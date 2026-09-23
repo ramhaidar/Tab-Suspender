@@ -240,7 +240,12 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            width: 100%;
+            border: 0;
             cursor: pointer;
+            color: inherit;
+            font: inherit;
+            text-align: left;
             user-select: none;
             padding: 12px 16px;
             background: #f8f9fa;
@@ -341,7 +346,7 @@
 
             <div id="tabs-container">
                 <div class="empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" role="img" aria-label="No suspended tabs">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="8" x2="12" y2="12"></line>
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -364,20 +369,20 @@
             </div>
 
             <div class="manual-recovery">
-                <div class="manual-recovery-header" onclick="toggleManualRecovery()">
+                <button type="button" class="manual-recovery-header" aria-expanded="false" aria-controls="manual-recovery-content" onclick="_toggleManualRecovery()">
                     <h3>
                         <span>⚙️</span>
                         Manual URL Recovery
                     </h3>
                     <span class="toggle-icon" id="toggle-icon">▼</span>
-                </div>
+                </button>
                 <div class="manual-recovery-content" id="manual-recovery-content">
                     <p style="color: #666; margin-bottom: 12px;">
                         If you have a suspended tab URL from your browser history, paste it here to extract the original URL:
                     </p>
                     <textarea id="manual-url" placeholder="Paste suspended tab URL here...
 Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https%3A%2F%2Fexample.com&title=Example"></textarea>
-                    <button class="btn btn-secondary" onclick="parseManualUrl()" style="margin-top: 8px;">
+                    <button type="button" class="btn btn-secondary" onclick="parseManualUrl()" style="margin-top: 8px;">
                         Extract Original URL
                     </button>
                     <div id="parse-result" class="parse-result" style="display: none;"></div>
@@ -450,7 +455,7 @@ Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https
 
                 // Render tabs list
                 let html = '<ul class="tabs-list">';
-                tabs.forEach((tab, index) => {
+                tabs.forEach((tab, _index) => {
                     const favicon = tab.favicon
                         ? `<img class="tab-favicon" src="${escapeHtml(tab.favicon)}" onerror="this.style.display='none'">`
                         : '<div class="tab-favicon placeholder">?</div>';
@@ -518,7 +523,7 @@ Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https
             }
         }
 
-        function openAllTabs() {
+        function _openAllTabs() {
             const tabs = getTabs();
             if (tabs.length > 10) {
                 if (!confirm(`This will open ${tabs.length} tabs. Continue?`)) {
@@ -530,7 +535,7 @@ Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https
             });
         }
 
-        function copyAllUrls() {
+        function _copyAllUrls() {
             const tabs = getTabs();
             const urls = tabs.map(t => t.url).join('\n');
             navigator.clipboard.writeText(urls).then(() => {
@@ -548,7 +553,7 @@ Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https
             });
         }
 
-        function exportAsHtml() {
+        function _exportAsHtml() {
             const tabs = getTabs();
             let html = `<!DOCTYPE html>
 <html>
@@ -585,7 +590,7 @@ Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https
             URL.revokeObjectURL(url);
         }
 
-        function parseManualUrl() {
+        function _parseManualUrl() {
             const input = document.getElementById('manual-url').value.trim();
             const resultEl = document.getElementById('parse-result');
 
@@ -617,12 +622,14 @@ Example: chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html?url=https
             }
         }
 
-        function toggleManualRecovery() {
+        function _toggleManualRecovery() {
             const content = document.getElementById('manual-recovery-content');
             const icon = document.getElementById('toggle-icon');
+            const header = document.querySelector('.manual-recovery-header');
 
             content.classList.toggle('expanded');
             icon.classList.toggle('expanded');
+            header.setAttribute('aria-expanded', content.classList.contains('expanded'));
         }
 
         // Load tabs on page load
