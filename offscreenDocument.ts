@@ -3,12 +3,6 @@ type BatteryStatusMessage = {
 	level: number;
 };
 
-type SuspendedTabInfo = {
-	url: string;
-	title: string;
-	favicon?: string;
-};
-
 const batteryDebug = false;
 const oldSettingsKeyPrefix = 'store.tabSuspenderSettings.';
 const BACKUP_SYNC_ORIGIN = 'https://uninstall.tab-suspender.com';
