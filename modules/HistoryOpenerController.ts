@@ -54,3 +54,6 @@ class HistoryOpenerController {
 		});
 	}
 }
+
+(globalThis as typeof globalThis & { HistoryOpenerController: typeof HistoryOpenerController }).HistoryOpenerController =
+	HistoryOpenerController;

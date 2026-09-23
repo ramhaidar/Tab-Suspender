@@ -122,3 +122,5 @@ class BrowserActionControl {
 		});
 	}
 }
+
+(globalThis as typeof globalThis & { BrowserActionControl: typeof BrowserActionControl }).BrowserActionControl = BrowserActionControl;

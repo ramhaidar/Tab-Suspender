@@ -104,7 +104,7 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 				sessionId: TSSessionId
 			});
 			parkHistory.splice(HISTORY_KEEP_LAST_N_ITEMS);
-			void LocalStore.set(LocalStoreKeys.PARK_HISTORY, parkHistory);
+			void (globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.PARK_HISTORY, parkHistory);
 		}
 	} catch (e) {
 		console.error(e);
@@ -153,7 +153,7 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 							sessionId: TSSessionId,
 							width: width,
 							height: height,
-							screenshotQuality: parseInt(await settings.get('screenshotQuality'), 10)
+							screenshotQuality: parseInt(String(await settings.get('screenshotQuality')), 10)
 						},
 						(response) => {
 							if (response != null) {
@@ -307,7 +307,7 @@ function closeTab(tabId, tab) {
 			sessionId: parseUrlParam(tab.url, 'sessionId')
 		});
 		closeHistory.splice(HISTORY_KEEP_LAST_N_ITEMS);
-		LocalStore.set(LocalStoreKeys.CLOSE_HISTORY, closeHistory)
+		(globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.CLOSE_HISTORY, closeHistory)
 			.then(() => {
 				tabManager.historyOpenerController.reloadHistoryPage();
 			})
@@ -350,20 +350,20 @@ async function discardTab(tabId) {
 		const tab = await chrome.tabs.get(tabId);
 
 		const SPLIT_VIEW_ID_NONE = -1;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const splitViewIdNone = (chrome.tabs as any).SPLIT_VIEW_ID_NONE ?? SPLIT_VIEW_ID_NONE;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const splitViewId = (tab as any).splitViewId;
+		const tabsWithSplitView = chrome.tabs as typeof chrome.tabs & { SPLIT_VIEW_ID_NONE?: number };
+		const tabWithSplitView = tab as chrome.tabs.Tab & { splitViewId?: number };
+		const splitViewIdNone = tabsWithSplitView.SPLIT_VIEW_ID_NONE ?? SPLIT_VIEW_ID_NONE;
+		const splitViewId = tabWithSplitView.splitViewId;
 
 		// If tab is in Split View, check if Split View is currently active
 		if (splitViewId !== undefined && splitViewId !== splitViewIdNone) {
 			try {
 				// Query all tabs in the same Split View (same window + same splitViewId)
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const tabsInSplitView = await chrome.tabs.query({
+				const queryInfo: chrome.tabs.QueryInfo & { splitViewId: number } = {
 					windowId: tab.windowId,
-					splitViewId: splitViewId
-				} as any);
+					splitViewId
+				};
+				const tabsInSplitView = await chrome.tabs.query(queryInfo);
 
 				// Check if at least one tab in this Split View is active
 				const hasActiveTab = tabsInSplitView.some((t) => t.active === true);
@@ -391,6 +391,25 @@ async function discardTab(tabId) {
 }
 
 // Export to global scope
-if (typeof global !== 'undefined') {
-	(global as any).discardTab = discardTab;
+if (typeof globalThis !== 'undefined') {
+	const tabParkGlobals = globalThis as typeof globalThis & {
+		discardTab: typeof discardTab;
+		parkTabs: typeof parkTabs;
+		parkTabGroup: typeof parkTabGroup;
+		unsuspendTabs: typeof unsuspendTabs;
+		unsuspendTabGroup: typeof unsuspendTabGroup;
+		markForUnsuspend: typeof markForUnsuspend;
+		closeTab: typeof closeTab;
+		isTabMarkedForUnsuspend: typeof isTabMarkedForUnsuspend;
+	};
+	Object.assign(tabParkGlobals, {
+		discardTab,
+		parkTabs,
+		parkTabGroup,
+		unsuspendTabs,
+		unsuspendTabGroup,
+		markForUnsuspend,
+		closeTab,
+		isTabMarkedForUnsuspend
+	});
 }

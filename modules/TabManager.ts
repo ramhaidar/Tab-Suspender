@@ -781,20 +781,20 @@ class TabManager {
 		// Protection only applies to Split Views that are currently active (user is viewing them)
 		if (await settings.get('ignoreSuspendSplitViewTabs')) {
 			const SPLIT_VIEW_ID_NONE = -1; // Fallback for older Chrome versions
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const splitViewIdNone = (chrome.tabs as any).SPLIT_VIEW_ID_NONE ?? SPLIT_VIEW_ID_NONE;
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const splitViewId = (tab as any).splitViewId;
+			const tabsWithSplitView = chrome.tabs as typeof chrome.tabs & { SPLIT_VIEW_ID_NONE?: number };
+			const tabWithSplitView = tab as chrome.tabs.Tab & { splitViewId?: number };
+			const splitViewIdNone = tabsWithSplitView.SPLIT_VIEW_ID_NONE ?? SPLIT_VIEW_ID_NONE;
+			const splitViewId = tabWithSplitView.splitViewId;
 
 			// If tab is in Split View, check if the Split View is currently active
 			if (splitViewId !== undefined && splitViewId !== splitViewIdNone) {
 				try {
 					// Query all tabs in the same Split View (same window + same splitViewId)
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const tabsInSplitView = await chrome.tabs.query({
+					const queryInfo: chrome.tabs.QueryInfo & { splitViewId: number } = {
 						windowId: tab.windowId,
-						splitViewId: splitViewId
-					} as any);
+						splitViewId
+					};
+					const tabsInSplitView = await chrome.tabs.query(queryInfo);
 
 					// Check if at least one tab in this Split View is active
 					const hasActiveTab = tabsInSplitView.some((t) => t.active === true);

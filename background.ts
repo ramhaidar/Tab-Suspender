@@ -17,9 +17,7 @@ const parkUrl = chrome.runtime.getURL('park.html');
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const historyPageUrl = chrome.runtime.getURL('history.html');
 
-// @ts-expect-error
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let database: DBProvider;
+const backgroundGlobals = globalThis as typeof globalThis & { database: typeof DBProvider.prototype };
 let parkHistory = [];
 let closeHistory = [];
 //window.tabScreens = {}; // map of tabIDs with last 'screen'
@@ -109,8 +107,42 @@ const getParkBgColor = async (): Promise<string> => {
 	else return DEFAULT_SETTINGS.parkBgColor;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getStartedAt = async () => startedAt;
+
+// Register classic-script globals explicitly while keeping mutable bindings live.
+Object.defineProperties(globalThis, {
+	historyPageUrl: { value: historyPageUrl },
+	parkHistory: { get: () => parkHistory, set: (value) => (parkHistory = value) },
+	closeHistory: { get: () => closeHistory, set: (value) => (closeHistory = value) },
+	pauseTics: { get: () => pauseTics, set: (value) => (pauseTics = value) },
+	pauseTicsStartedFrom: { get: () => pauseTicsStartedFrom, set: (value) => (pauseTicsStartedFrom = value) },
+	isCharging: { get: () => isCharging, set: (value) => (isCharging = value) },
+	windowManger: { get: () => windowManger, set: (value) => (windowManger = value) },
+	tabObserver: { get: () => tabObserver, set: (value) => (tabObserver = value) },
+	tabCapture: { get: () => tabCapture, set: (value) => (tabCapture = value) },
+	formRestoreController: { get: () => formRestoreController, set: (value) => (formRestoreController = value) },
+	settingsPageController: { get: () => settingsPageController, set: (value) => (settingsPageController = value) },
+	ignoreList: { get: () => ignoreList, set: (value) => (ignoreList = value) },
+	bgMessageListener: { get: () => bgMessageListener, set: (value) => (bgMessageListener = value) },
+	tabsMarkedForUnsuspend: { value: tabsMarkedForUnsuspend },
+	TABS_MARKED_FOR_UNSUSPEND_TTL: { value: TABS_MARKED_FOR_UNSUSPEND_TTL },
+	batteryLevel: { get: () => batteryLevel, set: (value) => (batteryLevel = value) },
+	getScreenCache: { get: () => getScreenCache, set: (value) => (getScreenCache = value) },
+	nextTabShouldBeSuspended: { get: () => nextTabShouldBeSuspended, set: (value) => (nextTabShouldBeSuspended = value) },
+	NEXT_TAB_SUSPEND_TTL: { value: NEXT_TAB_SUSPEND_TTL },
+	openSuspendedHistory: { value: openSuspendedHistory },
+	openClosedHistory: { value: openClosedHistory },
+	getRestoreEvent: { value: getRestoreEvent },
+	getReloadTabOnRestore: { value: getReloadTabOnRestore },
+	getTabIconStatusVisualize: { value: getTabIconStatusVisualize },
+	getTabIconOpacityChange: { value: getTabIconOpacityChange },
+	getRestoreButtonView: { value: getRestoreButtonView },
+	getScreenshotCssStyle: { value: getScreenshotCssStyle },
+	getStartDiscarted: { value: getStartDiscarted },
+	isFirstTimeTabDiscard: { value: isFirstTimeTabDiscard },
+	getParkBgColor: { value: getParkBgColor },
+	getStartedAt: { value: getStartedAt }
+});
 
 chrome.notifications.onClicked.addListener((id) => {
 	chrome.notifications.clear(id);
@@ -137,16 +169,20 @@ async function init(options) {
 
 	/* Restore parkHistory */
 	try {
-		parkHistory = await LocalStore.get(LocalStoreKeys.PARK_HISTORY);
-		if (!Array.isArray(parkHistory)) parkHistory = [];
+		const storedParkHistory = await (globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.get(
+			LocalStoreKeys.PARK_HISTORY
+		);
+		parkHistory = Array.isArray(storedParkHistory) ? storedParkHistory : [];
 	} catch (e) {
 		console.error('Exception while restore previous parkHistory:', e);
 	}
 
 	/* Restore closeHistory */
 	try {
-		closeHistory = await LocalStore.get(LocalStoreKeys.CLOSE_HISTORY);
-		if (!Array.isArray(closeHistory)) closeHistory = [];
+		const storedCloseHistory = await (globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.get(
+			LocalStoreKeys.CLOSE_HISTORY
+		);
+		closeHistory = Array.isArray(storedCloseHistory) ? storedCloseHistory : [];
 	} catch (e) {
 		console.error('Exception while restore previous closeHistory:', e);
 	}
@@ -240,10 +276,9 @@ function start() {
 		});
 
 	/* Connect DB */
-	// @ts-expect-error
-	_database = new DBProvider('IndexedDB');
+	backgroundGlobals.database = new DBProvider('IndexedDB', {});
 
-	setTimeout(cleanupDB, DELAY_BEFORE_DB_CLEANUP);
+	setTimeout(cleanupDB, (globalThis as typeof globalThis & { DELAY_BEFORE_DB_CLEANUP: number }).DELAY_BEFORE_DB_CLEANUP);
 
 	const prepare = async () => {
 		/* TODO: cleanup this logic after cleanup complete! */
@@ -280,7 +315,9 @@ function start() {
 
 					setTimeout(() => void trackView('TS started', { version: chrome.runtime.getManifest().version }), 5000);
 
-					const isAlreadyHasSyncSettings = (await LocalStore.get(LocalStoreKeys.INSTALLED)) != null && !chrome.extension.inIncognitoContext;
+					const isAlreadyHasSyncSettings =
+						(await (globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.get(LocalStoreKeys.INSTALLED)) != null &&
+						!chrome.extension.inIncognitoContext;
 					if (firstInstallation && !isAlreadyHasSyncSettings) {
 						console.log('EX: Installed!');
 						drawSetupWizardDialog();
@@ -289,7 +326,9 @@ function start() {
 						console.log('EX: Updated!');
 						//setTimeout(() => void trackView('updated'), 5000);
 						if (!isAlreadyHasSyncSettings) {
-							LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+							(globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(
+								console.error
+							);
 						}
 					}
 				})

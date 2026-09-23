@@ -33,7 +33,7 @@ class PageStateRestoreController {
 		const storedTabIdInt = parseInt(targetMapEntry.storedAsTabId, 10);
 
 		return new Promise<FormRestoreInfo>((resolve, _reject) => {
-			database.queryIndex(
+			(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.queryIndex(
 				{
 					IDB: {
 						table: FD_DB_NAME
@@ -58,7 +58,7 @@ class PageStateRestoreController {
 	}
 
 	async deleteDataRecord(tabId: number) {
-		database.executeDelete({
+		(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.executeDelete({
 			IDB: {
 				table: FD_DB_NAME,
 				params: [tabId],
@@ -97,7 +97,7 @@ class PageStateRestoreController {
 						data: response.formData
 					};
 
-					database.putV2([
+					(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.putV2([
 						{
 							IDB: {
 								table: FD_DB_NAME,
@@ -140,3 +140,6 @@ class PageStateRestoreController {
 		return Date.now() - tabMapEntry.timestamp > this.TIMEOUT;
 	}
 }
+
+(globalThis as typeof globalThis & { PageStateRestoreController: typeof PageStateRestoreController }).PageStateRestoreController =
+	PageStateRestoreController;

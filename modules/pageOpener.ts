@@ -17,3 +17,5 @@ function focusOrOpenTSPage(pageLocalUrl: string, options?) {
 		}
 	});
 }
+
+(globalThis as typeof globalThis & { focusOrOpenTSPage: typeof focusOrOpenTSPage }).focusOrOpenTSPage = focusOrOpenTSPage;

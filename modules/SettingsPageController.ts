@@ -55,3 +55,6 @@ class SettingsPageController {
 			.catch(console.error);
 	}
 }
+
+(globalThis as typeof globalThis & { SettingsPageController: typeof SettingsPageController }).SettingsPageController =
+	SettingsPageController;

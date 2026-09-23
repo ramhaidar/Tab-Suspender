@@ -4,29 +4,32 @@ enum LocalStoreKeys {
 	CLOSE_HISTORY = 'closeHistory'
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-class LocalStore {
-	private static keys = Object.fromEntries(Object.values(LocalStoreKeys).map((name) => [name, true]));
+type LocalStoreApi = {
+	get(key: string): Promise<unknown>;
+	set(key: string, value: unknown): Promise<void>;
+	remove(key: string): Promise<void>;
+};
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	static async get(key: string): Promise<any> {
-		LocalStore.checkKey(key);
+const localStoreGlobals = globalThis as typeof globalThis & { LocalStore: LocalStoreApi };
+const localStoreKeys = Object.fromEntries(Object.values(LocalStoreKeys).map((name) => [name, true]));
+
+localStoreGlobals.LocalStore = {
+	async get(key: string): Promise<unknown> {
+		checkKey(key);
 		return (await chrome.storage.local.get([key]))[key];
-	}
-
-	static set(key: string, value: unknown): Promise<void> {
-		LocalStore.checkKey(key);
+	},
+	set(key: string, value: unknown): Promise<void> {
+		checkKey(key);
 		return chrome.storage.local.set({ [key]: value });
-	}
-
-	static remove(key: string): Promise<void> {
-		LocalStore.checkKey(key);
+	},
+	remove(key: string): Promise<void> {
+		checkKey(key);
 		return chrome.storage.local.remove(key);
 	}
+};
 
-	private static checkKey(key: string) {
-		if (!LocalStore.keys[key]) {
-			console.error(`Key[${key}] is not supported by LocalStore`);
-		}
+function checkKey(key: string): void {
+	if (!localStoreKeys[key]) {
+		console.error(`Key[${key}] is not supported by LocalStore`);
 	}
 }

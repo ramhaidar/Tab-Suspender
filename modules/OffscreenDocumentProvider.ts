@@ -94,3 +94,6 @@ class OffscreenDocumentProvider {
 		});
 	}
 }
+
+(globalThis as typeof globalThis & { OffscreenDocumentProvider: typeof OffscreenDocumentProvider }).OffscreenDocumentProvider =
+	OffscreenDocumentProvider;

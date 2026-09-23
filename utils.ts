@@ -158,7 +158,7 @@ const globalIgnoredErrors = [
 	'RegExp:Cannot discard tab with id: \\d{1,5}\\.'
 ];
 
-function checkOccurrenceOfExpectedErrors(errorMessage: string, expectedList: any[]) {
+function checkOccurrenceOfExpectedErrors(errorMessage: string, expectedList: string[]) {
 	let expectedMessage = false;
 	for (let j = 0; j < expectedList.length; j++) {
 		if (expectedList[j].indexOf('RegExp:') === 0) {
@@ -176,7 +176,7 @@ function checkOccurrenceOfExpectedErrors(errorMessage: string, expectedList: any
 
 // eslint-disable-next-line no-redeclare,no-unused-vars,@typescript-eslint/no-unused-vars
 function hasLastError(expectedMessage?: string | string[], error?: Error, comment?: string) {
-	let expectedList = [];
+	let expectedList: string[] = [];
 
 	if (expectedMessage != null) {
 		if (Array.isArray(expectedMessage)) expectedList = expectedList.concat(expectedMessage);
@@ -329,6 +329,16 @@ function isDarkMode() {
 
 	return isDarkMode;
 }
+
+Object.defineProperties(globalThis, {
+	trace: { value: trace },
+	debugScreenCache: { value: debugScreenCache },
+	hasLastError: { value: hasLastError },
+	versionCompare: { value: versionCompare },
+	sql_error: { value: sql_error },
+	extractHostname: { value: extractHostname },
+	isDarkMode: { value: isDarkMode }
+});
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

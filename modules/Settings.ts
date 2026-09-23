@@ -120,10 +120,18 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 if (typeof global !== 'undefined') {
-	(global as any).DEFAULT_SETTINGS = DEFAULT_SETTINGS;
-	(global as any).SETTINGS_TYPES = SETTINGS_TYPES;
-	(global as any).GET_SETTINGS_TYPE = GET_SETTINGS_TYPE;
-	(global as any).NUMBER_TYPE = NUMBER_TYPE;
-	(global as any).STRING_TYPE = STRING_TYPE;
-	(global as any).BOOLEAN_TYPE = BOOLEAN_TYPE;
+	const settingsGlobals = global as typeof global & {
+		DEFAULT_SETTINGS: Settings;
+		SETTINGS_TYPES: typeof SETTINGS_TYPES;
+		GET_SETTINGS_TYPE: typeof GET_SETTINGS_TYPE;
+		NUMBER_TYPE: string;
+		STRING_TYPE: string;
+		BOOLEAN_TYPE: string;
+	};
+	settingsGlobals.DEFAULT_SETTINGS = DEFAULT_SETTINGS;
+	settingsGlobals.SETTINGS_TYPES = SETTINGS_TYPES;
+	settingsGlobals.GET_SETTINGS_TYPE = GET_SETTINGS_TYPE;
+	settingsGlobals.NUMBER_TYPE = NUMBER_TYPE;
+	settingsGlobals.STRING_TYPE = STRING_TYPE;
+	settingsGlobals.BOOLEAN_TYPE = BOOLEAN_TYPE;
 }

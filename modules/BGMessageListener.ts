@@ -351,7 +351,9 @@ class BGMessageListener {
 					whiteList.hideWhiteListDialog(sender.tab.id);
 					sendResponse({ tabId: sender.tab.id });
 				} else if (request.method === '[AutomaticTabCleaner:installed]') {
-					LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+					(globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(
+						console.error
+					);
 				} else if (request.method === '[AutomaticTabCleaner:addToWhiteList]') {
 					whiteList
 						.addPattern(request.pattern)
@@ -409,7 +411,9 @@ class BGMessageListener {
 						.removeAll()
 						.then(() => {
 							settings = new SettingsStore(SETTINGS_STORAGE_NAMESPACE, DEFAULT_SETTINGS, offscreenDocumentProvider);
-							LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+							(globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(
+								console.error
+							);
 							SettingsPageController.reloadSettings(/*{fromSettingsPage: true}*/).catch(console.error);
 						})
 						.catch(console.error);
@@ -422,7 +426,9 @@ class BGMessageListener {
 					settings
 						.importWithClear(request.settings)
 						.then(() => {
-							LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+							(globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(
+								console.error
+							);
 							SettingsPageController.reloadSettings(/*{fromSettingsPage: true}*/).catch(console.error);
 						})
 						.catch(console.error);
@@ -453,3 +459,5 @@ class BGMessageListener {
 		});
 	}
 }
+
+(globalThis as typeof globalThis & { BGMessageListener: typeof BGMessageListener }).BGMessageListener = BGMessageListener;

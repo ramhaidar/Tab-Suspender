@@ -1,15 +1,14 @@
 // debugScreenCache is declared globally
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-class ScreenshotController {
-	private static debug = false;
+const ScreenshotController = {
+	debug: false,
 
-	static isScreenExist(tabId: number, sessionId, callback) {
+	isScreenExist(tabId: number, sessionId, callback) {
 		//tabId = tabManager.findReplacedTabId(tabId);
 
 		if (sessionId == null) sessionId = TSSessionId;
 
-		database.queryIndexCount(
+		(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.queryIndexCount(
 			{
 				IDB: {
 					table: SCREENS_DB_NAME,
@@ -22,9 +21,9 @@ class ScreenshotController {
 			},
 			callback
 		);
-	}
+	},
 
-	static async getScreen(id, sessionId, callback, retryCount = 0) {
+	async getScreen(id, sessionId, callback, retryCount = 0) {
 		const MAX_RETRIES = 3;
 		const RETRY_TIMEOUT = 5000; // 5 seconds
 
@@ -38,7 +37,7 @@ class ScreenshotController {
 			return;
 		}
 
-		if (database.isInitialized() !== true) {
+		if ((globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.isInitialized() !== true) {
 			if (retryCount >= MAX_RETRIES) {
 				console.error('getScreen DB initialization failed after max retries for tabId:', id);
 				callback(null);
@@ -52,7 +51,7 @@ class ScreenshotController {
 				void ScreenshotController.getScreen(id, sessionId, callback, retryCount + 1);
 			}, RETRY_TIMEOUT);
 
-			database
+			(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database
 				.getInitializedPromise()
 				.then(() => {
 					clearTimeout(timeoutId);
@@ -92,7 +91,7 @@ class ScreenshotController {
 			} else getScreenCache = null;
 		}
 
-		database.queryIndex(
+		(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.queryIndex(
 			{
 				IDB: {
 					table: SCREENS_DB_NAME,
@@ -113,9 +112,9 @@ class ScreenshotController {
 				callback(fields.screen, fields.pixRat || 1);
 			}
 		);
-	}
+	},
 
-	static async addScreen(id: number | string, screen: string, devicePixelRatio: number, date?: Date): Promise<void> {
+	async addScreen(id: number | string, screen: string, devicePixelRatio: number, date?: Date): Promise<void> {
 		if (ScreenshotController.debug) console.warn(`addScreen(${id}, ${screen.length}b, ${devicePixelRatio}pr)`);
 
 		if (screen != null) {
@@ -131,7 +130,7 @@ class ScreenshotController {
 				pixRat: devicePixelRatio
 			};
 
-			await database.putV2([
+			await (globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.putV2([
 				{
 					IDB: {
 						table: SCREENS_DB_NAME,
@@ -149,7 +148,9 @@ class ScreenshotController {
 			]);
 		}
 	}
-}
+};
+
+(globalThis as typeof globalThis & { ScreenshotController: typeof ScreenshotController }).ScreenshotController = ScreenshotController;
 
 if (typeof module !== 'undefined')
 	module.exports = {

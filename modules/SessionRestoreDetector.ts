@@ -18,18 +18,18 @@ interface TabIndicators {
 	hasCompleteNonParkTabs: number;
 }
 
-class SessionRestoreDetector {
-	private static readonly DEFAULT_OPTIONS: Required<SessionRestoreOptions> = {
+const SessionRestoreDetector = {
+	DEFAULT_OPTIONS: {
 		maxChecks: 50, // Maximum 5 seconds (50 * 100ms)
 		checkInterval: 100, // Check every 100ms
 		parkUrl: 'chrome-extension://'
-	};
+	},
 
 	/**
 	 * Wait for Chrome's session restore to complete before processing tabs.
 	 * This prevents grouped tabs from becoming blank during browser startup.
 	 */
-	static waitForGroupRestore(options: SessionRestoreOptions = {}): Promise<void> {
+	waitForGroupRestore(options: SessionRestoreOptions = {}): Promise<void> {
 		const opts = { ...SessionRestoreDetector.DEFAULT_OPTIONS, ...options };
 
 		return new Promise((resolve) => {
@@ -74,12 +74,12 @@ class SessionRestoreDetector {
 			// Start checking after a brief initial delay
 			setTimeout(checkGroupRestoreStatus, 500);
 		});
-	}
+	},
 
 	/**
 	 * Analyze the current state of tabs to determine restore progress
 	 */
-	static analyzeTabState(tabs: chrome.tabs.Tab[], parkUrl: string): TabIndicators {
+	analyzeTabState(tabs: chrome.tabs.Tab[], parkUrl: string): TabIndicators {
 		const indicators: TabIndicators = {
 			hasNormalTabs: false,
 			hasGroupedTabs: false,
@@ -106,12 +106,12 @@ class SessionRestoreDetector {
 		}
 
 		return indicators;
-	}
+	},
 
 	/**
 	 * Determine if we should proceed with tab processing based on current state
 	 */
-	static shouldProceedWithProcessing(
+	shouldProceedWithProcessing(
 		indicators: TabIndicators,
 		checkCount: number,
 		stableChecks: number,
@@ -142,12 +142,12 @@ class SessionRestoreDetector {
 			// Absolute fallback: timeout
 			checkCount >= options.maxChecks
 		);
-	}
+	},
 
 	/**
 	 * Log the reason why processing was started
 	 */
-	static logCompletionReason(
+	logCompletionReason(
 		indicators: TabIndicators,
 		checkCount: number,
 		stableChecks: number,
@@ -175,7 +175,10 @@ class SessionRestoreDetector {
 			console.log(`Session restore proceeding after ${timing}ms (fallback conditions met)`);
 		}
 	}
-}
+};
+
+(globalThis as typeof globalThis & { SessionRestoreDetector: typeof SessionRestoreDetector }).SessionRestoreDetector =
+	SessionRestoreDetector;
 
 if (typeof module !== 'undefined')
 	module.exports = {

@@ -10,12 +10,12 @@ interface PopupQueryBGResponse {
 	pauseTicsStartedFrom: number;
 	isTabInIgnoreTabList: boolean;
 	isTabInWhiteList: boolean;
-	isCloseTabsOn: any;
+	isCloseTabsOn: boolean;
 	closeTimeout: number;
-	limitOfOpenedTabs: any;
+	limitOfOpenedTabs: number;
 	TSVersion: string;
-	sendErrors: any;
-	popup_showWindowSessionByDefault: any;
+	sendErrors: boolean;
+	popup_showWindowSessionByDefault: boolean;
 	isTabInGroup: boolean;
 }
 
@@ -58,3 +58,5 @@ async function popupQuery(tab) {
 		isTabInGroup: tab.groupId != null && tab.groupId !== -1
 	};
 }
+
+(globalThis as typeof globalThis & { popupQuery: typeof popupQuery }).popupQuery = popupQuery;

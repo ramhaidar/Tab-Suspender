@@ -354,3 +354,5 @@ class ContextMenuController {
 		return offsetWidth;
 	}
 }
+
+(globalThis as typeof globalThis & { ContextMenuController: typeof ContextMenuController }).ContextMenuController = ContextMenuController;

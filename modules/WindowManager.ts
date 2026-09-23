@@ -6,3 +6,5 @@ class WindowManager {
 		});
 	}
 }
+
+(globalThis as typeof globalThis & { WindowManager: typeof WindowManager }).WindowManager = WindowManager;

@@ -19,3 +19,5 @@ class IgnoreList {
 		new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
 	}
 }
+
+(globalThis as typeof globalThis & { IgnoreList: typeof IgnoreList }).IgnoreList = IgnoreList;

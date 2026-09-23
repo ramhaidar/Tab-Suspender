@@ -1,11 +1,8 @@
 const TWO_WEEKS_MS = 1000 * 60 * 60 * 24 * 14; // 14 Days
 const debugDBCleanup = false;
+const dbCleanupDelay = debugDBCleanup ? 5 * 1000 : 60 * 1000;
+(globalThis as typeof globalThis & { DELAY_BEFORE_DB_CLEANUP: number }).DELAY_BEFORE_DB_CLEANUP = dbCleanupDelay;
 
-let DELAY_BEFORE_DB_CLEANUP = 60 * 1000;
-if (debugDBCleanup) {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	DELAY_BEFORE_DB_CLEANUP = 5 * 1000;
-}
 type IDBAddedOnIndexType = [number, number, Date | string];
 type IDBPKKeyArrayType = [number, number];
 
@@ -142,7 +139,9 @@ function removeDBItemsInBackground(
 				}
 
 				try {
-					database.executeDelete(executeDeleteArgumentsConstructor(resultsKeyArrays[i]));
+					(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.executeDelete(
+						executeDeleteArgumentsConstructor(resultsKeyArrays[i])
+					);
 				} catch (e) {
 					console.error(`Error while cleanupDBItem[${i}]: `, e, resultsKeyArrays);
 				}
@@ -162,7 +161,7 @@ async function cleanupFds(tabs: chrome.tabs.Tab[]): Promise<void> {
 			return map;
 		}, openedTabIdsMap);
 
-		database.getAll(
+		(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.getAll(
 			{
 				IDB: {
 					table: FD_DB_NAME,
@@ -207,7 +206,7 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 	usedSessionIds[previousTSSessionId] = true;
 
 	return new Promise<void>((resolve) => {
-		database.getAll(
+		(globalThis as typeof globalThis & { database: typeof DBProvider.prototype }).database.getAll(
 			{
 				IDB: {
 					table: SCREENS_DB_NAME,
