@@ -72,14 +72,11 @@ Recovery page shown when user uninstalls the extension. Reads localStorage and d
 
 ### Initial Setup
 
-1. **Install Firebase CLI** (if not already installed):
-   ```bash
-   npm install -g firebase-tools
-   ```
+1. **Install dependencies** in `backup-server/` with `pnpm install` (the Firebase CLI is a local dev dependency).
 
 2. **Login to Firebase**:
    ```bash
-   firebase login
+   pnpm exec firebase login
    ```
 
 3. **Create Firebase Project**:
@@ -101,20 +98,20 @@ Recovery page shown when user uninstalls the extension. Reads localStorage and d
 
 ```bash
 cd backup-server
-npm install              # Install firebase-tools
-npm run deploy          # Deploy to Firebase Hosting
+pnpm install             # Install firebase-tools locally
+pnpm run deploy          # Deploy to Firebase Hosting
 ```
 
 Or deploy manually:
 ```bash
-firebase deploy --only hosting
+pnpm exec firebase deploy --only hosting
 ```
 
 ### Preview Before Deploy
 
 Test your deployment on a temporary URL:
 ```bash
-npm run deploy:preview
+pnpm run deploy:preview
 ```
 
 ### Custom Domain Setup
@@ -148,9 +145,9 @@ In `offscreenDocument.html`:
 
 ```bash
 cd backup-server
-npm start          # Starts on port 8080
+pnpm start         # Starts on port 8080
 # or
-npm run dev        # Starts on port 3000
+pnpm run dev       # Starts on port 3000
 # or
 node server.js --port 9000  # Custom port
 ```
@@ -169,7 +166,7 @@ node server.js --port 9000  # Custom port
            ...>
    ```
 
-3. Rebuild extension: `npm run build`
+3. Rebuild extension from the repository root: `pnpm run build`
 
 4. Reload extension in Chrome
 

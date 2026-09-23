@@ -1,35 +1,37 @@
 {
-  "name": "tab-suspender-stress-tests",
-  "version": "1.0.0",
-  "description": "Puppeteer stress & integration tests for Tab Suspender Chrome extension",
-  "type": "module",
-  "scripts": {
-    "test:stress": "node stress.test.js",
-    "test:suspend-discard": "npx tsx suspend-discard.test.ts",
-    "test:corrupt-storage": "npx tsx corrupt-storage.test.ts",
-    "test:basic-suspend-restore": "npx tsx basic-suspend-restore.test.ts",
-    "test:protected-urls": "npx tsx protected-urls.test.ts",
-    "test:auto-restore-tab": "npx tsx auto-restore-tab.test.ts",
-    "test:discard-tab-id-change": "npx tsx discard-tab-id-change.test.ts",
-    "test:form-data-restore": "npx tsx form-data-restore.test.ts",
-    "test:favicon-loss": "npx tsx favicon-loss.test.ts",
-    "test:favicon-nav-stress": "npx tsx favicon-nav-stress.test.ts",
-    "test:restore-modes": "npx tsx restore-modes.test.ts",
-    "test:bulk-tab-operations": "npx tsx bulk-tab-operations.test.ts",
-    "test:whitelist-ignore": "npx tsx whitelist-ignore.test.ts",
-    "test:screenshot-settings": "npx tsx screenshot-settings.test.ts",
-    "test:unfocused-tab-discard": "npx tsx unfocused-tab-discard.test.ts",
-    "test:start-discarded": "npx tsx start-discarded.test.ts"
-  },
-  "dependencies": {
-    "puppeteer": "^24.15.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+	"name": "tab-suspender-stress-tests",
+	"version": "1.0.0",
+	"description": "Puppeteer stress & integration tests for Tab Suspender Chrome extension",
+	"type": "module",
+	"packageManager": "pnpm@12.5.1",
+	"scripts": {
+		"test:stress": "node stress.test.js",
+		"test:suspend-discard": "pnpm exec tsx suspend-discard.test.ts",
+		"test:corrupt-storage": "pnpm exec tsx corrupt-storage.test.ts",
+		"test:basic-suspend-restore": "pnpm exec tsx basic-suspend-restore.test.ts",
+		"test:protected-urls": "pnpm exec tsx protected-urls.test.ts",
+		"test:auto-restore-tab": "pnpm exec tsx auto-restore-tab.test.ts",
+		"test:discard-tab-id-change": "pnpm exec tsx discard-tab-id-change.test.ts",
+		"test:form-data-restore": "pnpm exec tsx form-data-restore.test.ts",
+		"test:favicon-loss": "pnpm exec tsx favicon-loss.test.ts",
+		"test:favicon-nav-stress": "pnpm exec tsx favicon-nav-stress.test.ts",
+		"test:restore-modes": "pnpm exec tsx restore-modes.test.ts",
+		"test:bulk-tab-operations": "pnpm exec tsx bulk-tab-operations.test.ts",
+		"test:whitelist-ignore": "pnpm exec tsx whitelist-ignore.test.ts",
+		"test:screenshot-settings": "pnpm exec tsx screenshot-settings.test.ts",
+		"test:unfocused-tab-discard": "pnpm exec tsx unfocused-tab-discard.test.ts",
+		"test:start-discarded": "pnpm exec tsx start-discarded.test.ts",
+		"typecheck": "tsc --noEmit --pretty false"
+	},
+	"dependencies": {
+		"puppeteer": "^24.15.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"tsx": "^4.19.0",
+		"typescript": "^5.6.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
 }

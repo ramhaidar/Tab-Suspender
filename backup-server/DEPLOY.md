@@ -3,16 +3,22 @@
 ## Prerequisites
 - [ ] Firebase account created at https://console.firebase.google.com/
 - [ ] Firebase project created (e.g., `tab-suspender-backup`)
-- [ ] Firebase CLI installed globally: `npm install -g firebase-tools`
+- [ ] Firebase CLI available from `pnpm install` in `backup-server/` (local dev dependency)
 
 ## Before First Deploy
 
-1. **Login to Firebase**:
+1. **Install dependencies**:
    ```bash
-   firebase login
+   cd backup-server
+   pnpm install
    ```
 
-2. **Update `.firebaserc`** with your Firebase project ID:
+2. **Login to Firebase**:
+   ```bash
+   pnpm exec firebase login
+   ```
+
+3. **Update `.firebaserc`** with your Firebase project ID:
    ```json
    {
      "projects": {
@@ -21,28 +27,22 @@
    }
    ```
 
-3. **Install dependencies**:
-   ```bash
-   cd backup-server
-   npm install
-   ```
-
 ## Deploy Steps
 
 1. **Test locally** (optional):
    ```bash
-   npm run dev:https
+   pnpm run dev:https
    # Visit https://localhost:8080
    ```
 
 2. **Deploy to Firebase**:
    ```bash
-   npm run deploy
+   pnpm run deploy
    ```
 
    Or use preview channel first:
    ```bash
-   npm run deploy:preview
+   pnpm run deploy:preview
    ```
 
 3. **Verify deployment**:
@@ -83,9 +83,9 @@ Once deployed to production domain, update extension code:
            style="display:none;">
    ```
 
-### Rebuild and test:
+### Rebuild and test (from the repository root):
 ```bash
-npm run build
+pnpm run build
 # Reload extension in Chrome
 # Test with suspended tabs
 ```
@@ -119,7 +119,7 @@ npm run build
 
 If something goes wrong:
 ```bash
-firebase hosting:rollback
+pnpm exec firebase hosting:rollback
 ```
 
 This will restore the previous deployment.
