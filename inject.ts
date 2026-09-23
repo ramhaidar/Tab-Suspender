@@ -196,9 +196,14 @@ async function _getTabId() {
 		true
 	);
 
-	let suspendedPagesUrls = [];
+	let suspendedPagesUrls: string[] = [];
+	type InjectMessage = {
+		method: string;
+		suspendedUrls?: string[];
+		highliteInfo?: { lock?: boolean; suspendPercent?: number };
+	} & Partial<RequestParkPageFromInject>;
 
-	chrome.runtime.onMessage.addListener((request: any, _sender, sendResponse) => {
+	chrome.runtime.onMessage.addListener((request: InjectMessage, _sender, sendResponse) => {
 		if (request.method === '[AutomaticTabCleaner:backupSuspendedPagesUrls]') {
 			suspendedPagesUrls = request.suspendedUrls;
 			console.log('susPgsUrls: ', suspendedPagesUrls.length);
