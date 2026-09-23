@@ -279,6 +279,12 @@ tt {
 }
 
 /* Lists */
+ul,
+ol {
+	margin: 0 1.5em 1.5em 0;
+	padding-left: 1.5em;
+}
+
 ul {
 	list-style-type: disc;
 }
@@ -290,12 +296,6 @@ ol {
 li ul,
 li ol {
 	margin: 0;
-}
-
-ul,
-ol {
-	margin: 0 1.5em 1.5em 0;
-	padding-left: 1.5em;
 }
 
 dl {
@@ -316,6 +316,12 @@ table {
 	margin-bottom: 1.4em;
 }
 
+th,
+td,
+caption {
+	padding: 4px 10px 4px 5px;
+}
+
 th {
 	font-weight: bold;
 }
@@ -323,12 +329,6 @@ th {
 table.zebra thead th,
 table.zebra tfoot th {
 	background-color: #bfbfbf;
-}
-
-th,
-td,
-caption {
-	padding: 4px 10px 4px 5px;
 }
 
 table.zebra tbody tr:nth-child(even) td,
