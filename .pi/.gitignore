@@ -1,0 +1,9 @@
+# Pi Image Analyzer temporary clipboard images
+clipboard_temp/
+
+# BEGIN pi-durable-markdown-memory
+/memories/PERSONAL.md
+/memories/history/
+!/memories/
+!/memories/MAIN.md
+# END pi-durable-markdown-memory
