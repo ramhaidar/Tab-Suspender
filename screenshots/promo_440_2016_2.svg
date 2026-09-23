@@ -19,6 +19,7 @@
    inkscape:export-xdpi="90"
    inkscape:export-ydpi="90"
    sodipodi:docname="promo_440_2016_2.svg">
+  <title>Tab Suspender promotional artwork</title>
   <defs
      id="defs3844">
     <linearGradient
@@ -90,7 +91,7 @@
        inkscape:export-ydpi="90" />
     <text
        xml:space="preserve"
-       style="font-size:51.00255966000000300px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:2.20799997999999990;stroke-opacity:0.29090908;font-family:Sans;stroke-miterlimit:5;stroke-dasharray:none"
+       style="font-size:51.00255966000000300px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:2.20799997999999990;stroke-opacity:0.29090908;font-family:sans-serif;stroke-miterlimit:5;stroke-dasharray:none"
        x="56.570995"
        y="912.11676"
        id="text4370"
@@ -100,6 +101,6 @@
          id="tspan4372"
          x="56.570995"
          y="912.11676"
-         style="font-size:51.00255966000000300px;line-height:125%;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:2.20799997999999990;stroke-opacity:0.29090908;font-family:Cooper Black;-inkscape-font-specification:Cooper Black;stroke-miterlimit:5;stroke-dasharray:none">Tab Suspender</tspan></text>
+         style="font-size:51.00255966000000300px;line-height:125%;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:2.20799997999999990;stroke-opacity:0.29090908;font-family:sans-serif;stroke-miterlimit:5;stroke-dasharray:none">Tab Suspender</tspan></text>
   </g>
 </svg>
