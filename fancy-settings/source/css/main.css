@@ -10,10 +10,7 @@
 #sidebar {
 	position: absolute;
 	background-color: #ededed;
-	background-image: linear-gradient(top, #ededed, #f5f5f5);
-	background-image: -webkit-gradient(linear, left top, left 500, color-stop(0, #ededed), color-stop(1, #f5f5f5));
-	background-image: -moz-linear-gradient(center top, #ededed 0%, #f5f5f5 100%);
-	background-image: -o-linear-gradient(top, #ededed, #f5f5f5);
+	background-image: linear-gradient(to bottom, #ededed, #f5f5f5);
 	width: 258px;
 	top: 0;
 	left: 0;
@@ -39,7 +36,9 @@
 }
 
 #sidebar a {
-	font-family: Trebuchet MS;
+	font-family:
+		Trebuchet MS,
+		sans-serif;
 	font-size: 26px;
 	font-weight: bold;
 	color: #79bcff /*#1dcfeb*/;
@@ -63,7 +62,7 @@
 	padding-right: 25px;
 	border-top: 1px solid transparent;
 	border-bottom: 1px solid transparent;
-	-font-size: 12px;
+	font-size: 12px;
 	line-height: 28px;
 	color: #808080;
 	cursor: pointer;
@@ -72,8 +71,8 @@
 #search-container {
 	margin-top: 5px;
 	margin-bottom: 16px;
-	padding-right: 23px !important;
-	cursor: default !important;
+	padding-right: 23px;
+	cursor: default;
 }
 
 #search-container input {
@@ -118,16 +117,16 @@ body.searching #tab-container .tab.active {
 }
 
 body.searching .tab-content {
-	display: none !important;
+	display: none;
 }
 
 body.searching #search-result-container {
-	display: block !important;
+	display: block;
 }
 
 body.measuring .tab-content,
 body.measuring #search-result-container {
-	display: block !important;
+	display: block;
 	opacity: 0;
 	overflow: hidden;
 }

@@ -10,91 +10,87 @@
 }
 
 .irs-single {
-	top: -5px !important;
+	top: -5px;
 }
 
 .atcs-site-dialog {
 	/* wrapper */
-	position: fixed;
 	top: 0px;
 	bottom: 0px;
 	left: 0px;
 	right: 0px;
 	z-index: 11000000000;
 
-	overflow: hidden !important;
-	width: 95% !important;
-	max-width: 607px !important;
-	padding: 0 !important;
-	border-width: 0 !important;
-	border-radius: 5px !important;
-	background: transparent !important;
-	box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.3) !important;
+	overflow: hidden;
+	width: 95%;
+	max-width: 607px;
+	padding: 0;
+	border-width: 0;
+	border-radius: 5px;
+	background: transparent;
+	box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.3);
 	font:
 		16px "Roboto",
 		Arial,
-		sans-serif !important;
-	font-family: "Roboto", Arial, sans-serif !important;
-	display: block !important;
-	line-height: normal !important;
+		sans-serif;
+	display: block;
+	line-height: normal;
 
 	/* initial */
-	position: absolute !important;
-	height: -webkit-fit-content !important;
-	color: black !important;
-	margin: auto !important;
-	border-style: solid !important;
-	border-color: initial !important;
-	border-image: initial !important;
+	position: absolute;
+	height: -webkit-fit-content;
+	color: black;
+	margin: auto;
+	border-style: solid;
+	border-color: initial;
+	border-image: initial;
 }
 
 .atcs-site-dialog h1 {
 	/*font-size: 20px !important;
     font-weight: normal !important;*/
-	margin: 0 !important;
-	color: #fff !important;
+	margin: 0;
+	color: #fff;
 	font:
 		20px "Roboto",
 		Arial,
-		sans-serif !important;
+		sans-serif;
 }
 
 .atcs-site-dialog p {
-	font-size: 14px !important;
 	font:
 		14px "Roboto",
 		Arial,
-		sans-serif !important;
+		sans-serif;
 }
 
 .atcs-site-dialog p.header {
-	font-size: 13px !important;
 	font:
 		13px "Roboto",
 		Arial,
-		sans-serif !important;
-	font-weight: bold !important;
-	margin-top: 0 !important;
+		sans-serif;
+	font-weight: bold;
+	margin-top: 0;
 	/*margin-bottom: 0 !important;*/
 }
 
 .atcs-site-dialog .dialog-header {
-	padding: 12px 20px !important;
-	padding-top: 13px !important;
-	background-color: #ffc426 !important;
-	height: auto !important;
-	position: relative !important;
-	min-width: inherit !important;
+	padding: 12px 20px;
+	padding-top: 13px;
+	background-color: #ffc426;
+	height: auto;
+	position: relative;
+	min-width: inherit;
 }
 
 .atcs-site-dialog .dialog-content {
-	padding: 20px 40px !important;
-	color: #555 !important;
-	background-color: #fff !important;
+	padding: 20px 40px;
+	color: #555;
+	background-color: #fff;
 	/*display: none;*/
 	top: 0;
 	left: 0;
-	position: absolute !important;
+	position: absolute;
 	box-sizing: border-box;
 	width: 100%;
 }
@@ -103,20 +99,38 @@
 	/*display: block;*/
 }
 
+.atcs-site-dialog .wizard-step-one {
+	padding-top: 34px;
+}
+
+.atcs-site-dialog .wizard-intro {
+	margin-bottom: 10px;
+	font-size: 15px;
+}
+
+.atcs-site-dialog .wizard-step-two-question {
+	margin-top: 16px;
+}
+
+.atcs-site-dialog .wizard-step-three-hint {
+	font-size: 11px;
+	font-weight: 100;
+}
+
 .atcs-site-dialog .dialog-content /*p:last-of-type*/,
 .atcs-site-dialog .dialog-content p:only-child {
-	margin-top: 0 !important;
-	margin-bottom: 0 !important;
+	margin-top: 0;
+	margin-bottom: 0;
 	font:
 		14px "Roboto",
 		Arial,
-		sans-serif !important;
+		sans-serif;
 }
 
 .atcs-site-dialog .btn-group {
-	padding: 9px 10px !important;
-	text-align: right !important;
-	background-color: #e6e9ed !important;
+	padding: 9px 10px;
+	text-align: right;
+	background-color: #e6e9ed;
 }
 
 .dialog-content-main {
@@ -126,20 +140,20 @@
 }
 
 .atcsbtn {
-	padding: 10px 15px !important;
-	cursor: pointer !important;
-	color: #555 !important;
-	border-width: 1px !important;
-	border-style: solid !important;
-	border-radius: 3px !important;
-	background-color: #f3f3f3 !important;
-	text-transform: none !important;
+	padding: 10px 15px;
+	cursor: pointer;
+	color: #555;
+	border-width: 1px;
+	border-style: solid;
+	border-radius: 3px;
+	background-color: #f3f3f3;
+	text-transform: none;
 	font:
 		13.3px Arial,
-		sans-serif !important;
-	box-shadow: none !important;
-	margin: 0px !important;
-	margin-left: 6px !important;
+		sans-serif;
+	box-shadow: none;
+	margin: 0px;
+	margin-left: 6px;
 	display: none;
 }
 
@@ -148,28 +162,28 @@
 }
 
 .btn-danger {
-	color: #fff !important;
-	border-color: #73aae2 !important;
-	background-color: #71b2f3 !important;
+	color: #fff;
+	border-color: #73aae2;
+	background-color: #71b2f3;
 }
 
 .btn-danger:hover {
-	background-color: #79bcff !important; /* d 5% */
+	background-color: #79bcff; /* d 5% */
 }
 
 .btn-cancel {
-	color: #666 !important;
-	border-color: #ddd !important;
+	color: #666;
+	border-color: #ddd;
 }
 
 .btn-cancel:hover {
-	background-color: #f3f3f3 !important; /* d 5% */
+	background-color: #f3f3f3; /* d 5% */
 }
 
 /*****************Content**********************/
 
 .pattern {
-	margin-top: 3px !important;
+	margin-top: 3px;
 	width: 100%;
 }
 
@@ -198,17 +212,12 @@
 
 /* Slider */
 .close-sliders .irs-single {
-	color: #000 !important;
-	background: #fff !important;
+	color: #000;
+	background: #fff;
 	font:
 		14px "Roboto",
 		Arial,
-		sans-serif !important;
-}
-
-.unused-tabs:hover #tooltip-span {
-	display: block !important;
-	z-index: 1000000;
+		sans-serif;
 }
 
 .tooltip {
@@ -218,6 +227,11 @@
 
 #tooltip-span {
 	display: none;
+}
+
+.unused-tabs:hover #tooltip-span {
+	display: block;
+	z-index: 1000000;
 }
 
 .tooltip:hover #tooltip-span {

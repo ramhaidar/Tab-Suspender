@@ -126,20 +126,17 @@
 	position: fixed;
 	bottom: 10px;
 	left: 0px;
-	font-size: 11px !important;
+	font-size: 11px;
 	width: 245px;
-	text-shadow: none !important;
-}
-
-.settings-donation:hover img {
-	filter: contrast(200%);
+	text-shadow: none;
 }
 
 .settings-donation img {
 	filter: contrast(180%);
 }
 
-.settings-donation:hover {
+.settings-donation:hover img {
+	filter: contrast(200%);
 }
 
 ::placeholder {

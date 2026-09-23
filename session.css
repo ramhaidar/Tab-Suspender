@@ -7,7 +7,7 @@ div.line {
 }
 
 .ts_title {
-	font-family: Helvetica;
+	font-family: Helvetica, sans-serif;
 	font-size: 22px;
 	font-weight: bold;
 	color: #79bcff /*#1dcfeb*/;
@@ -23,15 +23,15 @@ div.line {
 
 .card-window {
 	margin-top: 70px;
-	min-width: -webkit-fill-available !important;
+	min-width: -webkit-fill-available;
 }
 
 .first-window {
-	margin-top: 25px !important;
+	margin-top: 25px;
 }
 
 .container {
-	padding-top: 10px !important;
+	padding-top: 10px;
 }
 
 .delete-btn {
@@ -41,7 +41,7 @@ div.line {
 }
 
 .delete-btn:hover {
-	transform: scale(1.2) !important;
+	transform: scale(1.2);
 }
 
 .tabs-n {

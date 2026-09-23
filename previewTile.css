@@ -1,12 +1,12 @@
 .card {
-	margin-bottom: 0.75rem !important;
+	margin-bottom: 0.75rem;
 	width: 22rem;
 }
 
 .card-body {
-	padding: 0.5rem !important;
-	padding-left: 1rem !important;
-	padding-right: 1rem !important;
+	padding: 0.5rem;
+	padding-left: 1rem;
+	padding-right: 1rem;
 	overflow: hidden;
 }
 
@@ -14,13 +14,13 @@
 	min-height: 3rem;
 	max-height: 3rem;
 	overflow: hidden;
-	margin-bottom: 0.25rem !important;
+	margin-bottom: 0.25rem;
 	font-weight: 400;
 	margin-right: 5px;
 }
 
 .card-title a {
-	color: #00428a !important;
+	color: #00428a;
 }
 
 .card-img-top {
@@ -48,9 +48,9 @@
 }
 
 .card-img-top.zoom {
-	transform: scale(2.5) !important;
+	transform: scale(2.5);
 	transition: transform 0.2s;
-	border: solid 2px #262626 !important;
+	border: solid 2px #262626;
 	border-radius: 5px;
 }
 
@@ -59,8 +59,8 @@
 }
 
 .card-img-top.clicked {
-	position: fixed !important;
-	max-height: unset !important;
+	position: fixed;
+	max-height: unset;
 	top: 0;
 	left: 0;
 	z-index: 10000000;
@@ -69,7 +69,7 @@
 .card-text {
 	white-space: nowrap;
 	color: #999;
-	margin-bottom: 0.25rem !important;
+	margin-bottom: 0.25rem;
 	text-overflow: ellipsis;
 	overflow: hidden;
 	font-size: 11px;
