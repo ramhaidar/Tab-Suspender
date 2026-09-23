@@ -17,23 +17,62 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
+type UnsuspendGroupTabManager = {
+	createNewTabInfo: (tab: chrome.tabs.Tab) => {
+		oldRefId?: number;
+		originRefId?: number;
+		parked?: boolean;
+	};
+	getTabInfoById: (id: number) => { id: number; oldRefId?: number; originRefId?: number; newRefId?: number };
+	unsuspendTab: (tab: chrome.tabs.Tab) => void;
+};
+type UnsuspendGroupTabManagerConstructor = new () => UnsuspendGroupTabManager;
+type UnsuspendGroupTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	pauseTics: number;
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: { tickSize: number };
+	TabInfo: unknown;
+	tabManager: UnsuspendGroupTabManager;
+};
+const testGlobals = global as UnsuspendGroupTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -41,34 +80,34 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
 
 // Mock global objects
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn().mockResolvedValue(false)
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).pauseTics = 0;
+testGlobals.pauseTics = 0;
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -88,29 +127,29 @@ const TabObserver = {
 };
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
-(global as any).TabObserver = TabObserver;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
+testGlobals.TabObserver = TabObserver;
 
 describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
-	let tabManager: any;
-	let TabManager: any;
-	let TabInfo: any;
+	let tabManager: UnsuspendGroupTabManager;
+	let TabManager: UnsuspendGroupTabManagerConstructor;
+	let TabInfo: unknown;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		// Clear global variables
-		(global as any).getScreenCache = null;
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		testGlobals.getScreenCache = null;
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		// Re-import modules
 		const TabInfoModule = require('../../modules/model/TabInfo');
 		TabInfo = TabInfoModule.TabInfo;
 
 		// Make TabInfo available globally
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const TabManagerModule = require('../../modules/TabManager');
 		TabManager = TabManagerModule.TabManager;
@@ -118,7 +157,7 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 		tabManager = new TabManager();
 
 		// Make tabManager available globally
-		(global as any).tabManager = tabManager;
+		testGlobals.tabManager = tabManager;
 	});
 
 	describe('TabManager.unsuspendTab with Tab ID Replacement', () => {

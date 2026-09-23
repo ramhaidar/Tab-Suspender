@@ -2,22 +2,62 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).publicExtensionUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugTabsInfo = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).pauseTics = 0;
-(global as any).isCharging = false;
-(global as any).batteryLevel = 1.0;
+type ActiveDisabledTabManager = {
+	getTabInfoById: (id: number) => { time: number } | undefined;
+};
+type ActiveDisabledTabObserver = { tick: (stateOnly: boolean) => Promise<void> };
+type ActiveDisabledTabManagerConstructor = new () => ActiveDisabledTabManager;
+type ActiveDisabledTabObserverConstructor = new (tabManager: ActiveDisabledTabManager) => ActiveDisabledTabObserver;
+type ActiveDisabledTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	publicExtensionUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugTabsInfo: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	pauseTics: number;
+	isCharging: boolean;
+	batteryLevel: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	parkTab: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabInfo: unknown;
+	TabManager: unknown;
+	TabObserver: unknown;
+};
+const testGlobals = global as ActiveDisabledTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.publicExtensionUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugTabsInfo = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.pauseTics = 0;
+testGlobals.isCharging = false;
+testGlobals.batteryLevel = 1.0;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	try {
 		return new URL(url).searchParams.get(param);
 	} catch {
@@ -25,7 +65,7 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -33,15 +73,15 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
-(global as any).parkTab = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
+testGlobals.parkTab = jest.fn();
 
 let mockActiveValue = true;
 
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			active: mockActiveValue,
 			timeout: 30, // very short timeout: 30 sec
 			pinned: false,
@@ -61,11 +101,11 @@ let mockActiveValue = true;
 	})
 };
 
-(global as any).whiteList = { isURIException: jest.fn().mockReturnValue(false) };
-(global as any).ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
-(global as any).tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
-(global as any).ContextMenuController = { menuIdMap: {} };
-(global as any).ScreenshotController = { getScreen: jest.fn() };
+testGlobals.whiteList = { isURIException: jest.fn().mockReturnValue(false) };
+testGlobals.ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
+testGlobals.tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
+testGlobals.ContextMenuController = { menuIdMap: {} };
+testGlobals.ScreenshotController = { getScreen: jest.fn() };
 
 const BrowserActionControl = jest.fn().mockImplementation(() => ({
 	updateStatus: jest.fn(),
@@ -77,8 +117,8 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	onRemoveTab: jest.fn(),
 	collectInitialTabState: jest.fn()
 }));
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
 
 const inactiveTab = {
 	id: 10,
@@ -96,36 +136,37 @@ const inactiveTab = {
 };
 
 describe('TabObserver - active: false disables auto-suspension', () => {
-	let tabManager: any;
-	let tabObserver: any;
-	let TabObserverClass: any;
-	let TabManager: any;
-	let TabInfo: any;
+	let tabManager: ActiveDisabledTabManager;
+	let tabObserver: ActiveDisabledTabObserver;
+	let TabObserverClass: ActiveDisabledTabObserverConstructor;
+	let TabManager: ActiveDisabledTabManagerConstructor;
+	let TabInfo: unknown;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 		mockActiveValue = true;
-		(global as any).parkTab = jest.fn();
-		(global as any).pauseTics = 0;
+		testGlobals.parkTab = jest.fn();
+		testGlobals.pauseTics = 0;
 
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		const TabInfoModule = require('../../modules/model/TabInfo');
 		TabInfo = TabInfoModule.TabInfo;
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const TabManagerModule = require('../../modules/TabManager');
 		TabManager = TabManagerModule.TabManager;
-		(global as any).TabManager = TabManager;
+		testGlobals.TabManager = TabManager;
 
 		require('../../modules/TabObserver');
-		TabObserverClass = (global as any).TabObserver;
+		TabObserverClass = testGlobals.TabObserver as ActiveDisabledTabObserverConstructor;
 
 		tabManager = new TabManager();
 
-		(global as any).chrome.windows.getAll = jest.fn((_options, callback) => {
-			callback([{ id: 1, focused: true, tabs: [inactiveTab] }]);
+		const getAllMock = testGlobals.chrome.windows.getAll as jest.Mock;
+		getAllMock.mockImplementation((_options: chrome.windows.QueryOptions, callback: (windows: chrome.windows.Window[]) => void) => {
+			callback([{ id: 1, focused: true, tabs: [inactiveTab] } as chrome.windows.Window]);
 		});
 	});
 
@@ -138,7 +179,7 @@ describe('TabObserver - active: false disables auto-suspension', () => {
 			await tabObserver.tick(false);
 		}
 
-		expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: inactiveTab.id }), inactiveTab.id);
+		expect(testGlobals.parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: inactiveTab.id }), inactiveTab.id);
 	});
 
 	it('should NOT suspend tab when active=false, even if time exceeds timeout', async () => {
@@ -150,7 +191,7 @@ describe('TabObserver - active: false disables auto-suspension', () => {
 			await tabObserver.tick(false);
 		}
 
-		expect((global as any).parkTab).not.toHaveBeenCalled();
+		expect(testGlobals.parkTab).not.toHaveBeenCalled();
 	});
 
 	it('should stop suspending immediately when active switches from true to false mid-session', async () => {
@@ -164,7 +205,7 @@ describe('TabObserver - active: false disables auto-suspension', () => {
 
 		// Disable auto-suspension before threshold is reached
 		mockActiveValue = false;
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// Run many more ticks — even though accumulated time would exceed timeout,
 		// active=false must prevent any suspension
@@ -172,7 +213,7 @@ describe('TabObserver - active: false disables auto-suspension', () => {
 			await tabObserver.tick(false);
 		}
 
-		expect((global as any).parkTab).not.toHaveBeenCalled();
+		expect(testGlobals.parkTab).not.toHaveBeenCalled();
 	});
 
 	it('should NOT accumulate tab time when active=false', async () => {

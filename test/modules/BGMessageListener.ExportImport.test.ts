@@ -6,8 +6,33 @@ import '../typing/global.d';
 import '../../fancy-settings/source/lib/store';
 import '../../modules/Settings';
 
+type ExportImportTestStore = {
+	getOnStorageInitialized: () => Promise<void>;
+	toObject: () => Promise<Record<string, unknown>>;
+	get: (key: string) => Promise<unknown>;
+	set: (key: string, value: unknown) => Promise<unknown>;
+	fromObject: (settings: object, merge: boolean) => Promise<unknown>;
+	importWithClear: (settings: object) => Promise<unknown>;
+};
+type ExportImportTestStoreConstructor = new (
+	namespace: string,
+	defaults: typeof DEFAULT_SETTINGS,
+	offscreenProvider: { extractOldSettings: jest.Mock; cleanupFormDatas: jest.Mock }
+) => ExportImportTestStore;
+type ExportImportTestGlobals = typeof global & {
+	debug: boolean;
+	LocalStore: typeof mockLocalStore;
+	LocalStoreKeys: { INSTALLED: string };
+	SettingsPageController: typeof mockSettingsPageController;
+	SETTINGS_STORAGE_NAMESPACE: string;
+	SettingsStore: ExportImportTestStoreConstructor;
+	DEFAULT_SETTINGS: typeof DEFAULT_SETTINGS;
+	settings: ExportImportTestStore;
+};
+const testGlobals = global as ExportImportTestGlobals;
+
 // Set up required global variables
-(global as any).debug = false;
+testGlobals.debug = false;
 
 // Mock the LocalStore that's used in BGMessageListener
 const mockLocalStore = {
@@ -20,21 +45,21 @@ const mockSettingsPageController = {
 };
 
 // Set up global mocks
-(global as any).LocalStore = mockLocalStore;
-(global as any).LocalStoreKeys = { INSTALLED: 'installed' };
-(global as any).SettingsPageController = mockSettingsPageController;
-(global as any).SETTINGS_STORAGE_NAMESPACE = 'tabSuspenderSettings';
+testGlobals.LocalStore = mockLocalStore;
+testGlobals.LocalStoreKeys = { INSTALLED: 'installed' };
+testGlobals.SettingsPageController = mockSettingsPageController;
+testGlobals.SETTINGS_STORAGE_NAMESPACE = 'tabSuspenderSettings';
 
 describe('BGMessageListener Export/Import Integration', () => {
-	let mockStorageData: Record<string, any>;
-	let globalSettings: any;
-	let mockOffscreenProvider: any;
+	let mockStorageData: Record<string, unknown>;
+	let globalSettings: ExportImportTestStore;
+	let mockOffscreenProvider: { extractOldSettings: jest.Mock; cleanupFormDatas: jest.Mock };
 
 	// Mock the chrome storage to simulate actual browser behavior
 	const mockChromeStorage = {
 		local: {
 			get: jest.fn().mockImplementation(async (keys: string[] | string) => {
-				const result: Record<string, any> = {};
+				const result: Record<string, unknown> = {};
 				if (Array.isArray(keys)) {
 					keys.forEach((key) => {
 						if (mockStorageData[key] !== undefined) {
@@ -48,7 +73,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 				}
 				return result;
 			}),
-			set: jest.fn().mockImplementation(async (data: Record<string, any>) => {
+			set: jest.fn().mockImplementation(async (data: Record<string, unknown>) => {
 				Object.assign(mockStorageData, data);
 			}),
 			remove: jest.fn().mockImplementation(async (keys: string[] | string) => {
@@ -79,11 +104,8 @@ describe('BGMessageListener Export/Import Integration', () => {
 		// Reset storage data before each test
 		mockStorageData = {};
 
-		// Update global chrome mock with our storage mock
-		(global as any).chrome = {
-			...(global as any).chrome,
-			storage: mockChromeStorage
-		};
+		// Update the existing storage mock while preserving Chrome's other storage APIs
+		Object.assign(testGlobals.chrome.storage, mockChromeStorage);
 
 		// Mock offscreen document provider
 		mockOffscreenProvider = {
@@ -92,7 +114,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 		};
 
 		// Create initial settings store (simulates what happens in background.ts)
-		globalSettings = new (global as any).SettingsStore('tabSuspenderSettings', (global as any).DEFAULT_SETTINGS, mockOffscreenProvider);
+		globalSettings = new testGlobals.SettingsStore('tabSuspenderSettings', testGlobals.DEFAULT_SETTINGS, mockOffscreenProvider);
 
 		// Wait for async init (DEFAULT_SETTINGS written to storage) before each test
 		// to eliminate the race between initOrMigrateSettings and test set() calls.
@@ -104,7 +126,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 		}
 
 		// Set as global settings variable (like in the actual app)
-		(global as any).settings = globalSettings;
+		testGlobals.settings = globalSettings;
 
 		// Mock console methods to reduce noise during tests
 		jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -137,7 +159,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 			expect(exportedSettings.parkBgColor).toBe('FF0000');
 
 			// Verify it contains all default keys
-			const defaultKeys = Object.keys((global as any).DEFAULT_SETTINGS);
+			const defaultKeys = Object.keys(testGlobals.DEFAULT_SETTINGS);
 			const exportedKeys = Object.keys(exportedSettings);
 			expect(exportedKeys).toEqual(expect.arrayContaining(defaultKeys));
 		});
@@ -155,7 +177,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 			};
 
 			// The OLD BUGGY approach: merging settings with defaults incorrectly
-			const buggyMergedDefaults = { ...(global as any).DEFAULT_SETTINGS, ...importSettings };
+			const buggyMergedDefaults = { ...testGlobals.DEFAULT_SETTINGS, ...importSettings };
 
 			// The bug was that this merged object became the "defaults" not the actual values
 			// So when you get() a value, it returns the default, not what you think you imported
@@ -198,7 +220,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 			};
 
 			// Simulate the FIXED import handler using importWithClear
-			const fixedImportHandler = async (settings: any) => {
+			const fixedImportHandler = async (settings: Record<string, unknown>) => {
 				// Check if importWithClear method exists, fallback to fromObject if not
 				if (typeof globalSettings.importWithClear === 'function') {
 					await globalSettings.importWithClear(settings);
@@ -221,7 +243,7 @@ describe('BGMessageListener Export/Import Integration', () => {
 			expect(await globalSettings.get('pinned')).toBe(false);
 
 			// Verify unspecified settings revert to defaults (merge=false)
-			expect(await globalSettings.get('ignoreAudible')).toBe((global as any).DEFAULT_SETTINGS.ignoreAudible);
+			expect(await globalSettings.get('ignoreAudible')).toBe(testGlobals.DEFAULT_SETTINGS.ignoreAudible);
 		});
 
 		test('should handle complete export/import cycle correctly with fixed implementation', async () => {

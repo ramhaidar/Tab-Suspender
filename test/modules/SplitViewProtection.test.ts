@@ -17,23 +17,55 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
+type SplitViewTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	pauseTics: number;
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: unknown;
+	TabInfo: unknown;
+	tabManager: unknown;
+};
+const testGlobals = global as SplitViewTestGlobals;
+type SplitViewTab = chrome.tabs.Tab & { splitViewId?: number };
+type SplitViewTabsApi = typeof chrome.tabs & { SPLIT_VIEW_ID_NONE?: number; discard: typeof chrome.tabs.discard };
+const splitViewTabs = chrome.tabs as SplitViewTabsApi;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -41,37 +73,37 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
 
 // Mock global objects
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
 		if (key === 'ignoreSuspendSplitViewTabs') return Promise.resolve(true);
 		return Promise.resolve(false);
 	})
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).pauseTics = 0;
+testGlobals.pauseTics = 0;
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -91,37 +123,37 @@ const TabObserver = {
 };
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
-(global as any).TabObserver = TabObserver;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
+testGlobals.TabObserver = TabObserver;
 
 describe('Chrome Split View Protection', () => {
-	let tabManager: any;
-	let TabManager: any;
-	let TabInfo: any;
+	let tabManager: TabManager;
+	let TabManagerClass: typeof TabManager;
+	let TabInfoClass: typeof TabInfo;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		// Clear global variables
-		(global as any).getScreenCache = null;
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		testGlobals.getScreenCache = null;
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		// Re-import modules
 		const TabInfoModule = require('../../modules/model/TabInfo');
-		TabInfo = TabInfoModule.TabInfo;
+		TabInfoClass = TabInfoModule.TabInfo;
 
 		// Make TabInfo available globally
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfoClass;
 
 		const TabManagerModule = require('../../modules/TabManager');
-		TabManager = TabManagerModule.TabManager;
+		TabManagerClass = TabManagerModule.TabManager;
 
-		tabManager = new TabManager();
+		tabManager = new TabManagerClass();
 
 		// Make tabManager available globally
-		(global as any).tabManager = tabManager;
+		testGlobals.tabManager = tabManager;
 	});
 
 	describe('Split View API Backward Compatibility', () => {
@@ -154,9 +186,9 @@ describe('Chrome Split View Protection', () => {
 
 		it('should handle Chrome 145+ with SPLIT_VIEW_ID_NONE constant', async () => {
 			// Mock Chrome 145+ with SPLIT_VIEW_ID_NONE constant
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
-			const mockTab: any = {
+			const mockTab: SplitViewTab = {
 				id: 100,
 				windowId: 1,
 				index: 0,
@@ -184,9 +216,9 @@ describe('Chrome Split View Protection', () => {
 	describe('Split View Tab Detection', () => {
 		it('should detect tab in ACTIVE Split View and mark as exception', async () => {
 			// Mock Chrome 145+ with Split View
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
-			const mockTab: any = {
+			const mockTab: SplitViewTab = {
 				id: 100,
 				windowId: 1,
 				index: 0,
@@ -221,9 +253,9 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should allow suspension of tab NOT in Split View', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
-			const mockTab: any = {
+			const mockTab: SplitViewTab = {
 				id: 100,
 				windowId: 1,
 				index: 0,
@@ -248,9 +280,9 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should allow suspension of tab in INACTIVE Split View', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
-			const mockTab: any = {
+			const mockTab: SplitViewTab = {
 				id: 100,
 				windowId: 1,
 				index: 0,
@@ -287,14 +319,14 @@ describe('Chrome Split View Protection', () => {
 
 	describe('Settings Control', () => {
 		it('should respect ignoreSuspendSplitViewTabs setting when enabled', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
-			(global as any).settings.get = jest.fn((key: string) => {
+			testGlobals.settings.get = jest.fn((key: string) => {
 				if (key === 'ignoreSuspendSplitViewTabs') return Promise.resolve(true);
 				return Promise.resolve(false);
 			});
 
-			const mockTab: any = {
+			const mockTab: SplitViewTab = {
 				id: 100,
 				windowId: 1,
 				index: 0,
@@ -325,14 +357,14 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should allow suspension when ignoreSuspendSplitViewTabs is disabled', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
-			(global as any).settings.get = jest.fn((key: string) => {
+			testGlobals.settings.get = jest.fn((key: string) => {
 				if (key === 'ignoreSuspendSplitViewTabs') return Promise.resolve(false);
 				return Promise.resolve(false);
 			});
 
-			const mockTab: any = {
+			const mockTab: SplitViewTab = {
 				id: 100,
 				windowId: 1,
 				index: 0,
@@ -359,15 +391,15 @@ describe('Chrome Split View Protection', () => {
 
 	describe('Multiple Split Views', () => {
 		it('should protect tabs in different Split Views', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
 			// Ensure setting is enabled
-			(global as any).settings.get = jest.fn((key: string) => {
+			testGlobals.settings.get = jest.fn((key: string) => {
 				if (key === 'ignoreSuspendSplitViewTabs') return Promise.resolve(true);
 				return Promise.resolve(false);
 			});
 
-			const splitView1Tab: any = {
+			const splitView1Tab: SplitViewTab = {
 				id: 100,
 				splitViewId: 1,
 				windowId: 1,
@@ -387,7 +419,7 @@ describe('Chrome Split View Protection', () => {
 				favIconUrl: ''
 			};
 
-			const splitView2Tab: any = {
+			const splitView2Tab: SplitViewTab = {
 				id: 200,
 				splitViewId: 2,
 				windowId: 1,
@@ -408,7 +440,7 @@ describe('Chrome Split View Protection', () => {
 			};
 
 			// Mock chrome.tabs.query to return different results for different splitViewIds
-			(chrome.tabs.query as jest.Mock).mockImplementation((queryInfo: any) => {
+			(chrome.tabs.query as jest.Mock).mockImplementation((queryInfo: chrome.tabs.QueryInfo & { splitViewId?: number }) => {
 				if (queryInfo.splitViewId === 1) {
 					// Split View 1 has active tab
 					return Promise.resolve([
@@ -443,7 +475,7 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should NEVER discard tab in ACTIVE Split View (independent of setting)', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
 			// Mock chrome.tabs.get to return Split View tab
 			(chrome.tabs.get as jest.Mock).mockResolvedValue({
@@ -466,10 +498,10 @@ describe('Chrome Split View Protection', () => {
 
 			// Mock chrome.tabs.discard
 			const mockDiscard = jest.fn();
-			(chrome.tabs as any).discard = mockDiscard;
+			splitViewTabs.discard = mockDiscard;
 
 			// Try to discard tab in ACTIVE Split View
-			await (global as any).discardTab(100);
+			await testGlobals.discardTab(100);
 
 			// CRITICAL: chrome.tabs.discard must NOT be called for ACTIVE Split View
 			expect(mockDiscard).not.toHaveBeenCalled();
@@ -481,7 +513,7 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should allow discard for tabs NOT in Split View', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
 			// Mock chrome.tabs.get to return normal tab (not in Split View)
 			(chrome.tabs.get as jest.Mock).mockResolvedValue({
@@ -498,10 +530,10 @@ describe('Chrome Split View Protection', () => {
 
 			// Mock chrome.tabs.discard
 			const mockDiscard = jest.fn();
-			(chrome.tabs as any).discard = mockDiscard;
+			splitViewTabs.discard = mockDiscard;
 
 			// Try to discard normal tab
-			await (global as any).discardTab(100);
+			await testGlobals.discardTab(100);
 
 			// Should call chrome.tabs.discard
 			expect(mockDiscard).toHaveBeenCalledWith(100, expect.any(Function));
@@ -509,7 +541,7 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should allow discard for tabs in INACTIVE Split View', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
 			// Mock chrome.tabs.get to return tab in Split View
 			(chrome.tabs.get as jest.Mock).mockResolvedValue({
@@ -532,10 +564,10 @@ describe('Chrome Split View Protection', () => {
 
 			// Mock chrome.tabs.discard
 			const mockDiscard = jest.fn();
-			(chrome.tabs as any).discard = mockDiscard;
+			splitViewTabs.discard = mockDiscard;
 
 			// Try to discard tab in INACTIVE Split View
-			await (global as any).discardTab(100);
+			await testGlobals.discardTab(100);
 
 			// Should allow discard for INACTIVE Split View
 			expect(mockDiscard).toHaveBeenCalledWith(100, expect.any(Function));
@@ -547,10 +579,10 @@ describe('Chrome Split View Protection', () => {
 		});
 
 		it('should protect ACTIVE Split View tabs even when ignoreSuspendSplitViewTabs is disabled', async () => {
-			(chrome.tabs as any).SPLIT_VIEW_ID_NONE = -1;
+			splitViewTabs.SPLIT_VIEW_ID_NONE = -1;
 
 			// Disable the setting - discard protection should still work for ACTIVE Split Views
-			(global as any).settings.get = jest.fn((key: string) => {
+			testGlobals.settings.get = jest.fn((key: string) => {
 				if (key === 'ignoreSuspendSplitViewTabs') return Promise.resolve(false);
 				return Promise.resolve(false);
 			});
@@ -572,10 +604,10 @@ describe('Chrome Split View Protection', () => {
 
 			// Mock chrome.tabs.discard
 			const mockDiscard = jest.fn();
-			(chrome.tabs as any).discard = mockDiscard;
+			splitViewTabs.discard = mockDiscard;
 
 			// Try to discard
-			await (global as any).discardTab(100);
+			await testGlobals.discardTab(100);
 
 			// CRITICAL: Must NOT discard ACTIVE Split View, even with setting disabled
 			expect(mockDiscard).not.toHaveBeenCalled();
@@ -597,10 +629,10 @@ describe('Chrome Split View Protection', () => {
 
 			// Mock chrome.tabs.discard
 			const mockDiscard = jest.fn();
-			(chrome.tabs as any).discard = mockDiscard;
+			splitViewTabs.discard = mockDiscard;
 
 			// Try to discard
-			await (global as any).discardTab(100);
+			await testGlobals.discardTab(100);
 
 			// Should allow discard (backward compatibility)
 			expect(mockDiscard).toHaveBeenCalledWith(100, expect.any(Function));

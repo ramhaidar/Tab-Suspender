@@ -2,25 +2,69 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).nextTabShouldBeSuspended = false;
-(global as any).NEXT_TAB_SUSPEND_TTL = 3000;
+type IntegrationTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: { sessionId: string; tabId: string; screen?: string | null; pixRat?: number | null } | null;
+	nextTabShouldBeSuspended: boolean;
+	NEXT_TAB_SUSPEND_TTL: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	pauseTics: number;
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: { tickSize: number };
+	TabInfo: unknown;
+	TabManager: unknown;
+};
+const testGlobals = global as IntegrationTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+type IntegrationTestTabInfo = {
+	id: number;
+	lstCapUrl?: string;
+	oldRefId?: number;
+	newRefId?: number;
+	nonCmpltInput?: boolean;
+	closed?: { at: number };
+};
+type IntegrationTestTabManager = {
+	getTabInfoById: (id: number) => IntegrationTestTabInfo;
+};
+type IntegrationTestTabManagerConstructor = new () => IntegrationTestTabManager;
+
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.nextTabShouldBeSuspended = false;
+testGlobals.NEXT_TAB_SUSPEND_TTL = 3000;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -28,11 +72,11 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
 
 // Mock global objects
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn().mockImplementation((key: string) => {
 		// Disable suspendOnCtrlClick by default for integration tests
 		if (key === 'suspendOnCtrlClick') return Promise.resolve(false);
@@ -40,26 +84,26 @@ import '../typing/global.d';
 	})
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).pauseTics = 0;
+testGlobals.pauseTics = 0;
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -79,18 +123,18 @@ const TabObserver = {
 };
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
-(global as any).TabObserver = TabObserver;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
+testGlobals.TabObserver = TabObserver;
 
 function _sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 describe('TabManager Integration Tests', () => {
-	let tabManager: any;
-	let TabManager: any;
-	let TabInfo: any;
+	let tabManager: IntegrationTestTabManager;
+	let TabManager: IntegrationTestTabManagerConstructor;
+	let TabInfo: unknown;
 
 	// Chrome event callbacks
 	let onCreatedCallback: (tab: chrome.tabs.Tab) => void;
@@ -104,24 +148,24 @@ describe('TabManager Integration Tests', () => {
 		jest.resetModules();
 
 		// Clear global variables
-		(global as any).getScreenCache = null;
-		(global as any).nextTabShouldBeSuspended = false;
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		testGlobals.getScreenCache = null;
+		testGlobals.nextTabShouldBeSuspended = false;
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		// Setup Chrome event listeners capture
-		(global as any).chrome.tabs.onCreated.addListener = jest.fn((callback) => {
+		testGlobals.chrome.tabs.onCreated.addListener = jest.fn((callback) => {
 			onCreatedCallback = callback;
 		});
-		(global as any).chrome.tabs.onReplaced.addListener = jest.fn((callback) => {
+		testGlobals.chrome.tabs.onReplaced.addListener = jest.fn((callback) => {
 			onReplacedCallback = callback;
 		});
-		(global as any).chrome.tabs.onUpdated.addListener = jest.fn((callback) => {
+		testGlobals.chrome.tabs.onUpdated.addListener = jest.fn((callback) => {
 			onUpdatedCallback = callback;
 		});
-		(global as any).chrome.tabs.onRemoved.addListener = jest.fn((callback) => {
+		testGlobals.chrome.tabs.onRemoved.addListener = jest.fn((callback) => {
 			onRemovedCallback = callback;
 		});
-		(global as any).chrome.tabs.onActivated.addListener = jest.fn((callback) => {
+		testGlobals.chrome.tabs.onActivated.addListener = jest.fn((callback) => {
 			_onActivatedCallback = callback;
 		});
 
@@ -130,7 +174,7 @@ describe('TabManager Integration Tests', () => {
 		TabInfo = TabInfoModule.TabInfo;
 
 		// Make TabInfo available globally
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const TabManagerModule = require('../../modules/TabManager');
 		TabManager = TabManagerModule.TabManager;
@@ -194,12 +238,13 @@ describe('TabManager Integration Tests', () => {
 			onCreatedCallback(originalTab);
 
 			// Mock chrome.tabs.get for replacement scenario
-			(global as any).chrome.tabs.get = jest.fn((tabId, callback) => {
+			const getTabMock = testGlobals.chrome.tabs.get as jest.Mock;
+			getTabMock.mockImplementation((tabId: number, callback: (tab: chrome.tabs.Tab) => void) => {
 				if (tabId === 2) {
 					callback({
 						id: 2,
 						url: 'chrome-extension://test/park.html?tabId=1&url=https://example.com/page1'
-					});
+					} as chrome.tabs.Tab);
 				}
 			});
 
@@ -288,9 +333,9 @@ describe('TabManager Integration Tests', () => {
 			// Simulate the FIXED callback logic from TabManager.ts:184-195
 			const fixedCallback = (screen: string, pixRat: number) => {
 				// This is the FIXED logic
-				if ((global as any).getScreenCache != null) {
-					(global as any).getScreenCache.screen = screen;
-					(global as any).getScreenCache.pixRat = pixRat;
+				if (testGlobals.getScreenCache != null) {
+					testGlobals.getScreenCache.screen = screen;
+					testGlobals.getScreenCache.pixRat = pixRat;
 				} else {
 					cacheWasCleared = true; // Race condition occurred
 				}
@@ -299,7 +344,7 @@ describe('TabManager Integration Tests', () => {
 			};
 
 			// Create cache entry
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: '123456',
 				tabId: '1',
 				screen: null,
@@ -307,7 +352,7 @@ describe('TabManager Integration Tests', () => {
 			};
 
 			// Clear the cache immediately (simulating race condition)
-			(global as any).getScreenCache = null;
+			testGlobals.getScreenCache = null;
 
 			// Execute the callback - this is the fix working
 			fixedCallback('mock-screen-data', 1.5);
@@ -327,20 +372,20 @@ describe('TabManager Integration Tests', () => {
 			const buggyCallback = (screen: string, pixRat: number) => {
 				callbackExecuted = true;
 				// OLD BUGGY LOGIC: only resolve if cache exists
-				if ((global as any).getScreenCache != null) {
-					(global as any).getScreenCache.screen = screen;
-					(global as any).getScreenCache.pixRat = pixRat;
+				if (testGlobals.getScreenCache != null) {
+					testGlobals.getScreenCache.screen = screen;
+					testGlobals.getScreenCache.pixRat = pixRat;
 					promiseResolved = true; // Only resolve if cache exists!
 				}
 				// BUG: If cache is null, promiseResolved stays false!
 			};
 
 			// Create cache then clear it (race condition)
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: '789012',
 				tabId: '2'
 			};
-			(global as any).getScreenCache = null; // Cleared!
+			testGlobals.getScreenCache = null; // Cleared!
 
 			// Execute the buggy callback
 			buggyCallback('mock-data', 1);

@@ -20,8 +20,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 	]);
 }
 
+type ParkPageTestChrome = { runtime: { sendMessage: jest.Mock } };
+type ParkPageTestGlobals = Omit<typeof global, 'chrome'> & { chrome: ParkPageTestChrome };
+type ParkPageScreenData = { scr: string; pixRat: number };
+const testGlobals = global as unknown as ParkPageTestGlobals;
+
 describe('Park Page Screenshot Timeout Tests', () => {
-	let mockChrome: any;
+	let mockChrome: ParkPageTestChrome;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -33,7 +38,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 				sendMessage: jest.fn()
 			}
 		};
-		(global as any).chrome = mockChrome;
+		testGlobals.chrome = mockChrome;
 	});
 
 	afterEach(() => {
@@ -188,7 +193,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 			let pageRendered = false;
 
 			await screenPromise
-				.then((_data: any) => {
+				.then((_data: unknown) => {
 					// Handle success - would draw screenshot
 					pageRendered = true;
 				})
@@ -257,7 +262,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 				pixRat: 2
 			};
 
-			mockChrome.runtime.sendMessage.mockImplementation((msg: any) => {
+			mockChrome.runtime.sendMessage.mockImplementation((msg: { method: string }) => {
 				if (msg.method === '[TS:dataForParkPage]') {
 					return Promise.resolve(mockParkData);
 				}
@@ -287,7 +292,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 			jest.advanceTimersByTime(100);
 
 			await screenPromise
-				.then(({ scr, pixRat }: any) => {
+				.then(({ scr, pixRat }: ParkPageScreenData) => {
 					expect(scr).toBe('data:image/jpeg;base64,screenshot');
 					expect(pixRat).toBe(2);
 					drawContentCalled = true;
@@ -403,11 +408,11 @@ describe('Park Page Screenshot Timeout Tests', () => {
 		});
 
 		it('should use 2500ms timeout as configured for screenPromise', async () => {
-			const mockScreenPromise = new Promise<{ scr: string; pixRat: number }>((resolve) => {
+			const mockScreenPromise = new Promise<{ scr: string | null; pixRat: number | null }>((resolve) => {
 				setTimeout(() => resolve({ scr: 'base64data', pixRat: 2 }), 2000);
 			});
 
-			const result = withTimeout(mockScreenPromise, 2500, { scr: null as any, pixRat: null as any });
+			const result = withTimeout(mockScreenPromise, 2500, { scr: null, pixRat: null });
 
 			jest.advanceTimersByTime(2000);
 

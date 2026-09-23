@@ -2,8 +2,23 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables
-(global as any).debug = false;
+type WhiteListTestInstance = {
+	patternList: Array<{ pattern: string }>;
+	addPattern: (pattern: string) => Promise<void>;
+	isURIException: (url: string) => boolean;
+};
+type WhiteListTestConstructor = new (settingsStore: typeof mockSettingsStore) => WhiteListTestInstance;
+type WhiteListTestGlobals = typeof global & {
+	debug: boolean;
+	SettingsPageController: { reloadSettings: jest.Mock };
+	BrowserActionControl: jest.Mock;
+	ContextMenuController: { menuIdMap: Record<string, string> };
+	pauseTics: number;
+	settings: typeof mockSettingsStore;
+	whiteList: WhiteListTestInstance | null;
+	chrome: typeof chrome & { notifications: { clear: jest.Mock; create: jest.Mock } };
+};
+const testGlobals = global as WhiteListTestGlobals;
 
 // Mock SettingsStore
 const mockSettingsStore = {
@@ -11,32 +26,33 @@ const mockSettingsStore = {
 	set: jest.fn().mockResolvedValue(undefined)
 };
 
-// Mock SettingsPageController
-(global as any).SettingsPageController = {
+// Mock global variables
+testGlobals.debug = false;
+testGlobals.SettingsPageController = {
 	reloadSettings: jest.fn().mockResolvedValue(undefined)
 };
-
-// Mock BrowserActionControl
-(global as any).BrowserActionControl = jest.fn();
-(global as any).ContextMenuController = {
+testGlobals.BrowserActionControl = jest.fn();
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
-(global as any).pauseTics = 0;
-(global as any).settings = mockSettingsStore;
-(global as any).whiteList = null;
+testGlobals.pauseTics = 0;
+testGlobals.settings = mockSettingsStore;
+testGlobals.whiteList = null;
 
 // Mock chrome notifications
-(global as any).chrome.notifications = {
-	clear: jest.fn(),
-	create: jest.fn()
-};
+Object.assign(testGlobals.chrome, {
+	notifications: {
+		clear: jest.fn(),
+		create: jest.fn()
+	}
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // 3.6 — Empty pattern is silently skipped without errors
 // ══════════════════════════════════════════════════════════════════════════
 describe('3.6 — Empty / wildcard-only patterns are skipped without errors', () => {
-	let WhiteList: any;
-	let whiteList: any;
+	let WhiteList: WhiteListTestConstructor;
+	let whiteList: WhiteListTestInstance;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -47,7 +63,7 @@ describe('3.6 — Empty / wildcard-only patterns are skipped without errors', ()
 		});
 		const mod = require('../../modules/WhiteList');
 		WhiteList = mod.WhiteList;
-		(global as any).whiteList = null;
+		testGlobals.whiteList = null;
 	});
 
 	it('addPattern("") does not throw and does not add an entry', async () => {
@@ -95,8 +111,8 @@ describe('3.6 — Empty / wildcard-only patterns are skipped without errors', ()
 // 3.7 — Invalid regex pattern is caught and extension does not crash
 // ══════════════════════════════════════════════════════════════════════════
 describe('3.7 — Invalid regex patterns are caught without crashing the extension', () => {
-	let WhiteList: any;
-	let whiteList: any;
+	let WhiteList: WhiteListTestConstructor;
+	let whiteList: WhiteListTestInstance;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -107,7 +123,7 @@ describe('3.7 — Invalid regex patterns are caught without crashing the extensi
 		});
 		const mod = require('../../modules/WhiteList');
 		WhiteList = mod.WhiteList;
-		(global as any).whiteList = null;
+		testGlobals.whiteList = null;
 	});
 
 	it('addPattern with unclosed group "(unclosed" does not throw', async () => {
@@ -155,8 +171,8 @@ describe('3.7 — Invalid regex patterns are caught without crashing the extensi
 });
 
 describe('Issue #36: Whitelist patterns with https:// prefix do not work', () => {
-	let WhiteList: any;
-	let whiteList: any;
+	let WhiteList: WhiteListTestConstructor;
+	let whiteList: WhiteListTestInstance;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -175,7 +191,7 @@ describe('Issue #36: Whitelist patterns with https:// prefix do not work', () =>
 		WhiteList = WhiteListModule.WhiteList;
 
 		// Clear any existing whiteList
-		(global as any).whiteList = null;
+		testGlobals.whiteList = null;
 	});
 
 	it('should fail: patterns with https:// prefix should whitelist URLs but do not work', () => {

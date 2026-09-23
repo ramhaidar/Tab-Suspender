@@ -13,17 +13,61 @@ const PARK_URL = 'chrome-extension://test/park.html';
 const ORIGINAL_URL = 'https://example.com';
 const PARK_URL_WITH_PARAMS = `${PARK_URL}?url=${encodeURIComponent(ORIGINAL_URL)}&tabId=42&sessionId=123456`;
 
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = PARK_URL;
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
+type TabRestoreTestInfo = {
+	time: number;
+	suspended_time: number;
+	parkTrys: number;
+	parked: boolean;
+	parkedUrl: string | null;
+};
+type TabRestoreTestManager = {
+	getTabInfoOrCreate: (tab: chrome.tabs.Tab) => TabRestoreTestInfo;
+	getTabInfoById: (id: number) => TabRestoreTestInfo;
+	setTabUnsuspended: (tab: chrome.tabs.Tab) => void;
+	markTabParked: (tab: chrome.tabs.Tab) => void;
+};
+type TabRestoreTestManagerConstructor = new () => TabRestoreTestManager;
+type TabRestoreTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	pauseTics: number;
+	nextTabShouldBeSuspended: boolean;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: { tickSize: number };
+	TabInfo: unknown;
+};
+const testGlobals = global as TabRestoreTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock globals
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = PARK_URL;
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	try {
 		return new URL(url).searchParams.get(param);
 	} catch {
@@ -31,7 +75,7 @@ const PARK_URL_WITH_PARAMS = `${PARK_URL}?url=${encodeURIComponent(ORIGINAL_URL)
 	}
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -39,30 +83,30 @@ const PARK_URL_WITH_PARAMS = `${PARK_URL}?url=${encodeURIComponent(ORIGINAL_URL)
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
-(global as any).pauseTics = 0;
-(global as any).nextTabShouldBeSuspended = false;
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
+testGlobals.pauseTics = 0;
+testGlobals.nextTabShouldBeSuspended = false;
 
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn().mockResolvedValue(false)
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = { menuIdMap: {} };
-(global as any).ScreenshotController = { getScreen: jest.fn() };
+testGlobals.ContextMenuController = { menuIdMap: {} };
+testGlobals.ScreenshotController = { getScreen: jest.fn() };
 
 const BrowserActionControl = jest.fn().mockImplementation(() => ({
 	updateStatus: jest.fn(),
@@ -78,9 +122,9 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 
 const TabObserver = { tickSize: 10 };
 
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
-(global as any).TabObserver = TabObserver;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
+testGlobals.TabObserver = TabObserver;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -113,19 +157,19 @@ function makeParkedTab(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Ta
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
 describe('TabManager — Tab Restore Behavior', () => {
-	let tabManager: any;
-	let _TabManagerClass: any;
+	let tabManager: TabRestoreTestManager;
+	let _TabManagerClass: TabRestoreTestManagerConstructor;
 	let onUpdatedListener: (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => void;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
-		(global as any).getScreenCache = null;
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		testGlobals.getScreenCache = null;
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		const { TabInfo } = require('../../modules/model/TabInfo');
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const { TabManager } = require('../../modules/TabManager');
 		_TabManagerClass = TabManager;

@@ -1,5 +1,18 @@
 // Mock Chrome APIs for testing
 
+type ChromeTestGlobals = Omit<typeof global, 'chrome' | 'Response'> &
+	Record<string, unknown> & {
+		chrome: {
+			storage: typeof mockStorage;
+			tabs: typeof mockTabs;
+			windows: typeof mockWindows;
+			runtime: typeof mockRuntime;
+			scripting: typeof mockScripting;
+		};
+		Response: jest.Mock;
+	};
+const testGlobals = global as unknown as ChromeTestGlobals;
+
 const mockTab: chrome.tabs.Tab = {
 	id: 1,
 	windowId: 1,
@@ -78,7 +91,7 @@ const mockScripting = {
 	executeScript: jest.fn().mockResolvedValue([{ result: 1 }])
 };
 
-(global as any).chrome = {
+testGlobals.chrome = {
 	storage: mockStorage,
 	tabs: mockTabs,
 	windows: mockWindows,
@@ -89,10 +102,10 @@ const mockScripting = {
 // Mock DOM APIs - use Node.js built-in TextEncoder/TextDecoder
 const NodeTextEncoder = require('node:util').TextEncoder;
 const NodeTextDecoder = require('node:util').TextDecoder;
-(global as any).TextEncoder = NodeTextEncoder;
-(global as any).TextDecoder = NodeTextDecoder;
+testGlobals.TextEncoder = NodeTextEncoder;
+testGlobals.TextDecoder = NodeTextDecoder;
 // Mock ReadableStream
-(global as any).ReadableStream = jest.fn().mockImplementation((options) => {
+testGlobals.ReadableStream = jest.fn().mockImplementation((options) => {
 	let controller: { _chunks: unknown[]; enqueue: jest.Mock; close: jest.Mock } | undefined;
 	const readable = {
 		getReader: () => ({
@@ -118,7 +131,7 @@ const NodeTextDecoder = require('node:util').TextDecoder;
 });
 
 // Mock compression streams with simpler implementation
-(global as any).CompressionStream = jest.fn().mockImplementation(() => ({
+testGlobals.CompressionStream = jest.fn().mockImplementation(() => ({
 	writable: {
 		getWriter: () => ({
 			write: jest.fn().mockResolvedValue(undefined),
@@ -135,7 +148,7 @@ const NodeTextDecoder = require('node:util').TextDecoder;
 	}
 }));
 
-(global as any).DecompressionStream = jest.fn().mockImplementation(() => ({
+testGlobals.DecompressionStream = jest.fn().mockImplementation(() => ({
 	writable: {
 		getWriter: () => ({
 			write: jest.fn().mockResolvedValue(undefined),
@@ -152,7 +165,7 @@ const NodeTextDecoder = require('node:util').TextDecoder;
 	}
 }));
 
-(global as any).Response = jest.fn().mockImplementation((_body) => ({
+testGlobals.Response = jest.fn().mockImplementation((_body) => ({
 	arrayBuffer: jest.fn().mockImplementation(async () => {
 		const encoder = new NodeTextEncoder();
 		const data = encoder.encode('Hello, World!');
@@ -166,21 +179,21 @@ global.atob = jest.fn((str: string) => Buffer.from(str, 'base64').toString());
 // Spy on setInterval/clearInterval to track calls while keeping real functionality
 jest.spyOn(global, 'setInterval');
 jest.spyOn(global, 'clearInterval');
-(global as any).Date.now = jest.fn(() => 1640995200000); // Fixed timestamp for testing
+testGlobals.Date.now = jest.fn(() => 1640995200000); // Fixed timestamp for testing
 
 // Mock additional global functions required by the modules
-(global as any).trackErrors = jest.fn();
-(global as any).trackError = jest.fn();
-(global as any).trackView = jest.fn();
-(global as any).sql_error = jest.fn();
-(global as any).hasLastError = jest.fn();
-(global as any).versionCompare = jest.fn();
-(global as any).isScreenExist = jest.fn();
-(global as any).addScreen = jest.fn();
-(global as any).getScreen = jest.fn();
-(global as any).drawPreviewTile = jest.fn();
-(global as any).html2canvas = jest.fn();
-(global as any).Store = jest.fn();
-(global as any).DBProvider = jest.fn();
-(global as any).ADDED_ON_INDEX_NAME = 'test';
-(global as any).SCREENS_BINARY_DB_NAME = 'test';
+testGlobals.trackErrors = jest.fn();
+testGlobals.trackError = jest.fn();
+testGlobals.trackView = jest.fn();
+testGlobals.sql_error = jest.fn();
+testGlobals.hasLastError = jest.fn();
+testGlobals.versionCompare = jest.fn();
+testGlobals.isScreenExist = jest.fn();
+testGlobals.addScreen = jest.fn();
+testGlobals.getScreen = jest.fn();
+testGlobals.drawPreviewTile = jest.fn();
+testGlobals.html2canvas = jest.fn();
+testGlobals.Store = jest.fn();
+testGlobals.DBProvider = jest.fn();
+testGlobals.ADDED_ON_INDEX_NAME = 'test';
+testGlobals.SCREENS_BINARY_DB_NAME = 'test';

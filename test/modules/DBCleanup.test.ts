@@ -5,20 +5,34 @@ import '../typing/global.d';
 // Mock IndexedDB for testing
 require('fake-indexeddb/auto');
 
-// Mock global variables
-(global as any).TSSessionId = 123456;
-(global as any).previousTSSessionId = '123455';
-(global as any).SCREENS_DB_NAME = 'screens';
-(global as any).FD_DB_NAME = 'fds';
-(global as any).ADDED_ON_INDEX_NAME = 'added_on';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
+type DBCleanupTestGlobals = typeof global & {
+	TSSessionId: number;
+	previousTSSessionId: string;
+	SCREENS_DB_NAME: string;
+	FD_DB_NAME: string;
+	ADDED_ON_INDEX_NAME: string;
+	parkUrl: string;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	database: typeof mockDatabase;
+	ScreenshotController: typeof mockScreenshotController;
+};
+const testGlobals = global as DBCleanupTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables
+testGlobals.TSSessionId = 123456;
+testGlobals.previousTSSessionId = '123455';
+testGlobals.SCREENS_DB_NAME = 'screens';
+testGlobals.FD_DB_NAME = 'fds';
+testGlobals.ADDED_ON_INDEX_NAME = 'added_on';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -35,29 +49,30 @@ const mockDatabase = {
 	deleteIndex: jest.fn()
 };
 
-(global as any).database = mockDatabase;
+testGlobals.database = mockDatabase;
 
 // Mock ScreenshotController
 const mockScreenshotController = {
 	addScreen: jest.fn()
 };
 
-(global as any).ScreenshotController = mockScreenshotController;
-
-function _sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+testGlobals.ScreenshotController = mockScreenshotController;
 
 // Define types from DbUtils
-type IDBAddedOnIndexType = [number, number, Date | string | null];
+type IDBAddedOnIndexType = [number, number, Date | string | null | undefined];
 type IDBPKKeyArrayType = [number, number];
 type IDBFdsValueType = { tabId: number; data: { timestamp: number | Date } };
-type IDBFdsKeyArrayType = [number][];
+type ScreenResultsFilter = (
+	usedSessionIds: Record<number, boolean>,
+	usedTabIds: Record<number, number>
+) => (result: IDBAddedOnIndexType[]) => IDBPKKeyArrayType[];
+type FdsResultsFilter = (openedTabIds: Record<number, number>) => (results: IDBFdsValueType[]) => number[][];
+type CleanupDatabase = () => Promise<void>;
 
 describe('DBCleanup Tests', () => {
-	let dbCleanup_filterScreenResults: any;
-	let dbCleanup_filterFdsResults: any;
-	let cleanupDB: any;
+	let dbCleanup_filterScreenResults: ScreenResultsFilter;
+	let dbCleanup_filterFdsResults: FdsResultsFilter;
+	let cleanupDB: CleanupDatabase;
 	let TWO_WEEKS_MS: number;
 
 	beforeEach(() => {
@@ -208,15 +223,11 @@ describe('DBCleanup Tests', () => {
 				{ id: 1, url: 'https://example.com' },
 				{ id: 2, url: 'https://google.com' }
 			];
-
-			(global as any).chrome = {
-				tabs: {
-					query: jest.fn((_options, callback) => {
-						// Execute callback immediately in synchronous manner for testing
-						setTimeout(() => callback(mockTabs), 0);
-					})
-				}
-			};
+			const queryMock = testGlobals.chrome.tabs.query as jest.Mock;
+			queryMock.mockImplementation((_options: chrome.tabs.QueryInfo, callback: (tabs: chrome.tabs.Tab[]) => void) => {
+				// Execute callback immediately in synchronous manner for testing
+				setTimeout(() => callback(mockTabs as chrome.tabs.Tab[]), 0);
+			});
 
 			// Mock database operations to complete immediately
 			mockDatabase.queryIndexByRange.mockImplementation((_config, callback) => {
@@ -235,14 +246,14 @@ describe('DBCleanup Tests', () => {
 					return originalSetTimeout(fn, 0);
 				}
 				return 1;
-			}) as any;
+			}) as unknown as typeof global.setTimeout;
 
 			try {
 				// Start cleanup but don't await (avoid timeout)
 				const promise = cleanupDB();
 
 				// Verify that chrome.tabs.query was called
-				expect((global as any).chrome.tabs.query).toHaveBeenCalledWith({}, expect.any(Function));
+				expect(testGlobals.chrome.tabs.query).toHaveBeenCalledWith({}, expect.any(Function));
 
 				// Clean up the promise (but don't wait for it)
 				promise.catch(() => {}); // Ignore any errors

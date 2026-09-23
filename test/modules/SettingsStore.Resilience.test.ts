@@ -6,21 +6,38 @@ import '../typing/global.d';
 import '../../fancy-settings/source/lib/store';
 import '../../modules/Settings';
 
-(global as any).debug = false;
+type ResilienceTestStore = {
+	getOnStorageInitialized: () => Promise<void>;
+	get: (key: string) => Promise<unknown>;
+	set: (key: string, value: unknown) => Promise<unknown>;
+};
+type ResilienceTestStoreConstructor = new (
+	namespace: string,
+	defaults: typeof DEFAULT_SETTINGS,
+	offscreenProvider: ReturnType<typeof makeOffscreenProvider>
+) => ResilienceTestStore;
+type ResilienceTestGlobals = typeof global & {
+	debug: boolean;
+	SettingsStore: ResilienceTestStoreConstructor;
+	DEFAULT_SETTINGS: typeof DEFAULT_SETTINGS;
+};
+const testGlobals = global as ResilienceTestGlobals;
+
+testGlobals.debug = false;
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-function makeMockStorage(localData: Record<string, any> = {}, syncData: Record<string, any> = {}) {
+function makeMockStorage(localData: Record<string, unknown> = {}, syncData: Record<string, unknown> = {}) {
 	return {
 		local: {
 			get: jest.fn().mockImplementation(async (keys: string | string[]) => {
-				const result: Record<string, any> = {};
+				const result: Record<string, unknown> = {};
 				(Array.isArray(keys) ? keys : [keys]).forEach((k) => {
 					if (localData[k] !== undefined) result[k] = localData[k];
 				});
 				return result;
 			}),
-			set: jest.fn().mockImplementation(async (data: Record<string, any>) => {
+			set: jest.fn().mockImplementation(async (data: Record<string, unknown>) => {
 				Object.assign(localData, data);
 			}),
 			remove: jest.fn().mockImplementation(async (keys: string | string[]) => {
@@ -38,13 +55,13 @@ function makeMockStorage(localData: Record<string, any> = {}, syncData: Record<s
 			// Handles both constructor call (null → all items) and per-key fallback calls
 			get: jest.fn().mockImplementation(async (keys: string | string[] | null) => {
 				if (keys === null) return { ...syncData };
-				const result: Record<string, any> = {};
+				const result: Record<string, unknown> = {};
 				(Array.isArray(keys) ? keys : [keys]).forEach((k) => {
 					if (syncData[k] !== undefined) result[k] = syncData[k];
 				});
 				return result;
 			}),
-			set: jest.fn().mockImplementation(async (data: Record<string, any>) => {
+			set: jest.fn().mockImplementation(async (data: Record<string, unknown>) => {
 				Object.assign(syncData, data);
 			}),
 			remove: jest.fn().mockResolvedValue(undefined),
@@ -54,20 +71,20 @@ function makeMockStorage(localData: Record<string, any> = {}, syncData: Record<s
 	};
 }
 
-function makeOffscreenProvider(oldSettings: Record<string, any> = {}) {
+function makeOffscreenProvider(oldSettings: Record<string, unknown> = {}) {
 	return {
 		extractOldSettings: jest.fn().mockResolvedValue(oldSettings),
 		cleanupFormDatas: jest.fn().mockResolvedValue(undefined)
 	};
 }
 
-async function createStore(storage: any, oldSettings: Record<string, any> = {}) {
-	(global as any).chrome.storage = storage;
-	const store = new (global as any).SettingsStore(
-		'tabSuspenderSettings',
-		(global as any).DEFAULT_SETTINGS,
-		makeOffscreenProvider(oldSettings)
-	);
+function setMockStorage(storage: ReturnType<typeof makeMockStorage>) {
+	Object.assign(testGlobals.chrome.storage, storage);
+}
+
+async function createStore(storage: ReturnType<typeof makeMockStorage>, oldSettings: Record<string, unknown> = {}) {
+	setMockStorage(storage);
+	const store = new testGlobals.SettingsStore('tabSuspenderSettings', testGlobals.DEFAULT_SETTINGS, makeOffscreenProvider(oldSettings));
 	await store.getOnStorageInitialized();
 	return store;
 }
@@ -93,9 +110,9 @@ describe('SettingsStore - Resilience to storage corruption and failures', () => 
 		it('should resolve (not hang) when chrome.storage.sync.get() rejects', async () => {
 			const storage = makeMockStorage();
 			storage.sync.get = jest.fn().mockRejectedValue(new Error('Network unavailable'));
-			(global as any).chrome.storage = storage;
+			setMockStorage(storage);
 
-			const store = new (global as any).SettingsStore('tabSuspenderSettings', (global as any).DEFAULT_SETTINGS, makeOffscreenProvider());
+			const store = new testGlobals.SettingsStore('tabSuspenderSettings', testGlobals.DEFAULT_SETTINGS, makeOffscreenProvider());
 
 			await expect(
 				Promise.race([
@@ -108,15 +125,15 @@ describe('SettingsStore - Resilience to storage corruption and failures', () => 
 		it('should still initialize settings with defaults after sync.get() failure', async () => {
 			const storage = makeMockStorage();
 			storage.sync.get = jest.fn().mockRejectedValue(new Error('Network unavailable'));
-			(global as any).chrome.storage = storage;
+			setMockStorage(storage);
 
-			const store = new (global as any).SettingsStore('tabSuspenderSettings', (global as any).DEFAULT_SETTINGS, makeOffscreenProvider());
+			const store = new testGlobals.SettingsStore('tabSuspenderSettings', testGlobals.DEFAULT_SETTINGS, makeOffscreenProvider());
 			await store.getOnStorageInitialized();
 
 			const active = await store.get('active');
 			const timeout = await store.get('timeout');
-			expect(active).toBe((global as any).DEFAULT_SETTINGS.active);
-			expect(timeout).toBe((global as any).DEFAULT_SETTINGS.timeout);
+			expect(active).toBe(testGlobals.DEFAULT_SETTINGS.active);
+			expect(timeout).toBe(testGlobals.DEFAULT_SETTINGS.timeout);
 		});
 	});
 
@@ -196,7 +213,7 @@ describe('SettingsStore - Resilience to storage corruption and failures', () => 
 
 		it('should NOT overwrite active=false when local storage already has it correctly', async () => {
 			// Normal operation: user set active=false, it was persisted correctly
-			const localData: Record<string, any> = {
+			const localData: Record<string, unknown> = {
 				'store.tabSuspenderSettings.active': false
 			};
 			const storage = makeMockStorage(localData, {});
@@ -209,7 +226,7 @@ describe('SettingsStore - Resilience to storage corruption and failures', () => 
 
 		it('should NOT overwrite a valid timeout even when type-guard would otherwise reset it', async () => {
 			// Regression guard: make sure a correctly typed stored value is never replaced
-			const localData: Record<string, any> = {
+			const localData: Record<string, unknown> = {
 				'store.tabSuspenderSettings.timeout': 3600 // 1-hour custom timeout
 			};
 			const storage = makeMockStorage(localData, {});

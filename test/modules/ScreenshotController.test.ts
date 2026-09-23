@@ -5,12 +5,42 @@ import '../typing/global.d';
 // Mock IndexedDB for testing
 require('fake-indexeddb/auto');
 
+type ScreenshotTestCache = {
+	sessionId: string | number;
+	tabId: string | number;
+	screen?: string | null;
+	pixRat?: number | null;
+	getScreenPromise?: Promise<void>;
+};
+type ScreenshotResult = string | null;
+type ScreenshotControllerTestFacade = {
+	addScreen: (id: number | string, screen: string | null, pixelRatio: number | null, date?: Date) => Promise<void>;
+	getScreen: (
+		id: number,
+		sessionId: number | null,
+		callback: (screen: ScreenshotResult, pixelRatio?: number) => void,
+		retryCount?: number
+	) => Promise<void> | void;
+	isScreenExist: (id: number, sessionId: number | null, callback: (count: number) => void) => void;
+};
+type ScreenshotTestGlobals = typeof global & {
+	TSSessionId: number;
+	debugScreenCache: boolean;
+	SCREENS_DB_NAME: string;
+	parkUrl: string;
+	getScreenCache: ScreenshotTestCache | null;
+	database: typeof mockDatabase;
+	tabManager: { findReplacedTabId: jest.Mock };
+	settings: { get: jest.Mock };
+};
+const testGlobals = global as ScreenshotTestGlobals;
+
 // Mock global variables
-(global as any).TSSessionId = 123456;
-(global as any).debugScreenCache = false;
-(global as any).SCREENS_DB_NAME = 'screens';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).getScreenCache = null;
+testGlobals.TSSessionId = 123456;
+testGlobals.debugScreenCache = false;
+testGlobals.SCREENS_DB_NAME = 'screens';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.getScreenCache = null;
 
 // Mock database
 const mockDatabase = {
@@ -21,15 +51,15 @@ const mockDatabase = {
 	putV2: jest.fn()
 };
 
-(global as any).database = mockDatabase;
+testGlobals.database = mockDatabase;
 
 // Mock tabManager
-(global as any).tabManager = {
+testGlobals.tabManager = {
 	findReplacedTabId: jest.fn((id) => id)
 };
 
 // Mock settings
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn().mockResolvedValue(true) // Default: screenshots enabled
 };
 
@@ -38,17 +68,17 @@ function _sleep(ms: number): Promise<void> {
 }
 
 describe('ScreenshotController Tests', () => {
-	let ScreenshotController: any;
+	let ScreenshotController: ScreenshotControllerTestFacade;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		// Clear cache
-		(global as any).getScreenCache = null;
+		testGlobals.getScreenCache = null;
 
 		// Reset settings mock to default (screenshots enabled)
-		(global as any).settings.get.mockResolvedValue(true);
+		testGlobals.settings.get.mockResolvedValue(true);
 
 		// Reset database mock to initialized state
 		mockDatabase.isInitialized.mockReturnValue(true);
@@ -203,7 +233,7 @@ describe('ScreenshotController Tests', () => {
 				callback(null); // No screen found
 			});
 
-			let result: any;
+			let result: ScreenshotResult;
 			await ScreenshotController.getScreen(tabId, sessionId, (screen) => {
 				result = screen;
 			});
@@ -241,7 +271,7 @@ describe('ScreenshotController Tests', () => {
 			const neverResolvingPromise = new Promise(() => {}); // Never resolves
 			mockDatabase.getInitializedPromise.mockReturnValue(neverResolvingPromise);
 
-			let callbackResult: any;
+			let callbackResult: ScreenshotResult;
 			let callbackCallCount = 0;
 
 			await ScreenshotController.getScreen(tabId, sessionId, (result) => {
@@ -286,7 +316,7 @@ describe('ScreenshotController Tests', () => {
 			// Spy on getScreen to track retry calls
 			jest
 				.spyOn(ScreenshotController, 'getScreen')
-				.mockImplementation((id: any, sessionId: any, callback: (result: any) => void, currentRetryCount: number = 0) => {
+				.mockImplementation((id: number, sessionId: number | null, callback: (result: ScreenshotResult) => void, currentRetryCount = 0) => {
 					if ((currentRetryCount as number) < 2) {
 						_retryCount = currentRetryCount as number;
 						// Call original method to test actual retry logic
@@ -298,7 +328,7 @@ describe('ScreenshotController Tests', () => {
 					}
 				});
 
-			ScreenshotController.getScreen(tabId, sessionId, (result: any) => {
+			ScreenshotController.getScreen(tabId, sessionId, (result: ScreenshotResult) => {
 				expect(result).toBeNull();
 			});
 
@@ -320,12 +350,12 @@ describe('ScreenshotController Tests', () => {
 			mockDatabase.isInitialized.mockReturnValue(true);
 
 			// Clear any existing cache
-			(global as any).getScreenCache = null;
+			testGlobals.getScreenCache = null;
 
 			// Create an immediately resolved promise
 			const cachePromise = Promise.resolve();
 
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: sessionId,
 				tabId: tabId,
 				getScreenPromise: cachePromise,
@@ -342,7 +372,7 @@ describe('ScreenshotController Tests', () => {
 
 			expect(result.screen).toBe(cachedScreen);
 			expect(result.pixelRatio).toBe(cachedPixelRatio);
-			expect((global as any).getScreenCache).toBeNull(); // Should clear cache
+			expect(testGlobals.getScreenCache).toBeNull(); // Should clear cache
 			expect(mockDatabase.queryIndex).not.toHaveBeenCalled(); // Should not query DB
 		});
 
@@ -354,10 +384,10 @@ describe('ScreenshotController Tests', () => {
 			mockDatabase.isInitialized.mockReturnValue(true);
 
 			// Clear any existing cache
-			(global as any).getScreenCache = null;
+			testGlobals.getScreenCache = null;
 
 			// Set up cache with different values
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: 999999, // Different session
 				tabId: tabId,
 				getScreenPromise: Promise.resolve(),
@@ -376,7 +406,7 @@ describe('ScreenshotController Tests', () => {
 				});
 			});
 
-			expect((global as any).getScreenCache).toBeNull(); // Should clear mismatched cache
+			expect(testGlobals.getScreenCache).toBeNull(); // Should clear mismatched cache
 			expect(mockDatabase.queryIndex).toHaveBeenCalled(); // Should query DB instead
 			expect(result.screen).toBe('db-screen'); // Should get data from DB
 		});
@@ -395,7 +425,7 @@ describe('ScreenshotController Tests', () => {
 			// Set up cache with a failing promise
 			const cachePromise = Promise.reject(new Error('Cache operation failed'));
 
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: sessionId,
 				tabId: tabId,
 				getScreenPromise: cachePromise,
@@ -421,7 +451,7 @@ describe('ScreenshotController Tests', () => {
 			// Should fall back to database when cache promise fails
 			expect(result.screen).toBe(dbScreen);
 			expect(result.pixelRatio).toBe(dbPixelRatio);
-			expect((global as any).getScreenCache).toBeNull(); // Should clear cache after error
+			expect(testGlobals.getScreenCache).toBeNull(); // Should clear cache after error
 			expect(mockDatabase.queryIndex).toHaveBeenCalled(); // Should query database as fallback
 		});
 
@@ -442,7 +472,7 @@ describe('ScreenshotController Tests', () => {
 				_promiseResolve = resolve;
 			});
 
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: sessionId,
 				tabId: tabId,
 				getScreenPromise: cachePromise,
@@ -472,7 +502,7 @@ describe('ScreenshotController Tests', () => {
 			expect(result.pixelRatio).toBe(dbPixelRatio);
 
 			// Cache should still exist (not cleared) since we only skipped it
-			expect((global as any).getScreenCache).not.toBeNull();
+			expect(testGlobals.getScreenCache).not.toBeNull();
 		});
 
 		it('should avoid deadlock when cache is being initialized by the same call', async () => {
@@ -494,7 +524,7 @@ describe('ScreenshotController Tests', () => {
 			let getScreenCallbackExecuted = false;
 
 			// Create cache like TabManager does
-			(global as any).getScreenCache = {
+			testGlobals.getScreenCache = {
 				sessionId: sessionId,
 				tabId: tabId,
 				getScreenPromise: new Promise<void>((resolve) => {
@@ -510,9 +540,9 @@ describe('ScreenshotController Tests', () => {
 					// This is the call that would deadlock without the fix
 					ScreenshotController.getScreen(tabId, sessionId, (screen, pixRat) => {
 						// Update cache with results (like TabManager does)
-						if ((global as any).getScreenCache != null) {
-							(global as any).getScreenCache.screen = screen;
-							(global as any).getScreenCache.pixRat = pixRat;
+						if (testGlobals.getScreenCache != null) {
+							testGlobals.getScreenCache.screen = screen;
+							testGlobals.getScreenCache.pixRat = pixRat;
 						}
 						getScreenCallbackExecuted = true;
 						resolve();
@@ -523,15 +553,15 @@ describe('ScreenshotController Tests', () => {
 			};
 
 			// Wait for the promise to resolve
-			await (global as any).getScreenCache.getScreenPromise;
+			await testGlobals.getScreenCache.getScreenPromise;
 
 			// Verify the callback was executed (no deadlock)
 			expect(getScreenCallbackExecuted).toBe(true);
 			expect(mockDatabase.queryIndex).toHaveBeenCalled();
 
 			// Cache should now have the data
-			expect((global as any).getScreenCache.screen).toBe(dbScreen);
-			expect((global as any).getScreenCache.pixRat).toBe(dbPixelRatio);
+			expect(testGlobals.getScreenCache.screen).toBe(dbScreen);
+			expect(testGlobals.getScreenCache.pixRat).toBe(dbPixelRatio);
 		});
 
 		it('should return null when screenshots are disabled', async () => {
@@ -539,12 +569,12 @@ describe('ScreenshotController Tests', () => {
 			const sessionId = 123456;
 
 			// Mock settings to return false for screenshotsEnabled
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'screenshotsEnabled') return Promise.resolve(false);
 				return Promise.resolve(true);
 			});
 
-			let resultScreen: any;
+			let resultScreen: ScreenshotResult;
 			let callbackCalled = false;
 
 			await ScreenshotController.getScreen(tabId, sessionId, (screen) => {

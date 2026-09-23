@@ -33,35 +33,72 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
+type FaviconRetryTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	publicExtensionUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugTabsInfo: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	pauseTics: number;
+	pauseTicsStartedFrom: number;
+	isCharging: boolean;
+	batteryLevel: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	isTabMarkedForUnsuspend: jest.Mock;
+	closeTab: jest.Mock;
+	parkTab: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabInfo: unknown;
+	TabManager: unknown;
+	TabObserver: unknown;
+};
+const testGlobals = global as FaviconRetryTestGlobals;
+
 const PARK_URL = 'chrome-extension://test/park.html';
 const PARKED_URL = `${PARK_URL}?tabId=42&url=https%3A%2F%2Fexample.com&sessionId=123456`;
 
 // ─── Globals ─────────────────────────────────────────────────────────────────
 
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = PARK_URL;
-(global as any).publicExtensionUrl = PARK_URL;
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugTabsInfo = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).pauseTics = 0;
-(global as any).pauseTicsStartedFrom = 0;
-(global as any).isCharging = false;
-(global as any).batteryLevel = 1.0;
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = PARK_URL;
+testGlobals.publicExtensionUrl = PARK_URL;
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugTabsInfo = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.pauseTics = 0;
+testGlobals.pauseTicsStartedFrom = 0;
+testGlobals.isCharging = false;
+testGlobals.batteryLevel = 1.0;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	try {
 		return new URL(url).searchParams.get(param);
 	} catch {
 		return null;
 	}
 });
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -69,18 +106,18 @@ const PARKED_URL = `${PARK_URL}?tabId=42&url=https%3A%2F%2Fexample.com&sessionId
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
-(global as any).isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
-(global as any).closeTab = jest.fn();
-(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
+testGlobals.isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
+testGlobals.closeTab = jest.fn();
+testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
 
 // Per-test settings overrides
-let settingsOverrides: Record<string, any> = {};
+let settingsOverrides: Record<string, unknown> = {};
 
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			active: true,
 			timeout: 30,
 			pinned: false,
@@ -104,11 +141,11 @@ let settingsOverrides: Record<string, any> = {};
 	})
 };
 
-(global as any).whiteList = { isURIException: jest.fn().mockReturnValue(false) };
-(global as any).ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
-(global as any).tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
-(global as any).ContextMenuController = { menuIdMap: {} };
-(global as any).ScreenshotController = { getScreen: jest.fn() };
+testGlobals.whiteList = { isURIException: jest.fn().mockReturnValue(false) };
+testGlobals.ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
+testGlobals.tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
+testGlobals.ContextMenuController = { menuIdMap: {} };
+testGlobals.ScreenshotController = { getScreen: jest.fn() };
 
 const BrowserActionControl = jest.fn().mockImplementation(() => ({
 	updateStatus: jest.fn(),
@@ -120,8 +157,8 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	onRemoveTab: jest.fn(),
 	collectInitialTabState: jest.fn()
 }));
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -150,16 +187,26 @@ function makeParkedTab(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Ta
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
+type FaviconTabManager = { getTabInfoById: (tabId: number) => { refreshIconRetries: number } | undefined };
+type FaviconTabManagerConstructor = new () => FaviconTabManager;
+type FaviconTabObserver = { tick: () => Promise<void> };
+type FaviconTabObserverConstructor = new (manager: FaviconTabManager) => FaviconTabObserver;
+
 describe('TabObserver — Favicon Retry for Parked Tabs', () => {
-	let tabManager: any;
-	let tabObserver: any;
-	let TabObserverClass: any;
-	let TabManagerClass: any;
+	let tabManager: FaviconTabManager;
+	let tabObserver: FaviconTabObserver;
+	let TabObserverClass: FaviconTabObserverConstructor;
+	let TabManagerClass: FaviconTabManagerConstructor;
 
 	let currentTab: chrome.tabs.Tab;
 
+	type FaviconRetryMockWindow = Pick<chrome.windows.Window, 'id' | 'focused' | 'tabs'>;
+
 	function setWindowTab(tab: chrome.tabs.Tab) {
-		(global as any).chrome.windows.getAll = jest.fn((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [tab] }]));
+		(testGlobals.chrome.windows.getAll as jest.Mock).mockImplementation(
+			(_options: chrome.windows.QueryOptions, callback: (windows: FaviconRetryMockWindow[]) => void) =>
+				callback([{ id: 1, focused: true, tabs: [tab] }])
+		);
 	}
 
 	async function runTicks(n: number) {
@@ -182,26 +229,26 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 		jest.useFakeTimers();
 
 		settingsOverrides = {};
-		(global as any).discardTab = jest.fn();
-		(global as any).isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
-		(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
-		(global as any).pauseTics = 0;
-		(global as any).pauseTicsStartedFrom = 0;
+		testGlobals.discardTab = jest.fn();
+		testGlobals.isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
+		testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
+		testGlobals.pauseTics = 0;
+		testGlobals.pauseTicsStartedFrom = 0;
 
 		const { TabInfo } = require('../../modules/model/TabInfo');
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const { TabManager } = require('../../modules/TabManager');
-		(global as any).TabManager = TabManagerClass = TabManager;
+		testGlobals.TabManager = TabManagerClass = TabManager;
 
 		require('../../modules/TabObserver');
-		TabObserverClass = (global as any).TabObserver;
+		TabObserverClass = testGlobals.TabObserver as FaviconTabObserverConstructor;
 
 		tabManager = new TabManagerClass();
 
 		// Override chrome.tabs.reload to invoke the callback so the inner reload
 		// logic (discardTab after reload) can execute if tested
-		(global as any).chrome.tabs.reload = jest.fn().mockImplementation((_id: number, cb?: () => void) => {
+		testGlobals.chrome.tabs.reload = jest.fn().mockImplementation((_id: number, cb?: () => void) => {
 			if (cb) cb();
 		});
 
@@ -234,7 +281,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			// refreshIconIndex starts at 0 → timeout = 100 * 0 = 0 ms
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalledWith(currentTab.id, expect.any(Function));
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalledWith(currentTab.id, expect.any(Function));
 		});
 
 		it('calls chrome.tabs.reload after tick when favIconUrl is null/undefined', async () => {
@@ -244,7 +291,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(1);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalledWith(currentTab.id, expect.any(Function));
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalledWith(currentTab.id, expect.any(Function));
 		});
 
 		it('calls chrome.tabs.reload with the correct tab id', async () => {
@@ -256,7 +303,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(1);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalledWith(TAB_ID, expect.any(Function));
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalledWith(TAB_ID, expect.any(Function));
 		});
 
 		it('schedules reload inside a setTimeout (not called synchronously)', async () => {
@@ -266,11 +313,11 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(1);
 
 			// Before advancing timers: reload must NOT have been called yet
-			expect((global as any).chrome.tabs.reload).not.toHaveBeenCalled();
+			expect(testGlobals.chrome.tabs.reload).not.toHaveBeenCalled();
 
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalled();
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalled();
 		});
 	});
 
@@ -285,7 +332,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(3);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).not.toHaveBeenCalled();
+			expect(testGlobals.chrome.tabs.reload).not.toHaveBeenCalled();
 		});
 
 		it('does NOT call chrome.tabs.reload when favIconUrl is a data URI', async () => {
@@ -295,7 +342,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(3);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).not.toHaveBeenCalled();
+			expect(testGlobals.chrome.tabs.reload).not.toHaveBeenCalled();
 		});
 	});
 
@@ -311,7 +358,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(3);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalledTimes(2);
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalledTimes(2);
 		});
 
 		it('does NOT call chrome.tabs.reload on the 3rd tick once retry cap is reached', async () => {
@@ -320,15 +367,15 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 
 			await runTicks(2);
 			advanceFaviconTimers();
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalledTimes(2);
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalledTimes(2);
 
-			(global as any).chrome.tabs.reload.mockClear();
+			(testGlobals.chrome.tabs.reload as jest.Mock).mockClear();
 
 			// 3rd and beyond ticks must not trigger another reload
 			await runTicks(2);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).not.toHaveBeenCalled();
+			expect(testGlobals.chrome.tabs.reload).not.toHaveBeenCalled();
 		});
 
 		it('calls chrome.tabs.reload exactly once on the first tick with empty icon', async () => {
@@ -338,7 +385,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(1);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).toHaveBeenCalledTimes(1);
+			expect(testGlobals.chrome.tabs.reload).toHaveBeenCalledTimes(1);
 		});
 	});
 
@@ -401,7 +448,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			// Advance timers: first setTimeout fires → reload → callback → second setTimeout
 			advanceFaviconTimers();
 
-			expect((global as any).discardTab).toHaveBeenCalledWith(currentTab.id);
+			expect(testGlobals.discardTab).toHaveBeenCalledWith(currentTab.id);
 		});
 
 		it('does NOT call discardTab after reload when tab.discarded=false', async () => {
@@ -414,7 +461,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			// discardTab may still be called from the auto-discard path if
 			// discardTabAfterSuspendWithTimeout is on; here it's off (settingsOverrides default)
 			// so the only path is the post-reload discard. Tab is not discarded → not called.
-			expect((global as any).discardTab).not.toHaveBeenCalled();
+			expect(testGlobals.discardTab).not.toHaveBeenCalled();
 		});
 	});
 
@@ -447,7 +494,7 @@ describe('TabObserver — Favicon Retry for Parked Tabs', () => {
 			await runTicks(3);
 			advanceFaviconTimers();
 
-			expect((global as any).chrome.tabs.reload).not.toHaveBeenCalled();
+			expect(testGlobals.chrome.tabs.reload).not.toHaveBeenCalled();
 		});
 	});
 });

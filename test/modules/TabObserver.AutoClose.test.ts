@@ -11,33 +11,70 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
+type AutoCloseTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	publicExtensionUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugTabsInfo: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	pauseTics: number;
+	pauseTicsStartedFrom: number;
+	isCharging: boolean;
+	batteryLevel: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	isTabMarkedForUnsuspend: jest.Mock;
+	closeTab: jest.Mock;
+	parkTab: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabInfo: unknown;
+	TabManager: unknown;
+	TabObserver: unknown;
+};
+const testGlobals = global as AutoCloseTestGlobals;
+
 const PARK_URL = 'chrome-extension://test/park.html';
 const TAB_URL = 'https://example.com';
 
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = PARK_URL;
-(global as any).publicExtensionUrl = PARK_URL;
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugTabsInfo = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).pauseTics = 0;
-(global as any).pauseTicsStartedFrom = 0;
-(global as any).isCharging = false;
-(global as any).batteryLevel = 1.0;
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = PARK_URL;
+testGlobals.publicExtensionUrl = PARK_URL;
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugTabsInfo = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.pauseTics = 0;
+testGlobals.pauseTicsStartedFrom = 0;
+testGlobals.isCharging = false;
+testGlobals.batteryLevel = 1.0;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	try {
 		return new URL(url).searchParams.get(param);
 	} catch {
 		return null;
 	}
 });
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -45,18 +82,18 @@ const TAB_URL = 'https://example.com';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
-(global as any).isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
-(global as any).closeTab = jest.fn();
-(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
+testGlobals.isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
+testGlobals.closeTab = jest.fn();
+testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
 
 // Per-test settings overrides: tests write to this object to change individual values.
-let settingsOverrides: Record<string, any> = {};
+let settingsOverrides: Record<string, unknown> = {};
 
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			active: true,
 			timeout: 30,
 			pinned: false,
@@ -79,11 +116,11 @@ let settingsOverrides: Record<string, any> = {};
 	})
 };
 
-(global as any).whiteList = { isURIException: jest.fn().mockReturnValue(false) };
-(global as any).ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
-(global as any).tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
-(global as any).ContextMenuController = { menuIdMap: {} };
-(global as any).ScreenshotController = { getScreen: jest.fn() };
+testGlobals.whiteList = { isURIException: jest.fn().mockReturnValue(false) };
+testGlobals.ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
+testGlobals.tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
+testGlobals.ContextMenuController = { menuIdMap: {} };
+testGlobals.ScreenshotController = { getScreen: jest.fn() };
 
 const BrowserActionControl = jest.fn().mockImplementation(() => ({
 	updateStatus: jest.fn(),
@@ -95,10 +132,29 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	onRemoveTab: jest.fn(),
 	collectInitialTabState: jest.fn()
 }));
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+type AutoCloseMockWindow = Pick<chrome.windows.Window, 'id' | 'tabs'>;
+type AutoCloseTabInfo = { time: number; active_time: number; swch_cnt: number; parked: boolean };
+type AutoCloseTabManager = {
+	getTabInfoOrCreate: (tab: chrome.tabs.Tab) => AutoCloseTabInfo;
+	getTabInfoById: (tabId: number) => AutoCloseTabInfo | undefined;
+};
+type AutoCloseTabManagerConstructor = new () => AutoCloseTabManager;
+type AutoCloseTabObserver = { tick: () => Promise<void> };
+type AutoCloseTabObserverConstructor = {
+	new (manager: AutoCloseTabManager): AutoCloseTabObserver;
+	tickSize: number;
+};
+
+function mockWindowsGetAll(windows: AutoCloseMockWindow[]) {
+	(chrome.windows.getAll as jest.Mock).mockImplementation(
+		(_options: chrome.windows.QueryOptions, callback: (windows: AutoCloseMockWindow[]) => void) => callback(windows)
+	);
+}
 
 function makeTab(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab {
 	return {
@@ -133,7 +189,7 @@ async function flushPromises(count = 30) {
 }
 
 /** Run one tick and drain the microtask queue. */
-async function runTick(tabObserver: any) {
+async function runTick(tabObserver: AutoCloseTabObserver) {
 	await tabObserver.tick();
 	await flushPromises();
 }
@@ -141,31 +197,31 @@ async function runTick(tabObserver: any) {
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
 describe('TabObserver — Auto-Close Rules', () => {
-	let tabManager: any;
-	let tabObserver: any;
-	let TabObserverClass: any;
-	let TabManagerClass: any;
+	let tabManager: AutoCloseTabManager;
+	let tabObserver: AutoCloseTabObserver;
+	let TabObserverClass: AutoCloseTabObserverConstructor;
+	let TabManagerClass: AutoCloseTabManagerConstructor;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		settingsOverrides = {};
-		(global as any).closeTab = jest.fn();
-		(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
-		(global as any).pauseTics = 0;
-		(global as any).pauseTicsStartedFrom = 0;
+		testGlobals.closeTab = jest.fn();
+		testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
+		testGlobals.pauseTics = 0;
+		testGlobals.pauseTicsStartedFrom = 0;
 
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		const { TabInfo } = require('../../modules/model/TabInfo');
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const { TabManager } = require('../../modules/TabManager');
-		(global as any).TabManager = TabManagerClass = TabManager;
+		testGlobals.TabManager = TabManagerClass = TabManager;
 
 		require('../../modules/TabObserver');
-		TabObserverClass = (global as any).TabObserver;
+		TabObserverClass = testGlobals.TabObserver as AutoCloseTabObserverConstructor;
 		// tickSize=10 means tickCount (incremented by 10 each tick) % 10 === 0 always,
 		// so the close-tab block runs on every tick.
 		TabObserverClass.tickSize = 10;
@@ -185,7 +241,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tab3 = makeTab({ id: 3, url: 'https://c.com' });
 
 			const windows = [{ id: 1, tabs: [tab1, tab2, tab3] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			// Pre-populate tabInfo for all three tabs so getTabInfoById finds them.
 			const info1 = tabManager.getTabInfoOrCreate(tab1);
@@ -208,14 +264,14 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).toHaveBeenCalledTimes(1);
+			expect(testGlobals.closeTab).toHaveBeenCalledTimes(1);
 		});
 
 		it('does not call closeTab more than once per tick even with many excess tabs', async () => {
 			// Limit is 2, we have 5 tabs — still only one should be closed per tick.
 			const tabs = [1, 2, 3, 4, 5].map((id) => makeTab({ id, url: `https://tab${id}.com` }));
 			const windows = [{ id: 1, tabs }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			tabs.forEach((tab) => {
 				const info = tabManager.getTabInfoOrCreate(tab);
@@ -228,7 +284,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			await runTick(tabObserver);
 
 			// The break after oneTabClosed = true ensures only 1 close per tick.
-			expect((global as any).closeTab).toHaveBeenCalledTimes(1);
+			expect(testGlobals.closeTab).toHaveBeenCalledTimes(1);
 		});
 	});
 
@@ -246,7 +302,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tabGrouped2 = makeTab({ id: 3, url: 'https://grouped2.com', groupId: 5 });
 
 			const windows = [{ id: 1, tabs: [tabRegular, tabGrouped1, tabGrouped2] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			// Pre-populate tabInfo for all tabs.
 			[tabRegular, tabGrouped1, tabGrouped2].forEach((tab) => {
@@ -261,7 +317,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			// Only tabRegular is eligible (grouped tabs filtered out by isPassGroupedTabsRules).
 			// tabArray.length = 1 which is NOT > limitOfOpenedTabs (2), so closeTab is NOT called.
-			expect((global as any).closeTab).not.toHaveBeenCalled();
+			expect(testGlobals.closeTab).not.toHaveBeenCalled();
 		});
 
 		it('closes a non-grouped tab when both grouped and non-grouped tabs exceed limit with ignoreCloseGroupedTabs=false', async () => {
@@ -273,7 +329,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tabGrouped2 = makeTab({ id: 3, url: 'https://grouped2.com', groupId: 5 });
 
 			const windows = [{ id: 1, tabs: [tabRegular, tabGrouped1, tabGrouped2] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			[tabRegular, tabGrouped1, tabGrouped2].forEach((tab) => {
 				const info = tabManager.getTabInfoOrCreate(tab);
@@ -287,7 +343,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			// All 3 tabs are eligible (ignoreCloseGroupedTabs=false means grouped tabs ARE included).
 			// 3 > 2 limit → closeTab must be called.
-			expect((global as any).closeTab).toHaveBeenCalledTimes(1);
+			expect(testGlobals.closeTab).toHaveBeenCalledTimes(1);
 		});
 	});
 
@@ -309,7 +365,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tabC = makeTab({ id: 3, url: 'https://c.com' }); // third tab to push count > limit
 
 			const windows = [{ id: 1, tabs: [tabA, tabB, tabC] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			const infoA = tabManager.getTabInfoOrCreate(tabA);
 			infoA.time = 200;
@@ -331,9 +387,9 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).toHaveBeenCalledTimes(1);
+			expect(testGlobals.closeTab).toHaveBeenCalledTimes(1);
 			// The first argument to closeTab is the tab id of the lowest-rank tab.
-			expect((global as any).closeTab.mock.calls[0][0]).toBe(1);
+			expect(testGlobals.closeTab.mock.calls[0][0]).toBe(1);
 		});
 
 		it('closes the parked tab (rank = -time²) when it has a much lower rank', async () => {
@@ -347,7 +403,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tabC = makeTab({ id: 3, url: 'https://c.com' });
 
 			const windows = [{ id: 1, tabs: [tabA, tabB, tabC] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			const infoA = tabManager.getTabInfoOrCreate(tabA);
 			infoA.time = 100;
@@ -369,8 +425,8 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).toHaveBeenCalledTimes(1);
-			expect((global as any).closeTab.mock.calls[0][0]).toBe(1);
+			expect(testGlobals.closeTab).toHaveBeenCalledTimes(1);
+			expect(testGlobals.closeTab.mock.calls[0][0]).toBe(1);
 		});
 
 		it('closes the least-active tab (higher active_time raises rank, protecting it)', async () => {
@@ -383,7 +439,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tabC = makeTab({ id: 3, url: 'https://c.com' });
 
 			const windows = [{ id: 1, tabs: [tabA, tabB, tabC] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			const infoA = tabManager.getTabInfoOrCreate(tabA);
 			infoA.time = 100;
@@ -405,9 +461,9 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).toHaveBeenCalledTimes(1);
+			expect(testGlobals.closeTab).toHaveBeenCalledTimes(1);
 			// Tab B has lowest rank → it must be the one closed.
-			expect((global as any).closeTab.mock.calls[0][0]).toBe(2);
+			expect(testGlobals.closeTab.mock.calls[0][0]).toBe(2);
 		});
 	});
 
@@ -421,7 +477,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tab2 = makeTab({ id: 2, url: 'https://b.com' });
 
 			const windows = [{ id: 1, tabs: [tab1, tab2] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			[tab1, tab2].forEach((tab) => {
 				const info = tabManager.getTabInfoOrCreate(tab);
@@ -433,7 +489,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).not.toHaveBeenCalled();
+			expect(testGlobals.closeTab).not.toHaveBeenCalled();
 		});
 
 		it('does NOT call closeTab when tab count is below limitOfOpenedTabs', async () => {
@@ -441,7 +497,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tab1 = makeTab({ id: 1, url: 'https://a.com' });
 
 			const windows = [{ id: 1, tabs: [tab1] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			const info = tabManager.getTabInfoOrCreate(tab1);
 			info.time = 100;
@@ -451,7 +507,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).not.toHaveBeenCalled();
+			expect(testGlobals.closeTab).not.toHaveBeenCalled();
 		});
 
 		it('does NOT call closeTab when isCloseTabsOn is false even with many tabs', async () => {
@@ -459,7 +515,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			const tabs = [1, 2, 3, 4, 5].map((id) => makeTab({ id, url: `https://tab${id}.com` }));
 			const windows = [{ id: 1, tabs }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			tabs.forEach((tab) => {
 				const info = tabManager.getTabInfoOrCreate(tab);
@@ -471,7 +527,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			await runTick(tabObserver);
 
-			expect((global as any).closeTab).not.toHaveBeenCalled();
+			expect(testGlobals.closeTab).not.toHaveBeenCalled();
 		});
 
 		it('does NOT close any tab when all tabs have time < closeTimeout', async () => {
@@ -481,7 +537,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			const tab3 = makeTab({ id: 3, url: 'https://c.com' });
 
 			const windows = [{ id: 1, tabs: [tab1, tab2, tab3] }];
-			(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb(windows));
+			mockWindowsGetAll(windows);
 
 			[tab1, tab2, tab3].forEach((tab) => {
 				const info = tabManager.getTabInfoOrCreate(tab);
@@ -495,7 +551,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 
 			// tabArray has 3 elements (> limit 2), but no tab reaches closeTimeout,
 			// so minRankTab stays null and closeTab is never called.
-			expect((global as any).closeTab).not.toHaveBeenCalled();
+			expect(testGlobals.closeTab).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -2,28 +2,63 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).publicExtensionUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugTabsInfo = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).pauseTics = 0;
-(global as any).isCharging = false;
-(global as any).batteryLevel = 1.0;
+type TestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	publicExtensionUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugTabsInfo: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	pauseTics: number;
+	pauseTicsStartedFrom: number;
+	isCharging: boolean;
+	batteryLevel: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	parkTab: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabInfo: unknown;
+	TabManager: unknown;
+	TabObserver: unknown;
+};
+const testGlobals = global as TestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.publicExtensionUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugTabsInfo = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.pauseTics = 0;
+testGlobals.isCharging = false;
+testGlobals.batteryLevel = 1.0;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -31,16 +66,16 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
-(global as any).parkTab = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
+testGlobals.parkTab = jest.fn();
 
 // Mock global objects
 let mockIgnoreAudible = true; // Can be changed per test
 
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			active: true,
 			timeout: 900, // 15 minutes in seconds
 			pinned: true,
@@ -59,24 +94,24 @@ let mockIgnoreAudible = true; // Can be changed per test
 	})
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -93,15 +128,15 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 }));
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
 
 describe('TabObserver - Active Tab with Audible Bug', () => {
-	let tabManager: any;
-	let TabManager: any;
-	let TabInfo: any;
-	let tabObserver: any;
-	let TabObserverClass: any;
+	let tabManager: TestTabManager;
+	let TabManager: TestTabManagerConstructor;
+	let TabInfo: unknown;
+	let tabObserver: TestTabObserver;
+	let TabObserverClass: TestTabObserverConstructor;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -111,34 +146,34 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		mockIgnoreAudible = true;
 
 		// Clear global variables
-		(global as any).getScreenCache = null;
-		(global as any).parkTab = jest.fn();
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		testGlobals.getScreenCache = null;
+		testGlobals.parkTab = jest.fn();
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		// Re-import modules
 		const TabInfoModule = require('../../modules/model/TabInfo');
 		TabInfo = TabInfoModule.TabInfo;
 
 		// Make TabInfo available globally
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const TabManagerModule = require('../../modules/TabManager');
 		TabManager = TabManagerModule.TabManager;
 
 		// Make TabManager available globally (required by TabObserver)
-		(global as any).TabManager = TabManager;
+		testGlobals.TabManager = TabManager;
 
 		// Load TabObserver module - it defines TabObserver class globally
 		require('../../modules/TabObserver');
 
 		// Get TabObserver from global scope (it's defined without export/import as per project rules)
-		TabObserverClass = (global as any).TabObserver;
+		TabObserverClass = testGlobals.TabObserver as TestTabObserverConstructor;
 
 		// Create TabManager instance
 		tabManager = new TabManager();
 
 		// Mock chrome.windows.getAll to return our test tabs
-		(global as any).chrome.windows.getAll = jest.fn();
+		testGlobals.chrome.windows.getAll = jest.fn();
 	});
 
 	/**
@@ -212,14 +247,14 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		console.log('Inactive audible tab time after 90 ticks:', tabInfo.time);
 
 		// Clear the parkTab mock to track new calls
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// Run one more tick
 		await tabObserver.tick(false);
 
 		// EXPECTED: Tab should NOT be suspended because it's playing audio (audible=true)
 		// and ignoreAudible setting is true (protect audible tabs)
-		expect((global as any).parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: inactiveAudibleTab.id }), inactiveAudibleTab.id);
+		expect(testGlobals.parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: inactiveAudibleTab.id }), inactiveAudibleTab.id);
 	});
 
 	/**
@@ -322,16 +357,16 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		console.log('Music tab time after 90 ticks (while ACTIVE):', tabInfo.time);
 
 		// Clear parkTab mock
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// User switches to another tab - next tick happens 10 seconds later
 		await tabObserver.tick(false);
 
 		// CHECK: Was music tab suspended?
-		const wasSuspended = (global as any).parkTab.mock.calls.some((call) => call[1] === musicTab.id);
+		const wasSuspended = testGlobals.parkTab.mock.calls.some((call) => call[1] === musicTab.id);
 
 		console.log('Was music tab suspended after switch?', wasSuspended);
-		console.log('parkTab calls:', (global as any).parkTab.mock.calls);
+		console.log('parkTab calls:', testGlobals.parkTab.mock.calls);
 
 		// THIS IS THE BUG THE USER EXPERIENCED:
 		// If time accumulated while tab was active (time >= 900),
@@ -340,7 +375,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		//
 		// The test expects suspension to NOT happen (that's the correct behavior)
 		// But with current bug, suspension WILL happen
-		expect((global as any).parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
+		expect(testGlobals.parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
 	});
 
 	/**
@@ -423,14 +458,14 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		console.log('Music tab time after 90 ticks:', tabInfo.time);
 
 		// Clear parkTab mock
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// Tick #91: audible is temporarily FALSE - tab gets suspended!
 		await tabObserver.tick(false);
 
 		// AFTER FIX: Tab should NOT be suspended because fix prevents time accumulation
 		// Even with race condition (audible temporarily false), time doesn't accumulate
-		expect((global as any).parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
+		expect(testGlobals.parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
 	});
 
 	/**
@@ -524,13 +559,13 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		// So time should be 0 (protected by !tab.active check in fix)
 		expect(tabInfo.time).toBe(0);
 
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// User switches away
 		await tabObserver.tick(false);
 
 		// AFTER FIX: Tab NOT suspended because time never accumulated
-		expect((global as any).parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
+		expect(testGlobals.parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
 	});
 
 	/**
@@ -645,7 +680,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		tabInfo = tabManager.getTabInfoById(musicTab.id);
 		console.log('[Phase 2] Music tab time after activation (ACTIVE, audible):', tabInfo.time);
 
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// Phase 3: User switches away - FIRST tick after switch
 		await tabObserver.tick(false);
@@ -655,11 +690,11 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 
 		// BUG: If line 255-256 doesn't execute (for any reason),
 		// tab will have time=10 and might be suspended if conditions align
-		const wasSuspended = (global as any).parkTab.mock.calls.some((call) => call[1] === musicTab.id);
+		const wasSuspended = testGlobals.parkTab.mock.calls.some((call) => call[1] === musicTab.id);
 		console.log('Was music tab suspended?', wasSuspended);
 
 		// Tab should NOT be suspended (audible protection should work)
-		expect((global as any).parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
+		expect(testGlobals.parkTab).not.toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
 	});
 
 	/**
@@ -733,14 +768,14 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		// Time should have accumulated to 900 because tab.audible=false
 		expect(tabInfo.time).toBeGreaterThanOrEqual(900);
 
-		(global as any).parkTab.mockClear();
+		testGlobals.parkTab.mockClear();
 
 		// Next tick: tab gets suspended!
 		await tabObserver.tick(false);
 
 		// THIS IS THE BUG: Tab was suspended even though music was actually playing
 		// Chrome just reported tab.audible=false (API bug or timing issue)
-		expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
+		expect(testGlobals.parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: musicTab.id }), musicTab.id);
 
 		console.log('✓ BUG REPRODUCED: Tab with playing audio suspended due to tab.audible=false');
 	});
@@ -788,7 +823,19 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 
 // ─── Helpers (mirrors AutoSuspension.test.ts pattern) ────────────────────────
 
-function makeTab54(overrides: Partial<any> = {}): any {
+type MockWindow = Pick<chrome.windows.Window, 'id' | 'focused' | 'tabs'>;
+type TestTabManager = { getTabInfoById: (tabId: number) => { time: number } | undefined };
+type TestTabManagerConstructor = new () => TestTabManager;
+type TestTabObserver = { tick: (force: boolean) => Promise<void> };
+type TestTabObserverConstructor = new (tabManager: TestTabManager) => TestTabObserver;
+
+function mockWindowsGetAll(tabs: chrome.tabs.Tab[]) {
+	(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: chrome.windows.QueryOptions, callback: (windows: MockWindow[]) => void) =>
+		callback([{ id: 1, focused: true, tabs }])
+	);
+}
+
+function makeTab54(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab {
 	return {
 		id: 10,
 		url: 'https://example.com',
@@ -821,13 +868,13 @@ function makeTab54(overrides: Partial<any> = {}): any {
  * Once tab.audible becomes false: time starts growing from 0 (the last reset value).
  */
 describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
-	let tabManager54: any;
-	let tabObserver54: any;
-	let TabObserverClass54: any;
-	let TabManagerClass54: any;
+	let tabManager54: TestTabManager;
+	let tabObserver54: TestTabObserver;
+	let TabObserverClass54: TestTabObserverConstructor;
+	let TabManagerClass54: TestTabManagerConstructor;
 
 	// Per-test settings overrides — tests write to this object
-	let settingsOverrides54: Record<string, any> = {};
+	let settingsOverrides54: Record<string, unknown> = {};
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -836,17 +883,17 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 		settingsOverrides54 = {};
 		mockIgnoreAudible = true; // default: protect audible tabs
 
-		(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
-		(global as any).pauseTics = 0;
-		(global as any).pauseTicsStartedFrom = 0;
-		(global as any).getScreenCache = null;
+		testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
+		testGlobals.pauseTics = 0;
+		testGlobals.pauseTicsStartedFrom = 0;
+		testGlobals.getScreenCache = null;
 
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		// Override settings.get to honour settingsOverrides54
-		(global as any).settings = {
+		testGlobals.settings = {
 			get: jest.fn((key: string) => {
-				const defaults: Record<string, any> = {
+				const defaults: Record<string, unknown> = {
 					active: true,
 					timeout: 30, // 30 s → 3 ticks of 10 s each to reach threshold
 					pinned: false,
@@ -869,13 +916,13 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 		};
 
 		const { TabInfo } = require('../../modules/model/TabInfo');
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const { TabManager } = require('../../modules/TabManager');
-		(global as any).TabManager = TabManagerClass54 = TabManager;
+		testGlobals.TabManager = TabManagerClass54 = TabManager;
 
 		require('../../modules/TabObserver');
-		TabObserverClass54 = (global as any).TabObserver;
+		TabObserverClass54 = testGlobals.TabObserver as TestTabObserverConstructor;
 		tabManager54 = new TabManagerClass54();
 	});
 
@@ -895,14 +942,14 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 		mockIgnoreAudible = true;
 		const tab = makeTab54({ audible: true, active: false });
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [tab] }]));
+		mockWindowsGetAll([tab]);
 
 		tabObserver54 = new TabObserverClass54(tabManager54);
 		await runTicks54(5); // 5 × 10 s = 50 s — well beyond a 30 s timeout
 
 		const tabInfo = tabManager54.getTabInfoById(tab.id);
 		expect(tabInfo?.time).toBe(0);
-		expect((global as any).parkTab).not.toHaveBeenCalled();
+		expect(testGlobals.parkTab).not.toHaveBeenCalled();
 	});
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -912,7 +959,7 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 		mockIgnoreAudible = true;
 		let currentTab = makeTab54({ audible: true, active: false });
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [currentTab] }]));
+		mockWindowsGetAll([currentTab]);
 
 		tabObserver54 = new TabObserverClass54(tabManager54);
 
@@ -923,7 +970,7 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 
 		// Tab stops playing audio
 		currentTab = { ...currentTab, audible: false };
-		(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [currentTab] }]));
+		mockWindowsGetAll([currentTab]);
 
 		// Run 3 more ticks → time = 3 × 10 s = 30 s
 		await runTicks54(3);
@@ -939,22 +986,22 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 		mockIgnoreAudible = true;
 		let currentTab = makeTab54({ audible: true, active: false });
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [currentTab] }]));
+		mockWindowsGetAll([currentTab]);
 
 		tabObserver54 = new TabObserverClass54(tabManager54);
 
 		// 2 ticks while audible — no suspension, time = 0
 		await runTicks54(2);
-		expect((global as any).parkTab).not.toHaveBeenCalled();
+		expect(testGlobals.parkTab).not.toHaveBeenCalled();
 
 		// Tab stops playing audio
 		currentTab = { ...currentTab, audible: false };
-		(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [currentTab] }]));
+		mockWindowsGetAll([currentTab]);
 
 		// 4 more ticks: time goes 10 → 20 → 30 → 40; first suspension on tick where time ≥ 30
 		await runTicks54(4);
 
-		expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: currentTab.id }), currentTab.id);
+		expect(testGlobals.parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: currentTab.id }), currentTab.id);
 	});
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -964,7 +1011,7 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 		mockIgnoreAudible = false;
 		const tab = makeTab54({ audible: true, active: false });
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [tab] }]));
+		mockWindowsGetAll([tab]);
 
 		tabObserver54 = new TabObserverClass54(tabManager54);
 
@@ -975,6 +1022,6 @@ describe('5.4 — Tab stopped playing audio: time counter resumes', () => {
 
 		// 2 more ticks → time = 40 s ≥ 30 s → suspended despite tab.audible=true
 		await runTicks54(2);
-		expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
+		expect(testGlobals.parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
 	});
 });

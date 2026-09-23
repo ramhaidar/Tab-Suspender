@@ -1,5 +1,19 @@
 // Jest globals are provided by the test environment.
 
+type SessionRestoreDetectorTestApi = {
+	analyzeTabState(
+		tabs: chrome.tabs.Tab[],
+		parkUrl: string
+	): {
+		hasNormalTabs: boolean;
+		hasGroupedTabs: boolean;
+		hasNewTabPages: number;
+		totalTabs: number;
+		hasLoadingTabs: number;
+		hasCompleteNonParkTabs: number;
+	};
+	shouldProceedWithProcessing(indicators: object, checkCount: number, stableChecks: number, options: object): boolean;
+};
 // Mock Chrome APIs
 const mockTabsQuery = jest.fn();
 const mockChrome = {
@@ -7,14 +21,14 @@ const mockChrome = {
 		query: mockTabsQuery
 	},
 	runtime: {
-		lastError: undefined as any
+		lastError: undefined as chrome.runtime.LastError | undefined
 	}
 };
 
-(global as any).chrome = mockChrome;
+Object.defineProperty(global, 'chrome', { configurable: true, value: mockChrome });
 
 describe('SessionRestoreDetector', () => {
-	let SessionRestoreDetector: any;
+	let SessionRestoreDetector: SessionRestoreDetectorTestApi;
 
 	beforeEach(() => {
 		jest.clearAllMocks();

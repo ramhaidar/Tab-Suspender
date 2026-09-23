@@ -1,27 +1,46 @@
+type IndexedDBProviderTestInstance = {
+	initializedPromise: Promise<void>;
+	db: IDBDatabase | null;
+	close: () => void;
+	putV2: (queries: unknown[]) => Promise<void>;
+	getTransaction: (tables: string[], mode: IDBTransactionMode) => Promise<IDBTransaction>;
+	queryIndex: (query: object, callback: (result: unknown) => void) => void;
+	queryIndexCount: (query: object, callback: (result: number) => void) => void;
+};
+type IndexedDBProviderTestConstructor = new (options?: { skipSchemaCreation?: boolean }) => IndexedDBProviderTestInstance;
+type IndexedDBProviderTestGlobals = typeof global & {
+	SCREENS_DB_NAME: string;
+	FD_DB_NAME: string;
+	ADDED_ON_INDEX_NAME: string;
+};
+const testGlobals = global as IndexedDBProviderTestGlobals;
+
 // Polyfill for structuredClone (needed for fake-indexeddb in Jest)
-if (typeof (global as any).structuredClone === 'undefined') {
-	(global as any).structuredClone = (obj: any) => JSON.parse(JSON.stringify(obj));
+if (typeof global.structuredClone === 'undefined') {
+	Object.defineProperty(global, 'structuredClone', {
+		value: (obj: unknown) => JSON.parse(JSON.stringify(obj))
+	});
 }
 
 // Mock IndexedDB for testing
 require('fake-indexeddb/auto');
 
 // Mock global variables
-(global as any).SCREENS_DB_NAME = 'screens';
-(global as any).FD_DB_NAME = 'fd';
-(global as any).ADDED_ON_INDEX_NAME = 'addedOnIndex';
+testGlobals.SCREENS_DB_NAME = 'screens';
+testGlobals.FD_DB_NAME = 'fd';
+testGlobals.ADDED_ON_INDEX_NAME = 'addedOnIndex';
 
 describe('IndexedDBProvider Promise Handling Tests', () => {
-	let IndexedDBProvider: any;
-	let provider: any;
-	let originalIndexedDB: any;
+	let IndexedDBProvider: IndexedDBProviderTestConstructor;
+	let provider: IndexedDBProviderTestInstance;
+	let originalIndexedDB: IDBFactory | undefined;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		// Save original indexedDB before each test
-		originalIndexedDB = (global as any).indexedDB;
+		originalIndexedDB = global.indexedDB;
 
 		const IndexedDBProviderModule = require('../../modules/IndexedDBProvider');
 		IndexedDBProvider = IndexedDBProviderModule.IndexedDBProvider;
@@ -34,7 +53,7 @@ describe('IndexedDBProvider Promise Handling Tests', () => {
 
 		// Always restore indexedDB after each test
 		if (originalIndexedDB) {
-			(global as any).indexedDB = originalIndexedDB;
+			Object.defineProperty(global, 'indexedDB', { configurable: true, value: originalIndexedDB });
 		}
 	});
 
@@ -154,23 +173,26 @@ describe('IndexedDBProvider Promise Handling Tests', () => {
 		it('should reject when initializedPromise fails', async () => {
 			// Create provider but force initialization to fail
 			const mockOpenRequest = {
-				onsuccess: null as any,
-				onerror: null as any,
-				onupgradeneeded: null as any
+				onsuccess: null as ((event: Event) => void) | null,
+				onerror: null as ((event: { target: { error: Error } }) => void) | null,
+				onupgradeneeded: null as ((event: IDBVersionChangeEvent) => void) | null
 			};
 
-			(global as any).indexedDB = {
-				open: jest.fn(() => {
-					// Trigger error in next microtask to ensure promise handlers are attached
-					Promise.resolve().then(() => {
-						if (mockOpenRequest.onerror) {
-							const error = new Error('Database initialization failed');
-							mockOpenRequest.onerror({ target: { error } });
-						}
-					});
-					return mockOpenRequest;
-				})
-			};
+			Object.defineProperty(global, 'indexedDB', {
+				configurable: true,
+				value: {
+					open: jest.fn(() => {
+						// Trigger error in next microtask to ensure promise handlers are attached
+						Promise.resolve().then(() => {
+							if (mockOpenRequest.onerror) {
+								const error = new Error('Database initialization failed');
+								mockOpenRequest.onerror({ target: { error } });
+							}
+						});
+						return mockOpenRequest as unknown as IDBOpenDBRequest;
+					})
+				} as unknown as IDBFactory
+			});
 
 			provider = new IndexedDBProvider({ skipSchemaCreation: true });
 
@@ -254,7 +276,7 @@ describe('IndexedDBProvider Promise Handling Tests', () => {
 			};
 
 			// Use promise to wait for callback
-			const result = await new Promise<any>((resolve) => {
+			const result = await new Promise<{ screen: string } | null>((resolve) => {
 				provider.queryIndex(query, resolve);
 			});
 
@@ -342,7 +364,7 @@ describe('IndexedDBProvider Promise Handling Tests', () => {
 
 			// Create a custom mock to track completion
 			const originalPut = provider.putV2.bind(provider);
-			provider.putV2 = async (queries: any[]) => {
+			provider.putV2 = async (queries: unknown[]) => {
 				const result = await originalPut(queries);
 				writeCompleted = true;
 				return result;

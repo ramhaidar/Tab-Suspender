@@ -6,20 +6,40 @@ import '../typing/global.d';
 import '../../fancy-settings/source/lib/store';
 import '../../modules/Settings';
 
+type SettingsExportImportStore = {
+	getOnStorageInitialized: () => Promise<void>;
+	toObject: () => Promise<Record<string, unknown>>;
+	get: (key: string) => Promise<unknown>;
+	set: (key: string, value: unknown) => Promise<unknown>;
+	fromObject: (value: object, merge: boolean) => Promise<unknown>;
+	importWithClear: (value: object) => Promise<unknown>;
+};
+type SettingsExportImportStoreConstructor = new (
+	namespace: string,
+	defaults: typeof DEFAULT_SETTINGS,
+	offscreenProvider: { extractOldSettings: jest.Mock; cleanupFormDatas: jest.Mock }
+) => SettingsExportImportStore;
+type SettingsExportImportGlobals = typeof global & {
+	debug: boolean;
+	SETTINGS_TYPES: typeof SETTINGS_TYPES;
+	GET_SETTINGS_TYPE: typeof GET_SETTINGS_TYPE;
+	SettingsStore: SettingsExportImportStoreConstructor;
+	DEFAULT_SETTINGS: typeof DEFAULT_SETTINGS;
+};
+const testGlobals = global as SettingsExportImportGlobals;
+
 // Set up required global variables
-(global as any).debug = false;
-(global as any).SETTINGS_TYPES = (global as any).SETTINGS_TYPES;
-(global as any).GET_SETTINGS_TYPE = (global as any).GET_SETTINGS_TYPE;
+testGlobals.debug = false;
 
 describe('Settings Export/Import Functionality', () => {
-	let mockStorageData: Record<string, any>;
-	let settingsStore: any;
+	let mockStorageData: Record<string, unknown>;
+	let settingsStore: SettingsExportImportStore;
 
 	// Mock the chrome storage to simulate actual browser behavior
 	const mockChromeStorage = {
 		local: {
 			get: jest.fn().mockImplementation(async (keys: string[] | string) => {
-				const result: Record<string, any> = {};
+				const result: Record<string, unknown> = {};
 				if (Array.isArray(keys)) {
 					keys.forEach((key) => {
 						if (mockStorageData[key] !== undefined) {
@@ -33,7 +53,7 @@ describe('Settings Export/Import Functionality', () => {
 				}
 				return result;
 			}),
-			set: jest.fn().mockImplementation(async (data: Record<string, any>) => {
+			set: jest.fn().mockImplementation(async (data: Record<string, unknown>) => {
 				Object.assign(mockStorageData, data);
 			}),
 			remove: jest.fn().mockImplementation(async (keys: string[] | string) => {
@@ -64,11 +84,8 @@ describe('Settings Export/Import Functionality', () => {
 		// Reset storage data before each test
 		mockStorageData = {};
 
-		// Update global chrome mock with our storage mock
-		(global as any).chrome = {
-			...(global as any).chrome,
-			storage: mockChromeStorage
-		};
+		// Update the existing storage mock while preserving Chrome's other storage APIs
+		Object.assign(testGlobals.chrome.storage, mockChromeStorage);
 
 		// Mock offscreen document provider
 		const mockOffscreenProvider = {
@@ -77,7 +94,7 @@ describe('Settings Export/Import Functionality', () => {
 		};
 
 		// Create a new SettingsStore instance for each test
-		settingsStore = new (global as any).SettingsStore('tabSuspenderSettings', (global as any).DEFAULT_SETTINGS, mockOffscreenProvider);
+		settingsStore = new testGlobals.SettingsStore('tabSuspenderSettings', testGlobals.DEFAULT_SETTINGS, mockOffscreenProvider);
 
 		// Wait for storage initialization to complete before tests run
 		await settingsStore.getOnStorageInitialized();
@@ -97,15 +114,15 @@ describe('Settings Export/Import Functionality', () => {
 			const exported = await settingsStore.toObject();
 
 			// Should contain all keys from DEFAULT_SETTINGS
-			const defaultKeys = Object.keys((global as any).DEFAULT_SETTINGS);
+			const defaultKeys = Object.keys(testGlobals.DEFAULT_SETTINGS);
 			const exportedKeys = Object.keys(exported);
 
 			expect(exportedKeys).toEqual(expect.arrayContaining(defaultKeys));
 
 			// Should export default values
-			expect(exported.active).toBe((global as any).DEFAULT_SETTINGS.active);
-			expect(exported.timeout).toBe((global as any).DEFAULT_SETTINGS.timeout);
-			expect(exported.parkBgColor).toBe((global as any).DEFAULT_SETTINGS.parkBgColor);
+			expect(exported.active).toBe(testGlobals.DEFAULT_SETTINGS.active);
+			expect(exported.timeout).toBe(testGlobals.DEFAULT_SETTINGS.timeout);
+			expect(exported.parkBgColor).toBe(testGlobals.DEFAULT_SETTINGS.parkBgColor);
 		});
 
 		test('should export custom settings when they are set', async () => {
@@ -122,7 +139,7 @@ describe('Settings Export/Import Functionality', () => {
 			expect(exported.parkBgColor).toBe('FF0000');
 
 			// Should still export defaults for unmodified settings
-			expect(exported.pinned).toBe((global as any).DEFAULT_SETTINGS.pinned);
+			expect(exported.pinned).toBe(testGlobals.DEFAULT_SETTINGS.pinned);
 		});
 
 		test('should export all settings including complex types', async () => {
@@ -205,7 +222,7 @@ describe('Settings Export/Import Functionality', () => {
 			expect(await settingsStore.get('timeout')).toBe(3600);
 
 			// Non-imported value should revert to default
-			expect(await settingsStore.get('parkBgColor')).toBe((global as any).DEFAULT_SETTINGS.parkBgColor);
+			expect(await settingsStore.get('parkBgColor')).toBe(testGlobals.DEFAULT_SETTINGS.parkBgColor);
 		});
 
 		test('should handle type validation during import', async () => {
@@ -270,7 +287,7 @@ describe('Settings Export/Import Functionality', () => {
 			expect(await settingsStore.get('pinned')).toBe(false);
 
 			// Verify unspecified settings revert to defaults
-			expect(await settingsStore.get('ignoreAudible')).toBe((global as any).DEFAULT_SETTINGS.ignoreAudible);
+			expect(await settingsStore.get('ignoreAudible')).toBe(testGlobals.DEFAULT_SETTINGS.ignoreAudible);
 		});
 
 		test('should ensure all DEFAULT_SETTINGS exist after import', async () => {
@@ -282,7 +299,7 @@ describe('Settings Export/Import Functionality', () => {
 			await settingsStore.fromObject(importData, false);
 
 			// All default settings should exist, even if not in import
-			const allDefaults = Object.keys((global as any).DEFAULT_SETTINGS);
+			const allDefaults = Object.keys(testGlobals.DEFAULT_SETTINGS);
 
 			// Keys that are set by migrations and should be excluded from default value check
 			const migrationKeys = ['suspendOnCtrlClick_hotfix_migrated', 'localStorageMigrated', 'localStorageFormDataCleaned'];
@@ -294,7 +311,7 @@ describe('Settings Export/Import Functionality', () => {
 				if (key === 'active') {
 					expect(value).toBe(false); // Our imported value
 				} else if (!migrationKeys.includes(key)) {
-					expect(value).toBe((global as any).DEFAULT_SETTINGS[key]); // Default value
+					expect(value).toBe(testGlobals.DEFAULT_SETTINGS[key]); // Default value
 				}
 				// Migration keys may have non-default values due to migration logic
 			}
@@ -338,13 +355,13 @@ describe('Settings Export/Import Functionality', () => {
 			const migrationKeys = ['suspendOnCtrlClick_hotfix_migrated', 'localStorageMigrated', 'localStorageFormDataCleaned'];
 
 			// Verify settings not customized maintain defaults
-			const defaultOnlyKeys = Object.keys((global as any).DEFAULT_SETTINGS)
+			const defaultOnlyKeys = Object.keys(testGlobals.DEFAULT_SETTINGS)
 				.filter((key) => !Object.hasOwn(customSettings, key))
 				.filter((key) => !migrationKeys.includes(key));
 
 			for (const key of defaultOnlyKeys) {
 				const importedValue = await settingsStore.get(key);
-				expect(importedValue).toBe((global as any).DEFAULT_SETTINGS[key]);
+				expect(importedValue).toBe(testGlobals.DEFAULT_SETTINGS[key]);
 			}
 		});
 	});
@@ -377,7 +394,7 @@ describe('Settings Export/Import Functionality', () => {
 			expect(await settingsStore.get('pinned')).toBe(false);
 
 			// Verify unspecified settings have default values
-			expect(await settingsStore.get('ignoreAudible')).toBe((global as any).DEFAULT_SETTINGS.ignoreAudible);
+			expect(await settingsStore.get('ignoreAudible')).toBe(testGlobals.DEFAULT_SETTINGS.ignoreAudible);
 		});
 
 		test('old buggy approach vs new importWithClear approach', async () => {
@@ -389,7 +406,7 @@ describe('Settings Export/Import Functionality', () => {
 			};
 
 			// OLD BUGGY: This creates wrong merged defaults
-			const _oldApproach = { ...(global as any).DEFAULT_SETTINGS, ...oldBuggyImportSettings };
+			const _oldApproach = { ...testGlobals.DEFAULT_SETTINGS, ...oldBuggyImportSettings };
 
 			// The bug is that these become the "defaults", not the actual settings
 			// So when you try to get() a value, it would return the default, not the "set" value
@@ -403,8 +420,8 @@ describe('Settings Export/Import Functionality', () => {
 			expect(await settingsStore.get('parkBgColor')).toBe('FF0000');
 
 			// These should be defaults since not specified in import
-			expect(await settingsStore.get('pinned')).toBe((global as any).DEFAULT_SETTINGS.pinned);
-			expect(await settingsStore.get('ignoreAudible')).toBe((global as any).DEFAULT_SETTINGS.ignoreAudible);
+			expect(await settingsStore.get('pinned')).toBe(testGlobals.DEFAULT_SETTINGS.pinned);
+			expect(await settingsStore.get('ignoreAudible')).toBe(testGlobals.DEFAULT_SETTINGS.ignoreAudible);
 		});
 
 		test('export then import should preserve all settings using importWithClear', async () => {

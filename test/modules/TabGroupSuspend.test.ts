@@ -2,28 +2,79 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).publicExtensionUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugTabsInfo = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).pauseTics = 0;
-(global as any).isCharging = false;
-(global as any).batteryLevel = 1.0;
+type TabGroupTestTab = Pick<chrome.tabs.Tab, 'id' | 'windowId' | 'groupId'> & Partial<chrome.tabs.Tab>;
+type TabGroupManager = {
+	isExceptionTab: jest.Mock;
+	unsuspendTab: jest.Mock;
+};
+type TabGroupManagerConstructor = new (
+	settings: typeof testGlobals.settings,
+	whiteList: typeof testGlobals.whiteList,
+	ignoreList: typeof testGlobals.ignoreList
+) => TabGroupManager;
+type TabGroupManagerClass = TabGroupManagerConstructor & {
+	isTabURLAllowedForPark: (tab: TabGroupTestTab) => boolean;
+	isTabParked: (tab: TabGroupTestTab) => boolean;
+};
+type TabGroupTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	publicExtensionUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugTabsInfo: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	pauseTics: number;
+	isCharging: boolean;
+	batteryLevel: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	parkTab: jest.Mock;
+	unsuspendTabGroup: (tab: TabGroupTestTab | null) => void;
+	parkTabGroup: (tab: TabGroupTestTab | null) => void;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: unknown;
+	TabInfo: unknown;
+	TabManager: TabGroupManagerClass;
+	tabManager: { isExceptionTab: jest.Mock; unsuspendTab: jest.Mock };
+};
+const testGlobals = global as TabGroupTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.publicExtensionUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugTabsInfo = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.pauseTics = 0;
+testGlobals.isCharging = false;
+testGlobals.batteryLevel = 1.0;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -31,13 +82,13 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
 
 // Mock settings
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			active: true,
 			timeout: 900,
 			pinned: true,
@@ -56,24 +107,24 @@ import '../typing/global.d';
 	})
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -90,12 +141,12 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 }));
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
 
 // Define parkTabGroup and unsuspendTabGroup functions globally for testing
 // These are simplified versions based on the actual implementation
-(global as any).parkTabGroup = (tab: chrome.tabs.Tab) => {
+testGlobals.parkTabGroup = (tab: chrome.tabs.Tab) => {
 	if (tab == null || tab.groupId === -1) {
 		console.warn('Cannot suspend tab group: tab is not in a group');
 		return;
@@ -110,11 +161,11 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 				const currentTab = window.tabs[j];
 				// Only suspend tabs in the same group
 				if (currentTab.groupId === groupId) {
-					const TabManager = (global as any).TabManager;
+					const TabManager = testGlobals.TabManager;
 					if (TabManager?.isTabURLAllowedForPark(currentTab)) {
-						const tabManager = (global as any).tabManager;
+						const tabManager = testGlobals.tabManager;
 						if (tabManager && !(await tabManager.isExceptionTab(currentTab))) {
-							const parkTab = (global as any).parkTab;
+							const parkTab = testGlobals.parkTab;
 							if (parkTab) {
 								await parkTab(currentTab, currentTab.id, { bulkNumber: currentTab.discarded ? number++ : null });
 							}
@@ -126,7 +177,7 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	});
 };
 
-(global as any).unsuspendTabGroup = (tab: chrome.tabs.Tab) => {
+testGlobals.unsuspendTabGroup = (tab: chrome.tabs.Tab) => {
 	if (tab == null || tab.groupId === -1) {
 		console.warn('Cannot unsuspend tab group: tab is not in a group');
 		return;
@@ -140,12 +191,12 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 			if (Object.hasOwn(window.tabs, j)) {
 				const currentTab = window.tabs[j];
 				// Only unsuspend tabs in the same group
-				const TabManager = (global as any).TabManager;
+				const TabManager = testGlobals.TabManager;
 				if (currentTab.groupId === groupId && TabManager && TabManager.isTabParked(currentTab)) {
 					const tmpFunction = (currentTab: chrome.tabs.Tab) => {
 						const clzOpenedIndex = openedIndex++;
 						setTimeout(() => {
-							const tabManager = (global as any).tabManager;
+							const tabManager = testGlobals.tabManager;
 							if (tabManager) {
 								tabManager.unsuspendTab(currentTab);
 							}
@@ -160,8 +211,8 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 };
 
 describe('Tab Group Suspend/Unsuspend', () => {
-	let tabManager: any;
-	let TabManager: any;
+	let tabManager: TabGroupManager;
+	let TabManager: TabGroupManagerClass;
 	let parkTabMock: jest.Mock;
 	let unsuspendTabMock: jest.Mock;
 	let mockChromeWindowsGet: jest.Mock;
@@ -172,27 +223,22 @@ describe('Tab Group Suspend/Unsuspend', () => {
 
 		// Reset parkTab mock
 		parkTabMock = jest.fn().mockResolvedValue(undefined);
-		(global as any).parkTab = parkTabMock;
+		testGlobals.parkTab = parkTabMock;
 
 		// Reset chrome.windows.get mock
 		mockChromeWindowsGet = jest.fn();
-		(global as any).chrome = {
-			...((global as any).chrome || {}),
-			windows: {
-				get: mockChromeWindowsGet
-			}
-		};
+		testGlobals.chrome.windows.get = mockChromeWindowsGet as typeof chrome.windows.get;
 
 		// Re-import modules using require (not import)
 		const TabManagerModule = require('../../modules/TabManager');
 		TabManager = TabManagerModule.TabManager;
 
 		// Make TabManager available globally
-		(global as any).TabManager = TabManager;
+		testGlobals.TabManager = TabManager;
 
 		// Initialize TabManager
-		tabManager = new TabManager((global as any).settings, (global as any).whiteList, (global as any).ignoreList);
-		(global as any).tabManager = tabManager;
+		tabManager = new TabManager(testGlobals.settings, testGlobals.whiteList, testGlobals.ignoreList);
+		testGlobals.tabManager = tabManager;
 
 		// Setup unsuspendTab mock
 		unsuspendTabMock = jest.fn().mockImplementation((_tab: chrome.tabs.Tab) => {
@@ -234,7 +280,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 			});
 
 			// Call parkTabGroup
-			const parkTabGroup = (global as any).parkTabGroup;
+			const parkTabGroup = testGlobals.parkTabGroup;
 			await parkTabGroup(tab);
 
 			// Wait for async operations
@@ -281,7 +327,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				return tab.audible || tab.pinned;
 			});
 
-			const parkTabGroup = (global as any).parkTabGroup;
+			const parkTabGroup = testGlobals.parkTabGroup;
 			await parkTabGroup(tab);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
@@ -312,7 +358,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				discarded: false
 			};
 
-			const parkTabGroup = (global as any).parkTabGroup;
+			const parkTabGroup = testGlobals.parkTabGroup;
 			parkTabGroup(tab);
 
 			// Should log warning
@@ -330,7 +376,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 		it('should do nothing if tab is null', async () => {
 			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-			const parkTabGroup = (global as any).parkTabGroup;
+			const parkTabGroup = testGlobals.parkTabGroup;
 			parkTabGroup(null);
 
 			expect(consoleSpy).toHaveBeenCalledWith('Cannot suspend tab group: tab is not in a group');
@@ -366,7 +412,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
-			const parkTabGroup = (global as any).parkTabGroup;
+			const parkTabGroup = testGlobals.parkTabGroup;
 			await parkTabGroup(tab);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
@@ -400,7 +446,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
-			const parkTabGroup = (global as any).parkTabGroup;
+			const parkTabGroup = testGlobals.parkTabGroup;
 			await parkTabGroup(tab);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
@@ -441,7 +487,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
-			const unsuspendTabGroup = (global as any).unsuspendTabGroup;
+			const unsuspendTabGroup = testGlobals.unsuspendTabGroup;
 			unsuspendTabGroup(tab);
 
 			// Wait for setTimeout delays (1 second per tab)
@@ -485,7 +531,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
-			const unsuspendTabGroup = (global as any).unsuspendTabGroup;
+			const unsuspendTabGroup = testGlobals.unsuspendTabGroup;
 			unsuspendTabGroup(tab);
 
 			// Wait for first tab (1 second delay)
@@ -525,7 +571,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				discarded: false
 			};
 
-			const unsuspendTabGroup = (global as any).unsuspendTabGroup;
+			const unsuspendTabGroup = testGlobals.unsuspendTabGroup;
 			unsuspendTabGroup(tab);
 
 			// Should log warning
@@ -544,7 +590,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 		it('should do nothing if tab is null', async () => {
 			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-			const unsuspendTabGroup = (global as any).unsuspendTabGroup;
+			const unsuspendTabGroup = testGlobals.unsuspendTabGroup;
 			unsuspendTabGroup(null);
 
 			expect(consoleSpy).toHaveBeenCalledWith('Cannot unsuspend tab group: tab is not in a group');
@@ -582,7 +628,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
-			const unsuspendTabGroup = (global as any).unsuspendTabGroup;
+			const unsuspendTabGroup = testGlobals.unsuspendTabGroup;
 			unsuspendTabGroup(tab);
 
 			// Verify chrome.windows.get was called with correct windowId
@@ -614,7 +660,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
-			const unsuspendTabGroup = (global as any).unsuspendTabGroup;
+			const unsuspendTabGroup = testGlobals.unsuspendTabGroup;
 			unsuspendTabGroup(tab);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));

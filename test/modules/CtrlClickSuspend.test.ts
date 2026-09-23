@@ -2,25 +2,55 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).nextTabShouldBeSuspended = false;
-(global as any).NEXT_TAB_SUSPEND_TTL = 3000;
+type CtrlClickTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	nextTabShouldBeSuspended: boolean;
+	NEXT_TAB_SUSPEND_TTL: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	pauseTics: number;
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: unknown;
+	TabInfo: unknown;
+};
+const testGlobals = global as CtrlClickTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.nextTabShouldBeSuspended = false;
+testGlobals.NEXT_TAB_SUSPEND_TTL = 3000;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -28,37 +58,37 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
 
 // Mock global objects
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn().mockImplementation((key: string) => {
 		if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 		return Promise.resolve(false);
 	})
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).pauseTics = 0;
+testGlobals.pauseTics = 0;
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -78,41 +108,41 @@ const TabObserver = {
 };
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
-(global as any).TabObserver = TabObserver;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
+testGlobals.TabObserver = TabObserver;
 
 describe('Ctrl/Cmd+Click Suspend Functionality', () => {
-	let tabManager: any;
-	let TabManager: any;
-	let TabInfo: any;
+	let tabManager: TabManager;
+	let TabManagerClass: typeof TabManager;
+	let TabInfoClass: typeof TabInfo;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		// Clear global variables
-		(global as any).getScreenCache = null;
-		(global as any).nextTabShouldBeSuspended = false;
+		testGlobals.getScreenCache = null;
+		testGlobals.nextTabShouldBeSuspended = false;
 
 		// Try to mock Date.now if not using fake timers
 		try {
-			((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 		} catch (_e) {
 			// Ignore if Date.now mock is not available (e.g., when using fake timers)
 		}
 
 		// Re-import modules
 		const TabInfoModule = require('../../modules/model/TabInfo');
-		TabInfo = TabInfoModule.TabInfo;
+		TabInfoClass = TabInfoModule.TabInfo;
 
 		// Make TabInfo available globally
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfoClass;
 
 		const TabManagerModule = require('../../modules/TabManager');
-		TabManager = TabManagerModule.TabManager;
+		TabManagerClass = TabManagerModule.TabManager;
 
-		tabManager = new TabManager();
+		tabManager = new TabManagerClass();
 	});
 
 	afterEach(() => {
@@ -121,10 +151,10 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 
 	test('should mark tab for suspension when Ctrl/Cmd+Click is detected and setting is enabled', async () => {
 		// Set the flag that indicates Ctrl/Cmd+Click
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
 		// Mock settings.get to return true for suspendOnCtrlClick
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 			return Promise.resolve(false);
 		});
@@ -142,22 +172,22 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		};
 
 		// Trigger the onCreated event
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		// Check that the tab was marked for suspension
 		const tabInfo = tabManager.getTabInfoById(tab.id);
 		expect(tabInfo.markedForLoadSuspended).toBe(true);
 		expect(tabInfo.originalUrlBeforeSuspend).toBe('https://example.com');
-		expect((global as any).nextTabShouldBeSuspended).toBe(false);
+		expect(testGlobals.nextTabShouldBeSuspended).toBe(false);
 	});
 
 	test('should NOT mark tab for suspension when setting is disabled', async () => {
 		// Set the flag that indicates Ctrl/Cmd+Click
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
 		// Mock settings.get to return false for suspendOnCtrlClick
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(false);
 			return Promise.resolve(false);
 		});
@@ -175,21 +205,21 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		};
 
 		// Trigger the onCreated event
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		// Check that the tab was NOT marked for suspension
 		const tabInfo = tabManager.getTabInfoById(tab.id);
 		expect(tabInfo.markedForLoadSuspended).toBe(false);
-		expect((global as any).nextTabShouldBeSuspended).toBe(false);
+		expect(testGlobals.nextTabShouldBeSuspended).toBe(false);
 	});
 
 	test('should NOT mark active tab for suspension even with Ctrl/Cmd+Click', async () => {
 		// Set the flag that indicates Ctrl/Cmd+Click
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
 		// Mock settings.get to return true for suspendOnCtrlClick
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 			return Promise.resolve(false);
 		});
@@ -207,7 +237,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		};
 
 		// Trigger the onCreated event
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		// Check that the tab was NOT marked for suspension (because it's active)
@@ -219,9 +249,9 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		jest.useFakeTimers();
 
 		// First, mark a tab for suspension
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 			return Promise.resolve(false);
 		});
@@ -239,7 +269,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		};
 
 		// Trigger the onCreated event
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		// Verify tab is marked for suspension
@@ -259,7 +289,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		(chrome.tabs.update as jest.Mock).mockResolvedValue(undefined);
 
 		// Now trigger onUpdated with status=complete
-		const onUpdatedListener = (chrome.tabs.onUpdated as any).addListener.mock.calls[0][0];
+		const onUpdatedListener = (chrome.tabs.onUpdated.addListener as jest.Mock).mock.calls[0][0];
 		await onUpdatedListener(tab.id, { status: 'complete' }, { ...tab, status: 'complete' });
 
 		// Fast-forward timers to trigger polling
@@ -293,9 +323,9 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		jest.useFakeTimers();
 
 		// First, mark a tab for suspension
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 			return Promise.resolve(false);
 		});
@@ -313,7 +343,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		};
 
 		// Trigger the onCreated event
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		// Mock chrome.tabs.get to return tab WITHOUT favicon first, then WITH favicon
@@ -345,7 +375,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		(chrome.tabs.update as jest.Mock).mockResolvedValue(undefined);
 
 		// Now trigger onUpdated with status=complete
-		const onUpdatedListener = (chrome.tabs.onUpdated as any).addListener.mock.calls[0][0];
+		const onUpdatedListener = (chrome.tabs.onUpdated.addListener as jest.Mock).mock.calls[0][0];
 		await onUpdatedListener(tab.id, { status: 'complete' }, { ...tab, status: 'complete' });
 
 		// Fast-forward first polling attempt (no favicon)
@@ -385,9 +415,9 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		jest.useFakeTimers();
 
 		// First, set flag for suspension
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 			return Promise.resolve(false);
 		});
@@ -405,7 +435,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		};
 
 		// Trigger the onCreated event
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		// NEW BEHAVIOR: Tab IS marked for suspension even with undefined URL
@@ -425,9 +455,9 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 	test('10.3 — screenshot NOT captured during Ctrl+Click suspension', async () => {
 		jest.useFakeTimers();
 
-		(global as any).nextTabShouldBeSuspended = true;
+		testGlobals.nextTabShouldBeSuspended = true;
 
-		(global as any).settings.get = jest.fn().mockImplementation((key: string) => {
+		testGlobals.settings.get = jest.fn().mockImplementation((key: string) => {
 			if (key === 'suspendOnCtrlClick') return Promise.resolve(true);
 			return Promise.resolve(false);
 		});
@@ -444,7 +474,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 			status: 'loading'
 		};
 
-		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
+		const onCreatedListener = (chrome.tabs.onCreated.addListener as jest.Mock).mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		(chrome.tabs.get as jest.Mock).mockResolvedValue({
@@ -455,7 +485,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		});
 		(chrome.tabs.update as jest.Mock).mockResolvedValue(undefined);
 
-		const onUpdatedListener = (chrome.tabs.onUpdated as any).addListener.mock.calls[0][0];
+		const onUpdatedListener = (chrome.tabs.onUpdated.addListener as jest.Mock).mock.calls[0][0];
 		await onUpdatedListener(tab.id, { status: 'complete' }, { ...tab, status: 'complete' });
 
 		await jest.advanceTimersByTimeAsync(200);
@@ -465,7 +495,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		expect(chrome.tabs.update).toHaveBeenCalledWith(tab.id, expect.objectContaining({ url: expect.stringContaining('park.html') }));
 
 		// Screenshot capture was NOT called — Ctrl+Click suspension skips it
-		expect((global as any).tabCapture.captureTab).not.toHaveBeenCalled();
+		expect(testGlobals.tabCapture.captureTab).not.toHaveBeenCalled();
 
 		jest.useRealTimers();
 	});
@@ -480,9 +510,15 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 			index: 0,
 			url: 'https://example.com',
 			active: false,
+			pinned: false,
 			discarded: false,
 			autoDiscardable: false,
-			status: 'loading'
+			audible: false,
+			groupId: -1,
+			status: 'loading',
+			highlighted: false,
+			incognito: false,
+			selected: false
 		};
 
 		const tabInfo = tabManager.createNewTabInfo(tab);
@@ -503,7 +539,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		(chrome.tabs.update as jest.Mock).mockResolvedValue(undefined);
 
 		// Trigger onUpdated with status=complete
-		const onUpdatedListener = (chrome.tabs.onUpdated as any).addListener.mock.calls[0][0];
+		const onUpdatedListener = (chrome.tabs.onUpdated.addListener as jest.Mock).mock.calls[0][0];
 		await onUpdatedListener(tab.id, { status: 'complete' }, { ...tab, status: 'complete' });
 
 		// Fast-forward timers

@@ -2,23 +2,52 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
-// Mock global variables and functions before importing
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = 'chrome-extension://test/park.html';
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
+type TabManagerTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	pauseTics: number;
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabObserver: unknown;
+	TabInfo: unknown;
+	tabManager: unknown;
+};
+const testGlobals = global as TabManagerTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+// Mock global variables and functions before importing
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = 'chrome-extension://test/park.html';
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	const urlParams = new URLSearchParams(url.split('?')[1]);
 	return urlParams.get(param);
 });
 
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -26,34 +55,34 @@ import '../typing/global.d';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
 
 // Mock global objects
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn().mockResolvedValue(false)
 };
 
-(global as any).whiteList = {
+testGlobals.whiteList = {
 	isURIException: jest.fn().mockReturnValue(false)
 };
 
-(global as any).ignoreList = {
+testGlobals.ignoreList = {
 	isTabInIgnoreTabList: jest.fn().mockReturnValue(false)
 };
 
-(global as any).tabCapture = {
+testGlobals.tabCapture = {
 	captureTab: jest.fn(),
 	injectJS: jest.fn()
 };
 
-(global as any).ContextMenuController = {
+testGlobals.ContextMenuController = {
 	menuIdMap: {}
 };
 
-(global as any).pauseTics = 0;
+testGlobals.pauseTics = 0;
 
-(global as any).ScreenshotController = {
+testGlobals.ScreenshotController = {
 	getScreen: jest.fn()
 };
 
@@ -73,37 +102,48 @@ const TabObserver = {
 };
 
 // Make classes available globally
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
-(global as any).TabObserver = TabObserver;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
+testGlobals.TabObserver = TabObserver;
+
+type TabManagerTestFacade = Omit<
+	TabManager,
+	'markTabActivated' | 'onTabReplaceDetected' | 'markTabClosed' | 'tabInfos' | 'checkAndTurnOffAutoDiscardable'
+> & {
+	markTabActivated: (tab: chrome.tabs.Tab) => void;
+	onTabReplaceDetected: (newId: number, oldId: number) => TabInfo;
+	markTabClosed: (tabId: number) => void;
+	tabInfos: TabInfo[];
+	checkAndTurnOffAutoDiscardable: (tab: Pick<chrome.tabs.Tab, 'id' | 'autoDiscardable'>) => void;
+};
 
 describe('TabManager', () => {
-	let tabManager: any;
-	let TabManager: any;
-	let TabInfo: any;
+	let tabManager: TabManagerTestFacade;
+	let TabManagerClass: typeof TabManager;
+	let TabInfoClass: typeof TabInfo;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		// Clear global variables
-		(global as any).getScreenCache = null;
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		testGlobals.getScreenCache = null;
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		// Re-import modules
 		const TabInfoModule = require('../../modules/model/TabInfo');
-		TabInfo = TabInfoModule.TabInfo;
+		TabInfoClass = TabInfoModule.TabInfo;
 
 		// Make TabInfo available globally
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfoClass;
 
 		const TabManagerModule = require('../../modules/TabManager');
-		TabManager = TabManagerModule.TabManager;
+		TabManagerClass = TabManagerModule.TabManager;
 
-		tabManager = new TabManager();
+		tabManager = new TabManagerClass() as unknown as TabManagerTestFacade;
 
 		// Make tabManager available globally
-		(global as any).tabManager = tabManager;
+		testGlobals.tabManager = tabManager;
 	});
 
 	describe('Constructor', () => {
@@ -334,7 +374,7 @@ describe('TabManager', () => {
 
 		it('should mark tab as activated', () => {
 			const fixedTime = 1640995200000;
-			((global as any).Date.now as jest.Mock).mockReturnValue(fixedTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(fixedTime);
 
 			tabManager.markTabActivated(mockTab);
 			const tabInfo = tabManager.getTabInfoById(mockTab.id);
@@ -366,7 +406,7 @@ describe('TabManager', () => {
 
 		it('should set last capture URL and time', () => {
 			const fixedTime = 1640995200000;
-			((global as any).Date.now as jest.Mock).mockReturnValue(fixedTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(fixedTime);
 
 			tabManager.setLastCaptureUrl(mockTab);
 			const tabInfo = tabManager.getTabInfoById(mockTab.id);
@@ -434,7 +474,7 @@ describe('TabManager', () => {
 
 		it('should mark tab as closed', () => {
 			const fixedTime = 1640995200000;
-			((global as any).Date.now as jest.Mock).mockReturnValue(fixedTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(fixedTime);
 
 			tabManager.markTabClosed(mockTab.id);
 			const tabInfo = tabManager.getTabInfoById(mockTab.id);
@@ -454,7 +494,7 @@ describe('TabManager', () => {
 			tabInfo.closed.at = expiredTime;
 
 			// Mock current time to be after TTL
-			((global as any).Date.now as jest.Mock).mockReturnValue(currentTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(currentTime);
 
 			tabManager.clearClosedTabs();
 
@@ -473,7 +513,7 @@ describe('TabManager', () => {
 			tabInfo.closed.at = recentTime;
 
 			// Mock current time
-			((global as any).Date.now as jest.Mock).mockReturnValue(currentTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(currentTime);
 
 			tabManager.clearClosedTabs();
 
@@ -553,47 +593,47 @@ describe('TabManager', () => {
 		};
 
 		it('should correctly identify tabs allowed for parking', () => {
-			expect(TabManager.isTabURLAllowedForPark(httpTab)).toBe(true);
-			expect(TabManager.isTabURLAllowedForPark(httpsTab)).toBe(true);
-			expect(TabManager.isTabURLAllowedForPark(chromeStoreTab)).toBe(false);
+			expect(TabManagerClass.isTabURLAllowedForPark(httpTab)).toBe(true);
+			expect(TabManagerClass.isTabURLAllowedForPark(httpsTab)).toBe(true);
+			expect(TabManagerClass.isTabURLAllowedForPark(chromeStoreTab)).toBe(false);
 		});
 
 		it('should correctly identify tabs that can be scripted', () => {
-			expect(TabManager.canTabBeScripted(httpTab)).toBe(true);
-			expect(TabManager.canTabBeScripted(httpsTab)).toBe(true);
-			expect(TabManager.canTabBeScripted(chromeStoreTab)).toBe(false);
+			expect(TabManagerClass.canTabBeScripted(httpTab)).toBe(true);
+			expect(TabManagerClass.canTabBeScripted(httpsTab)).toBe(true);
+			expect(TabManagerClass.canTabBeScripted(chromeStoreTab)).toBe(false);
 		});
 
 		it('should correctly identify parked tabs', () => {
-			expect(TabManager.isTabParked(httpTab)).toBe(false);
-			expect(TabManager.isTabParked(httpsTab)).toBe(false);
-			expect(TabManager.isTabParked(parkedTab)).toBe(true);
+			expect(TabManagerClass.isTabParked(httpTab)).toBe(false);
+			expect(TabManagerClass.isTabParked(httpsTab)).toBe(false);
+			expect(TabManagerClass.isTabParked(parkedTab)).toBe(true);
 		});
 
 		it('should correctly identify audible tabs', () => {
 			const audibleTab = { ...httpTab, audible: true };
 			const silentTab = { ...httpTab, audible: false };
 
-			expect(TabManager.isAudible(audibleTab)).toBe(true);
-			expect(TabManager.isAudible(silentTab)).toBe(false);
+			expect(TabManagerClass.isAudible(audibleTab)).toBe(true);
+			expect(TabManagerClass.isAudible(silentTab)).toBe(false);
 		});
 
 		it('should correctly check grouped tabs rules', () => {
 			const groupedTab = { ...httpTab, groupId: 1 };
 			const ungroupedTab = { ...httpTab, groupId: -1 };
 
-			expect(TabManager.isPassGroupedTabsRules(ungroupedTab, false)).toBe(true);
-			expect(TabManager.isPassGroupedTabsRules(ungroupedTab, true)).toBe(true);
-			expect(TabManager.isPassGroupedTabsRules(groupedTab, false)).toBe(true);
-			expect(TabManager.isPassGroupedTabsRules(groupedTab, true)).toBe(false);
+			expect(TabManagerClass.isPassGroupedTabsRules(ungroupedTab, false)).toBe(true);
+			expect(TabManagerClass.isPassGroupedTabsRules(ungroupedTab, true)).toBe(true);
+			expect(TabManagerClass.isPassGroupedTabsRules(groupedTab, false)).toBe(true);
+			expect(TabManagerClass.isPassGroupedTabsRules(groupedTab, true)).toBe(false);
 		});
 
 		it('should extract URL parameters correctly', () => {
 			const url = 'https://example.com?param1=value1&param2=value2';
 
-			expect(TabManager.getParameterByName('param1', url)).toBe('value1');
-			expect(TabManager.getParameterByName('param2', url)).toBe('value2');
-			expect(TabManager.getParameterByName('param3', url)).toBeNull();
+			expect(TabManagerClass.getParameterByName('param1', url)).toBe('value1');
+			expect(TabManagerClass.getParameterByName('param2', url)).toBe('value2');
+			expect(TabManagerClass.getParameterByName('param3', url)).toBeNull();
 		});
 	});
 
@@ -622,7 +662,7 @@ describe('TabManager', () => {
 
 		it('should detect audible tab exception', async () => {
 			const audibleTab = { ...mockTab, audible: true };
-			(global as any).settings.get.mockResolvedValueOnce(true); // ignoreAudible = true
+			testGlobals.settings.get.mockResolvedValueOnce(true); // ignoreAudible = true
 
 			const isException = await tabManager.isExceptionTab(audibleTab);
 			expect(isException).toBe(true);
@@ -630,7 +670,7 @@ describe('TabManager', () => {
 
 		it('should detect pinned tab exception', async () => {
 			const pinnedTab = { ...mockTab, pinned: true };
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'ignoreAudible') return Promise.resolve(false);
 				if (key === 'pinned') return Promise.resolve(true);
 				return Promise.resolve(false);
@@ -641,17 +681,17 @@ describe('TabManager', () => {
 		});
 
 		it('should detect ignored tab exception', async () => {
-			(global as any).settings.get.mockResolvedValue(false);
-			(global as any).ignoreList.isTabInIgnoreTabList.mockReturnValueOnce(true);
+			testGlobals.settings.get.mockResolvedValue(false);
+			testGlobals.ignoreList.isTabInIgnoreTabList.mockReturnValueOnce(true);
 
 			const isException = await tabManager.isExceptionTab(mockTab);
 			expect(isException).toBe(true);
 		});
 
 		it('should detect whitelist exception', async () => {
-			(global as any).settings.get.mockResolvedValue(false);
-			(global as any).ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
-			(global as any).whiteList.isURIException.mockReturnValueOnce(true);
+			testGlobals.settings.get.mockResolvedValue(false);
+			testGlobals.ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
+			testGlobals.whiteList.isURIException.mockReturnValueOnce(true);
 
 			const isException = await tabManager.isExceptionTab(mockTab);
 			expect(isException).toBe(true);
@@ -659,12 +699,12 @@ describe('TabManager', () => {
 
 		it('should detect grouped tab exception', async () => {
 			const groupedTab = { ...mockTab, groupId: 1 };
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'ignoreSuspendGroupedTabs') return Promise.resolve(true);
 				return Promise.resolve(false);
 			});
-			(global as any).ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
-			(global as any).whiteList.isURIException.mockReturnValue(false);
+			testGlobals.ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
+			testGlobals.whiteList.isURIException.mockReturnValue(false);
 
 			const isException = await tabManager.isExceptionTab(groupedTab);
 			expect(isException).toBe(true);
@@ -672,12 +712,12 @@ describe('TabManager', () => {
 
 		it('should not detect grouped tab exception when setting is disabled', async () => {
 			const groupedTab = { ...mockTab, groupId: 1 };
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'ignoreSuspendGroupedTabs') return Promise.resolve(false);
 				return Promise.resolve(false);
 			});
-			(global as any).ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
-			(global as any).whiteList.isURIException.mockReturnValue(false);
+			testGlobals.ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
+			testGlobals.whiteList.isURIException.mockReturnValue(false);
 
 			const isException = await tabManager.isExceptionTab(groupedTab);
 			expect(isException).toBe(false);
@@ -685,21 +725,21 @@ describe('TabManager', () => {
 
 		it('should not detect grouped tab exception for ungrouped tabs', async () => {
 			const ungroupedTab = { ...mockTab, groupId: -1 };
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'ignoreSuspendGroupedTabs') return Promise.resolve(true);
 				return Promise.resolve(false);
 			});
-			(global as any).ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
-			(global as any).whiteList.isURIException.mockReturnValue(false);
+			testGlobals.ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
+			testGlobals.whiteList.isURIException.mockReturnValue(false);
 
 			const isException = await tabManager.isExceptionTab(ungroupedTab);
 			expect(isException).toBe(false);
 		});
 
 		it('should not detect exception for normal tab', async () => {
-			(global as any).settings.get.mockResolvedValue(false);
-			(global as any).ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
-			(global as any).whiteList.isURIException.mockReturnValue(false);
+			testGlobals.settings.get.mockResolvedValue(false);
+			testGlobals.ignoreList.isTabInIgnoreTabList.mockReturnValue(false);
+			testGlobals.whiteList.isURIException.mockReturnValue(false);
 
 			const isException = await tabManager.isExceptionTab(mockTab);
 			expect(isException).toBe(false);
@@ -748,7 +788,7 @@ describe('TabManager', () => {
 			const nonDiscardedTab = { ...mockTab, discarded: false, status: 'loading' };
 
 			// Mock the settings promise chain
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'reloadTabOnRestore') return Promise.resolve(true);
 				return Promise.resolve(false);
 			});
@@ -885,7 +925,7 @@ describe('TabManager', () => {
 
 		it('should set missingCheckTime on first missing detection', () => {
 			const fixedTime = 1640995200000;
-			((global as any).Date.now as jest.Mock).mockReturnValue(fixedTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(fixedTime);
 
 			const openedChromeTabs = {}; // Empty - tab is missing
 			tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
@@ -900,12 +940,12 @@ describe('TabManager', () => {
 			const duringGracePeriod = startTime + 15000; // 15 seconds later (within 30s grace period)
 
 			// First detection - set missing time
-			((global as any).Date.now as jest.Mock).mockReturnValue(startTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(startTime);
 			const openedChromeTabs = {};
 			tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
 
 			// Second check during grace period
-			((global as any).Date.now as jest.Mock).mockReturnValue(duringGracePeriod);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(duringGracePeriod);
 			tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
 
 			const tabInfo = tabManager.getTabInfoById(mockTab.id);
@@ -918,12 +958,12 @@ describe('TabManager', () => {
 			const afterGracePeriod = startTime + 31000; // 31 seconds later (after 30s grace period)
 
 			// First detection - set missing time
-			((global as any).Date.now as jest.Mock).mockReturnValue(startTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(startTime);
 			const openedChromeTabs = {};
 			tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
 
 			// Second check after grace period
-			((global as any).Date.now as jest.Mock).mockReturnValue(afterGracePeriod);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(afterGracePeriod);
 			tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
 
 			const tabInfo = tabManager.getTabInfoById(mockTab.id);
@@ -935,7 +975,7 @@ describe('TabManager', () => {
 
 		it('should clear missingCheckTime when tab reappears', () => {
 			const fixedTime = 1640995200000;
-			((global as any).Date.now as jest.Mock).mockReturnValue(fixedTime);
+			(testGlobals.Date.now as jest.Mock).mockReturnValue(fixedTime);
 
 			// First detection - tab missing
 			const emptyChromeTabs = {};
@@ -972,8 +1012,8 @@ describe('TabManager', () => {
 	});
 
 	describe('Disable Screenshots Functionality', () => {
-		let _TabCapture: any;
-		let ScreenshotController: any;
+		let _TabCapture: typeof TabCapture;
+		let screenshotController: typeof ScreenshotController;
 
 		beforeEach(() => {
 			// Re-import modules
@@ -981,7 +1021,7 @@ describe('TabManager', () => {
 			_TabCapture = TabCaptureModule.TabCapture;
 
 			const ScreenshotControllerModule = require('../../modules/ScreenshotController');
-			ScreenshotController = ScreenshotControllerModule.ScreenshotController;
+			screenshotController = ScreenshotControllerModule.ScreenshotController;
 		});
 
 		it('should have screenshotsEnabled setting defaulted to true', () => {
@@ -990,7 +1030,7 @@ describe('TabManager', () => {
 
 		it('should return null from ScreenshotController when screenshots are disabled', async () => {
 			// Mock settings.get to return false for screenshotsEnabled
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'screenshotsEnabled') return Promise.resolve(false);
 				return Promise.resolve(true);
 			});
@@ -998,7 +1038,7 @@ describe('TabManager', () => {
 			const mockCallback = jest.fn();
 
 			// Call getScreen
-			await ScreenshotController.getScreen(1, 123456, mockCallback);
+			await screenshotController.getScreen(1, 123456, mockCallback);
 
 			// Verify callback was called with null (no screenshot)
 			expect(mockCallback).toHaveBeenCalledWith(null);
@@ -1006,7 +1046,7 @@ describe('TabManager', () => {
 
 		afterEach(() => {
 			// Reset settings mock to default behavior
-			(global as any).settings.get.mockResolvedValue(true);
+			testGlobals.settings.get.mockResolvedValue(true);
 		});
 	});
 });

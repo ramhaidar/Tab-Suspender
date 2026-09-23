@@ -20,30 +20,76 @@ import '../typing/global.d';
 const PARK_URL = 'chrome-extension://test/park.html';
 const TAB_URL = 'https://example.com';
 
-(global as any).sessionsPageUrl = 'chrome-extension://test/sessions.html';
-(global as any).wizardPageUrl = 'chrome-extension://test/wizard_background.html';
-(global as any).historyPageUrl = 'chrome-extension://test/history.html';
-(global as any).parkUrl = PARK_URL;
-(global as any).publicExtensionUrl = PARK_URL;
-(global as any).trace = false;
-(global as any).debug = false;
-(global as any).debugTabsInfo = false;
-(global as any).debugScreenCache = false;
-(global as any).TSSessionId = 123456;
-(global as any).getScreenCache = null;
-(global as any).pauseTics = 0;
-(global as any).pauseTicsStartedFrom = 0;
-(global as any).isCharging = false;
-(global as any).batteryLevel = 1.0;
+type SettingsChangeTestTabManager = {
+	getTabInfoById: (id: number) => { time: number } | undefined;
+};
+type SettingsChangeTestTabObserver = {
+	settingsChanged: () => void;
+	tick: (stateOnly: boolean) => Promise<void>;
+};
+type SettingsChangeTestTabManagerConstructor = new () => SettingsChangeTestTabManager;
+type SettingsChangeTestTabObserverConstructor = new (tabManager: SettingsChangeTestTabManager) => SettingsChangeTestTabObserver;
+type SettingsChangeTestGlobals = typeof global & {
+	sessionsPageUrl: string;
+	wizardPageUrl: string;
+	historyPageUrl: string;
+	parkUrl: string;
+	publicExtensionUrl: string;
+	trace: boolean;
+	debug: boolean;
+	debugTabsInfo: boolean;
+	debugScreenCache: boolean;
+	TSSessionId: number;
+	getScreenCache: unknown;
+	pauseTics: number;
+	pauseTicsStartedFrom: number;
+	isCharging: boolean;
+	batteryLevel: number;
+	parseUrlParam: jest.Mock;
+	extractHostname: jest.Mock;
+	discardTab: jest.Mock;
+	markForUnsuspend: jest.Mock;
+	isTabMarkedForUnsuspend: jest.Mock;
+	closeTab: jest.Mock;
+	parkTab: jest.Mock;
+	settings: { get: jest.Mock };
+	whiteList: { isURIException: jest.Mock };
+	ignoreList: { isTabInIgnoreTabList: jest.Mock };
+	tabCapture: { captureTab: jest.Mock; injectJS: jest.Mock };
+	ContextMenuController: { menuIdMap: Record<string, number> };
+	ScreenshotController: { getScreen: jest.Mock };
+	BrowserActionControl: unknown;
+	HistoryOpenerController: unknown;
+	TabInfo: unknown;
+	TabManager: unknown;
+	TabObserver: unknown;
+};
+const testGlobals = global as SettingsChangeTestGlobals;
 
-(global as any).parseUrlParam = jest.fn((url: string, param: string) => {
+testGlobals.sessionsPageUrl = 'chrome-extension://test/sessions.html';
+testGlobals.wizardPageUrl = 'chrome-extension://test/wizard_background.html';
+testGlobals.historyPageUrl = 'chrome-extension://test/history.html';
+testGlobals.parkUrl = PARK_URL;
+testGlobals.publicExtensionUrl = PARK_URL;
+testGlobals.trace = false;
+testGlobals.debug = false;
+testGlobals.debugTabsInfo = false;
+testGlobals.debugScreenCache = false;
+testGlobals.TSSessionId = 123456;
+testGlobals.getScreenCache = null;
+testGlobals.pauseTics = 0;
+testGlobals.pauseTicsStartedFrom = 0;
+testGlobals.isCharging = false;
+testGlobals.batteryLevel = 1.0;
+
+testGlobals.parseUrlParam = jest.fn((url: string, param: string) => {
 	try {
 		return new URL(url).searchParams.get(param);
 	} catch {
 		return null;
 	}
 });
-(global as any).extractHostname = jest.fn((url: string) => {
+testGlobals.extractHostname = jest.fn((url: string) => {
 	try {
 		return new URL(url).hostname;
 	} catch {
@@ -51,18 +97,18 @@ const TAB_URL = 'https://example.com';
 	}
 });
 
-(global as any).discardTab = jest.fn();
-(global as any).markForUnsuspend = jest.fn();
-(global as any).isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
-(global as any).closeTab = jest.fn();
-(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
+testGlobals.discardTab = jest.fn();
+testGlobals.markForUnsuspend = jest.fn();
+testGlobals.isTabMarkedForUnsuspend = jest.fn().mockReturnValue(false);
+testGlobals.closeTab = jest.fn();
+testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
 
 // Per-test settings overrides: tests write to this object to change individual values.
-let settingsOverrides: Record<string, any> = {};
+let settingsOverrides: Record<string, unknown> = {};
 
-(global as any).settings = {
+testGlobals.settings = {
 	get: jest.fn((key: string) => {
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			active: true,
 			timeout: 90, // 90 s default — 9 ticks of 10 s needed to reach threshold
 			pinned: false,
@@ -85,11 +131,11 @@ let settingsOverrides: Record<string, any> = {};
 	})
 };
 
-(global as any).whiteList = { isURIException: jest.fn().mockReturnValue(false) };
-(global as any).ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
-(global as any).tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
-(global as any).ContextMenuController = { menuIdMap: {} };
-(global as any).ScreenshotController = { getScreen: jest.fn() };
+testGlobals.whiteList = { isURIException: jest.fn().mockReturnValue(false) };
+testGlobals.ignoreList = { isTabInIgnoreTabList: jest.fn().mockReturnValue(false) };
+testGlobals.tabCapture = { captureTab: jest.fn(), injectJS: jest.fn() };
+testGlobals.ContextMenuController = { menuIdMap: {} };
+testGlobals.ScreenshotController = { getScreen: jest.fn() };
 
 const BrowserActionControl = jest.fn().mockImplementation(() => ({
 	updateStatus: jest.fn(),
@@ -101,8 +147,8 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	onRemoveTab: jest.fn(),
 	collectInitialTabState: jest.fn()
 }));
-(global as any).BrowserActionControl = BrowserActionControl;
-(global as any).HistoryOpenerController = HistoryOpenerController;
+testGlobals.BrowserActionControl = BrowserActionControl;
+testGlobals.HistoryOpenerController = HistoryOpenerController;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -131,35 +177,38 @@ function makeTab(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab {
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
 describe('TabObserver — Settings Change (11.4)', () => {
-	let tabManager: any;
-	let tabObserver: any;
-	let TabObserverClass: any;
-	let TabManagerClass: any;
+	let tabManager: SettingsChangeTestTabManager;
+	let tabObserver: SettingsChangeTestTabObserver;
+	let TabObserverClass: SettingsChangeTestTabObserverConstructor;
+	let TabManagerClass: SettingsChangeTestTabManagerConstructor;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
 
 		settingsOverrides = {};
-		(global as any).parkTab = jest.fn().mockResolvedValue(undefined);
-		(global as any).pauseTics = 0;
-		(global as any).pauseTicsStartedFrom = 0;
+		testGlobals.parkTab = jest.fn().mockResolvedValue(undefined);
+		testGlobals.pauseTics = 0;
+		testGlobals.pauseTicsStartedFrom = 0;
 
-		((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
+		(testGlobals.Date.now as jest.Mock).mockReturnValue(1640995200000);
 
 		const { TabInfo } = require('../../modules/model/TabInfo');
-		(global as any).TabInfo = TabInfo;
+		testGlobals.TabInfo = TabInfo;
 
 		const { TabManager } = require('../../modules/TabManager');
-		(global as any).TabManager = TabManagerClass = TabManager;
+		testGlobals.TabManager = TabManagerClass = TabManager;
 
 		require('../../modules/TabObserver');
-		TabObserverClass = (global as any).TabObserver;
+		TabObserverClass = testGlobals.TabObserver as SettingsChangeTestTabObserverConstructor;
 		tabManager = new TabManagerClass();
 	});
 
 	function setWindowTab(tab: chrome.tabs.Tab) {
-		(global as any).chrome.windows.getAll = jest.fn((_opts: any, cb: any) => cb([{ id: 1, focused: true, tabs: [tab] }]));
+		const getAllMock = testGlobals.chrome.windows.getAll as jest.Mock;
+		getAllMock.mockImplementation((_options: chrome.windows.QueryOptions, callback: (windows: chrome.windows.Window[]) => void) => {
+			callback([{ id: 1, focused: true, tabs: [tab] } as chrome.windows.Window]);
+		});
 	}
 
 	/** Run n real (non-stateOnly) ticks, draining the fire-and-forget callback chain. */
@@ -187,7 +236,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 
 			const tabInfo = tabManager.getTabInfoById(tab.id);
 			expect(tabInfo?.time).toBe(30); // accumulated but below threshold
-			expect((global as any).parkTab).not.toHaveBeenCalled();
+			expect(testGlobals.parkTab).not.toHaveBeenCalled();
 		});
 
 		// ────────────────────────────────────────────────────────────────────────
@@ -202,7 +251,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 
 			// 3 normal ticks with the original 90 s timeout
 			await runTicks(3);
-			expect((global as any).parkTab).not.toHaveBeenCalled();
+			expect(testGlobals.parkTab).not.toHaveBeenCalled();
 
 			const tabInfoAfter3 = tabManager.getTabInfoById(tab.id);
 			expect(tabInfoAfter3?.time).toBe(30);
@@ -218,7 +267,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 			// One real tick: time = 40 ≥ 30 → suspension
 			await runTicks(1);
 
-			expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
+			expect(testGlobals.parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
 		});
 
 		// ────────────────────────────────────────────────────────────────────────
@@ -274,7 +323,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 
 			// 2 ticks → time = 20 s (below 30 s threshold)
 			await runTicks(2);
-			expect((global as any).parkTab).not.toHaveBeenCalled();
+			expect(testGlobals.parkTab).not.toHaveBeenCalled();
 
 			// Increase timeout so the tab is no longer over the threshold
 			settingsOverrides.timeout = 90;
@@ -284,7 +333,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 
 			// 1 more tick: time = 30 s; threshold is now 90 s → no suspension
 			await runTicks(1);
-			expect((global as any).parkTab).not.toHaveBeenCalled();
+			expect(testGlobals.parkTab).not.toHaveBeenCalled();
 
 			const tabInfo = tabManager.getTabInfoById(tab.id);
 			expect(tabInfo?.time).toBe(30);
@@ -313,7 +362,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 			// Ticker is still operational after repeated restarts
 			settingsOverrides.timeout = 10;
 			await runTicks(1);
-			expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
+			expect(testGlobals.parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
 		});
 	});
 });

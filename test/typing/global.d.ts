@@ -18,23 +18,23 @@ declare global {
 	function markForUnsuspend(tab: chrome.tabs.Tab): void;
 
 	// Global objects
-	const settings: any;
-	const whiteList: any;
-	const ignoreList: any;
-	const tabCapture: any;
-	const tabManager: any;
-	const ContextMenuController: any;
-	const pauseTics: any;
+	const settings: Settings;
+	const whiteList: WhiteList;
+	const ignoreList: IgnoreList;
+	const tabCapture: TabCapture;
+	const tabManager: TabManager;
+	const ContextMenuController: typeof ContextMenuController;
+	const pauseTics: number;
 
 	// Global cache objects
-	let getScreenCache: any;
+	let getScreenCache: unknown;
 
 	// Interfaces
 	interface TabChangeInfo {
 		status?: string;
 		url?: string;
 		discarded?: boolean;
-		[key: string]: any;
+		[key: string]: unknown;
 	}
 
 	interface TabInfo {

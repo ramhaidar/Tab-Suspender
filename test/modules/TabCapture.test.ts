@@ -2,9 +2,29 @@
 import '../lib/Chrome';
 import '../typing/global.d';
 
+type TabCaptureTestInstance = { captureTab: (tab: unknown, options?: { tryEvenIncomplete?: boolean }) => Promise<void> };
+type TabCaptureTestTab = Partial<chrome.tabs.Tab> & Pick<chrome.tabs.Tab, 'id' | 'url' | 'status' | 'active' | 'windowId'>;
+type TabCaptureTestGlobals = typeof global & {
+	debug: boolean;
+	settings: { get: jest.Mock };
+	ScreenshotController: typeof mockScreenshotController;
+	tabManager: typeof mockTabManager;
+	TabManager: { isTabURLAllowedForPark: jest.Mock; canTabBeScripted: jest.Mock };
+	hasLastError: jest.Mock;
+};
+type TabCaptureTestChrome = Omit<typeof chrome, 'tabs' | 'scripting'> & {
+	tabs: Omit<typeof chrome.tabs, 'query' | 'captureVisibleTab' | 'getZoom'> & {
+		query: jest.Mock;
+		captureVisibleTab: jest.Mock;
+		getZoom: jest.Mock;
+	};
+	scripting: Omit<typeof chrome.scripting, 'executeScript'> & { executeScript: jest.Mock };
+};
+const testGlobals = global as TabCaptureTestGlobals;
+
 // Mock global variables and settings
-(global as any).debug = false;
-(global as any).settings = {
+testGlobals.debug = false;
+testGlobals.settings = {
 	get: jest.fn().mockResolvedValue(90) // Default screenshot quality
 };
 
@@ -12,7 +32,7 @@ import '../typing/global.d';
 const mockScreenshotController = {
 	addScreen: jest.fn().mockResolvedValue(undefined)
 };
-(global as any).ScreenshotController = mockScreenshotController;
+testGlobals.ScreenshotController = mockScreenshotController;
 
 // Mock TabManager
 const mockTabManager = {
@@ -21,22 +41,22 @@ const mockTabManager = {
 	isTabURLAllowedForPark: jest.fn().mockReturnValue(true),
 	canTabBeScripted: jest.fn().mockReturnValue(true)
 };
-(global as any).tabManager = mockTabManager;
-(global as any).TabManager = {
+testGlobals.tabManager = mockTabManager;
+testGlobals.TabManager = {
 	isTabURLAllowedForPark: mockTabManager.isTabURLAllowedForPark,
 	canTabBeScripted: mockTabManager.canTabBeScripted
 };
 
 // Mock hasLastError
-(global as any).hasLastError = jest.fn().mockReturnValue(false);
+testGlobals.hasLastError = jest.fn().mockReturnValue(false);
 
 // Import TabCapture once
 const TabCapture = require('../../modules/TabCapture');
 
 describe('TabCapture Race Condition Tests', () => {
-	let tabCapture: any;
-	let mockChrome: any;
-	let currentActiveTab: any; // Track the currently "active" tab for chrome.tabs.query
+	let tabCapture: TabCaptureTestInstance;
+	let mockChrome: TabCaptureTestChrome;
+	let currentActiveTab: TabCaptureTestTab; // Track the currently "active" tab for chrome.tabs.query
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -47,10 +67,10 @@ describe('TabCapture Race Condition Tests', () => {
 		mockScreenshotController.addScreen.mockResolvedValue(undefined);
 
 		// Reset hasLastError mock
-		(global as any).hasLastError = jest.fn().mockReturnValue(false);
+		testGlobals.hasLastError = jest.fn().mockReturnValue(false);
 
 		// Setup Chrome API mocks
-		mockChrome = (global as any).chrome;
+		mockChrome = testGlobals.chrome as TabCaptureTestChrome;
 
 		// Default active tab
 		currentActiveTab = {
@@ -93,7 +113,7 @@ describe('TabCapture Race Condition Tests', () => {
 		});
 
 		// Reset settings mock
-		(global as any).settings.get.mockImplementation((key) => {
+		testGlobals.settings.get.mockImplementation((key) => {
 			if (key === 'screenshotsEnabled') return Promise.resolve(true);
 			if (key === 'screenshotQuality') return Promise.resolve(90);
 			return Promise.resolve(90);
@@ -232,7 +252,7 @@ describe('TabCapture Race Condition Tests', () => {
 			mockChrome.scripting.executeScript.mockRejectedValue(new Error('Tab closed'));
 
 			// Mock hasLastError to return true for expected exceptions
-			(global as any).hasLastError = jest.fn().mockReturnValue(true);
+			testGlobals.hasLastError = jest.fn().mockReturnValue(true);
 
 			await expect(tabCapture.captureTab(mockTab)).rejects.toBeDefined();
 		});
@@ -308,7 +328,7 @@ describe('TabCapture Race Condition Tests', () => {
 			// Simulate captureVisibleTab returning a valid screen, but Chrome also sets lastError
 			// (hasLastError reads chrome.runtime.lastError internally).
 			// Mock hasLastError to return true → triggers the error branch.
-			(global as any).hasLastError = jest.fn().mockReturnValue(true);
+			testGlobals.hasLastError = jest.fn().mockReturnValue(true);
 
 			await expect(tabCapture.captureTab(mockTab)).rejects.toBeDefined();
 			expect(mockScreenshotController.addScreen).not.toHaveBeenCalled();
@@ -324,7 +344,7 @@ describe('TabCapture Race Condition Tests', () => {
 			};
 			currentActiveTab = { ...mockTab };
 
-			(global as any).hasLastError = jest.fn().mockReturnValue(true);
+			testGlobals.hasLastError = jest.fn().mockReturnValue(true);
 
 			const error = await tabCapture.captureTab(mockTab).catch((e: Error) => e);
 			expect(error).toBeDefined();
@@ -457,7 +477,7 @@ describe('TabCapture Race Condition Tests', () => {
 			};
 
 			// Mock settings to return false for screenshotsEnabled
-			(global as any).settings.get.mockImplementation((key: string) => {
+			testGlobals.settings.get.mockImplementation((key: string) => {
 				if (key === 'screenshotsEnabled') return Promise.resolve(false);
 				return Promise.resolve(90);
 			});
