@@ -33,8 +33,9 @@ class SettingsStoreClient {
 		return `store.${namespace ? namespace : SETTINGS_STORAGE_NAMESPACE}.${name}`;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	static async get(name: string, namespace: string): Promise<any> {
+	static get<K extends keyof Settings>(name: K, namespace: string): Promise<Settings[K]>;
+	static get(name: string, namespace: string): Promise<unknown>;
+	static async get(name: string, namespace: string): Promise<unknown> {
 		if (DEFAULT_SETTINGS[name] === undefined) {
 			throw new Error(`SettingsStore.get(): Unknown property '${name}'`);
 		}
@@ -44,20 +45,19 @@ class SettingsStoreClient {
 		return (await chrome.storage.local.get([name]))[name];
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	async get(name: string): Promise<any> {
+	get<K extends keyof Settings>(name: K): Promise<Settings[K]>;
+	get(name: string): Promise<unknown>;
+	async get(name: string): Promise<unknown> {
 		return SettingsStoreClient.get(name, this.namespace);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	static async getAll(namespace: string): Promise<object> {
+	static async getAll(namespace: string): Promise<Record<string, unknown>> {
 		const keys = Object.keys(DEFAULT_SETTINGS).map((key) => SettingsStoreClient.genName(key, namespace));
 
 		return await chrome.storage.local.get(keys);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	async getAll(): Promise<any> {
+	async getAll(): Promise<Record<string, unknown>> {
 		return SettingsStoreClient.getAll(this.namespace);
 	}
 
@@ -157,7 +157,7 @@ class SettingsStore extends SettingsStoreClient {
 				.get(null as string)
 				.catch((err) => {
 					console.error('[SettingsStore] sync.get() failed, continuing without sync data:', err);
-					return {} as Record<string, any>;
+					return {} as Record<string, unknown>;
 				})
 				.then(async (_items) => {
 					/* TODO: Implement sync from sync server
@@ -256,7 +256,7 @@ class SettingsStore extends SettingsStoreClient {
 					}
 
 					await this.set('localStorageMigrated', true);
-					await LocalStore.set(LocalStoreKeys.INSTALLED, true);
+					await (globalThis as typeof globalThis & { LocalStore: LocalStoreApi }).LocalStore.set(LocalStoreKeys.INSTALLED, true);
 				}
 			}
 		}
