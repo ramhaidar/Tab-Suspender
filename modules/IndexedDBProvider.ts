@@ -4,8 +4,6 @@
  * Zadorozhniy.Sergey@gmail.com
  */
 
-'use strict';
-
 const SCREENS_DB_NAME = 'screens';
 const FD_DB_NAME = 'fd';
 const ADDED_ON_INDEX_NAME = 'addedOnIndex';
@@ -26,7 +24,7 @@ function IndexedDBProvider(options) {
  */
 // TODO-v4: Add return promise
 IndexedDBProvider.prototype.getAll = function (query, callback, errorCallback) {
-	void this.getTransaction([query.IDB.table], 'readonly').then(function (transaction) {
+	void this.getTransaction([query.IDB.table], 'readonly').then((transaction) => {
 		const objectStore = transaction.objectStore(query.IDB.table);
 
 		const resultsRowsArray = [];
@@ -35,7 +33,7 @@ IndexedDBProvider.prototype.getAll = function (query, callback, errorCallback) {
 			if (query.IDB.predicate === 'getAllKeys') {
 				const cursor = objectStore.index(query.IDB.index).openKeyCursor();
 
-				cursor.onsuccess = function (e) {
+				cursor.onsuccess = (e) => {
 					if (!e.target.result) {
 						if (query.IDB.predicateResultLogic != null) return callback(query.IDB.predicateResultLogic(resultsRowsArray));
 						else return callback(resultsRowsArray);
@@ -43,18 +41,18 @@ IndexedDBProvider.prototype.getAll = function (query, callback, errorCallback) {
 
 					const res = e.target.result;
 					resultsRowsArray.push(res.key);
-					res['continue']();
+					res.continue();
 				};
 
-				cursor.onerror = function (e) {
+				cursor.onerror = (e) => {
 					console.error('IDB Error on getAll(): ', e.target.error);
 					(errorCallback != null ? errorCallback : sql_error)(e);
 				};
-			} else throw new Error('Unimplemented predicate name: ' + query.IDB.predicate);
+			} else throw new Error(`Unimplemented predicate name: ${query.IDB.predicate}`);
 		} else {
 			const cursor = objectStore.openCursor();
 
-			cursor.onsuccess = function (e) {
+			cursor.onsuccess = (e) => {
 				if (!e.target.result) {
 					if (query.IDB.predicateResultLogic != null) return callback(query.IDB.predicateResultLogic(resultsRowsArray));
 					else return callback(resultsRowsArray);
@@ -62,10 +60,10 @@ IndexedDBProvider.prototype.getAll = function (query, callback, errorCallback) {
 
 				const res = e.target.result;
 				resultsRowsArray.push(res.value);
-				res['continue']();
+				res.continue();
 			};
 
-			cursor.onerror = function (e) {
+			cursor.onerror = (e) => {
 				console.error('IDB Error on getAll(): ', e.target.error);
 				(errorCallback != null ? errorCallback : sql_error)(e);
 			};
@@ -78,21 +76,21 @@ IndexedDBProvider.prototype.getAll = function (query, callback, errorCallback) {
  */
 IndexedDBProvider.prototype.queryIndex = function (query, callback) {
 	this.getTransaction([query.IDB.table], 'readonly')
-		.then(function (transaction) {
-			let store = transaction.objectStore(query.IDB.table);
+		.then((transaction) => {
+			const store = transaction.objectStore(query.IDB.table);
 
 			let storeWithIndex = store;
 			if (query.IDB.index) storeWithIndex = store.index(query.IDB.index);
 
 			const request = storeWithIndex.get(IDBKeyRange.only(query.params));
 
-			request.onsuccess = function (e) {
+			request.onsuccess = (e) => {
 				const result = e.target.result;
 
 				callback(result);
 			};
 
-			request.onerror = function (e) {
+			request.onerror = (e) => {
 				console.error('Error', e.target.error);
 				callback(null);
 			};
@@ -108,16 +106,16 @@ IndexedDBProvider.prototype.queryIndex = function (query, callback) {
  */
 IndexedDBProvider.prototype.queryIndexCount = function (query, callback) {
 	this.getTransaction([query.IDB.table], 'readonly')
-		.then(function (transaction) {
-			let store = transaction.objectStore(query.IDB.table);
+		.then((transaction) => {
+			const store = transaction.objectStore(query.IDB.table);
 
-			let request = store.index(query.IDB.index).count(IDBKeyRange.only(query.params));
+			const request = store.index(query.IDB.index).count(IDBKeyRange.only(query.params));
 
-			request.onsuccess = function () {
+			request.onsuccess = () => {
 				callback(request.result);
 			};
 
-			request.onerror = function (e) {
+			request.onerror = (e) => {
 				console.error('Error', e.target.error);
 				callback(0);
 			};
@@ -132,7 +130,7 @@ IndexedDBProvider.prototype.queryIndexCount = function (query, callback) {
  *
  */
 IndexedDBProvider.prototype.executeDelete = function (query /*, callback*/) {
-	this.getTransaction([query.IDB.table], 'readwrite').then(function (transaction) {
+	this.getTransaction([query.IDB.table], 'readwrite').then((transaction) => {
 		const store = transaction.objectStore(query.IDB.table);
 
 		let storeWithIndex = store;
@@ -140,19 +138,19 @@ IndexedDBProvider.prototype.executeDelete = function (query /*, callback*/) {
 
 		const request = storeWithIndex.get(IDBKeyRange.only(query.IDB.params));
 
-		request.onsuccess = function (e) {
+		request.onsuccess = (e) => {
 			const result = e.target.result;
 
 			if (result != null) {
 				let combinedKeyValues = null;
 				if (typeof store.keyPath === 'string') combinedKeyValues = result[store.keyPath];
 				else combinedKeyValues = store.keyPath.map((key) => result[key]);
-				store['delete'](combinedKeyValues);
-			} else if (query.IDB.ignoreNotFound == undefined || query.IDB.ignoreNotFound === false)
+				store.delete(combinedKeyValues);
+			} else if (query.IDB.ignoreNotFound === undefined || query.IDB.ignoreNotFound === false)
 				console.error('IDB ExecuteDelete error(e, e.target, e.target.result): ', e, e.target, e.target.result);
 		};
 
-		request.onerror = function (e) {
+		request.onerror = (e) => {
 			console.error('IDB ExecuteDelete Error: ', e.target.error);
 		};
 	});
@@ -162,16 +160,16 @@ IndexedDBProvider.prototype.executeDelete = function (query /*, callback*/) {
  *
  */
 IndexedDBProvider.prototype.put = function (query) {
-	this.getTransaction([query.IDB.table], 'readwrite').then(function (transaction) {
-		let store = transaction.objectStore(query.IDB.table);
+	this.getTransaction([query.IDB.table], 'readwrite').then((transaction) => {
+		const store = transaction.objectStore(query.IDB.table);
 
-		let request = store.put(query.IDB.data);
+		const request = store.put(query.IDB.data);
 
-		request.onerror = function (e) {
+		request.onerror = (e) => {
 			console.error('Error', e.target.error);
 		};
 
-		request.onsuccess = function () {};
+		request.onsuccess = () => {};
 	});
 };
 
@@ -182,49 +180,48 @@ IndexedDBProvider.prototype.putV2 = function (queries) {
 	return this.getTransaction(
 		queries.map((query) => query.IDB.table),
 		'readwrite'
-	).then(function (transaction) {
-		return new Promise<void>((resolve, reject) => {
-			let pendingOperations = queries.length;
-			let hasError = false;
+	).then(
+		(transaction) =>
+			new Promise<void>((resolve, reject) => {
+				let pendingOperations = queries.length;
+				let hasError = false;
 
-			queries.forEach((query) => {
-				let store = transaction.objectStore(query.IDB.table);
+				queries.forEach((query) => {
+					const store = transaction.objectStore(query.IDB.table);
 
-				let request = store.put(query.IDB.data, query.IDB.key);
+					const request = store.put(query.IDB.data, query.IDB.key);
 
-				request.onerror = function (e) {
-					console.error('Error', e.target.error);
-					hasError = true;
-					if (--pendingOperations === 0) {
-						reject(e.target.error);
-					}
-				};
+					request.onerror = (e) => {
+						console.error('Error', e.target.error);
+						hasError = true;
+						if (--pendingOperations === 0) {
+							reject(e.target.error);
+						}
+					};
 
-				request.onsuccess = function () {
-					if (--pendingOperations === 0 && !hasError) {
-						resolve();
-					}
-				};
-			});
-		});
-	});
+					request.onsuccess = () => {
+						if (--pendingOperations === 0 && !hasError) {
+							resolve();
+						}
+					};
+				});
+			})
+	);
 };
 
 /**
  *
  */
 IndexedDBProvider.prototype.getTransaction = function (tables, mode) {
-	// eslint-disable-next-line @typescript-eslint/no-this-alias
-	let self = this;
 	if (this.db == null)
-		return new Promise(function (resolve, reject) {
-			self.initializedPromise
-				.then(function () {
+		return new Promise((resolve, reject) => {
+			this.initializedPromise
+				.then(() => {
 					try {
-						resolve(self.db.transaction(tables, mode));
+						resolve(this.db.transaction(tables, mode));
 					} catch (e) {
 						console.error(e);
-						self.getTransactionWithReconnect(e, tables, mode).then(resolve).catch(reject);
+						this.getTransactionWithReconnect(e, tables, mode).then(resolve).catch(reject);
 					}
 				})
 				.catch((e) => {
@@ -233,41 +230,37 @@ IndexedDBProvider.prototype.getTransaction = function (tables, mode) {
 				});
 		});
 
-	return new Promise(function (resolve, reject) {
+	return new Promise((resolve, reject) => {
 		try {
-			resolve(self.db.transaction(tables, mode));
+			resolve(this.db.transaction(tables, mode));
 		} catch (e) {
 			console.error(e);
-			self.getTransactionWithReconnect(e, tables, mode).then(resolve).catch(reject);
+			this.getTransactionWithReconnect(e, tables, mode).then(resolve).catch(reject);
 		}
 	});
 };
 
 IndexedDBProvider.prototype.getTransactionWithReconnect = function (e, tables, mode) {
-	// eslint-disable-next-line @typescript-eslint/no-this-alias
-	let self = this;
-	return new Promise(function (resolve, reject) {
+	return new Promise((resolve, reject) => {
 		if (e.name === 'InvalidStateError') {
-			self.open();
-			self.initializedPromise.then(
-				function () {
+			this.open();
+			this.initializedPromise.then(
+				() => {
 					try {
-						resolve(self.db.transaction(tables, mode));
+						resolve(this.db.transaction(tables, mode));
 					} catch (e) {
 						console.error(e);
-						reject();
+						reject(e);
 					}
 				},
-				function (e) {
-					e.message = 'Could not reconnect to IndexedDB!!!!!: ' + e.message;
-					reject();
-					throw e;
+				(e) => {
+					e.message = `Could not reconnect to IndexedDB!!!!!: ${e.message}`;
+					reject(e);
 				}
 			);
 		} else {
-			e.message = 'Unexpected getTransaction Exception: ' + e.message;
-			reject();
-			throw e;
+			e.message = `Unexpected getTransaction Exception: ${e.message}`;
+			reject(e);
 		}
 	});
 };
@@ -280,7 +273,7 @@ IndexedDBProvider.prototype.close = function () {
 		try {
 			this.db.close();
 			// eslint-disable-next-line no-empty,@typescript-eslint/no-unused-vars
-		} catch (e) {}
+		} catch (_e) {}
 	}
 };
 
@@ -288,26 +281,23 @@ IndexedDBProvider.prototype.close = function () {
  *
  */
 IndexedDBProvider.prototype.open = function (options) {
-	// eslint-disable-next-line @typescript-eslint/no-this-alias
-	let self = this;
-
 	this.close();
 
-	let openRequest = indexedDB.open('TSDB', 6);
+	const openRequest = indexedDB.open('TSDB', 6);
 
-	openRequest.onupgradeneeded = function (upgradeEvent) {
-		// @ts-ignore
-		let thisDB = upgradeEvent.target.result;
-		// @ts-ignore
+	openRequest.onupgradeneeded = (upgradeEvent) => {
+		// @ts-expect-error
+		const thisDB = upgradeEvent.target.result;
+		// @ts-expect-error
 		const tx = upgradeEvent.target.transaction;
 
 		console.log(`IDBVersionChangeEvent: `, upgradeEvent);
 
-		if (options == null || options.skipSchemaCreation == false) {
+		if (options == null || options.skipSchemaCreation === false) {
 			/* If initial setup... */
 			if (upgradeEvent.oldVersion === 0) {
 				if (!thisDB.objectStoreNames.contains(SCREENS_DB_NAME)) {
-					let objectStore = thisDB.createObjectStore(SCREENS_DB_NAME, { keyPath: ['id', 'sessionId'] });
+					const objectStore = thisDB.createObjectStore(SCREENS_DB_NAME, { keyPath: ['id', 'sessionId'] });
 					objectStore.createIndex('PK', ['id', 'sessionId'], { unique: true });
 				}
 
@@ -330,27 +320,27 @@ IndexedDBProvider.prototype.open = function (options) {
 		}
 	};
 
-	this.initializedPromise = new Promise<void>(function (resolve, reject) {
-		openRequest.onsuccess = function (e) {
+	this.initializedPromise = new Promise<void>((resolve, reject) => {
+		openRequest.onsuccess = (e) => {
 			console.log('IDB Connected successfully');
-			// @ts-ignore
-			self.db = e.target.result;
-			self.initialized = true;
-			self.db.onversionchange = () => {
-				self.db.close();
+			// @ts-expect-error
+			this.db = e.target.result;
+			this.initialized = true;
+			this.db.onversionchange = () => {
+				this.db.close();
 				console.log('A new version of this page is ready. Please reload or close this tab!');
 			};
 			resolve();
 		};
 
-		openRequest.onerror = function (e) {
+		openRequest.onerror = (e) => {
 			console.error('IDB error:', e);
 			reject(e);
 		};
 	});
 };
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		IndexedDBProvider,
 		ADDED_ON_INDEX_NAME,

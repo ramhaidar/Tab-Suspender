@@ -73,7 +73,6 @@ class Settings {
 //import { keys } from 'ts-transformer-keys';
 //console.trace(`ISettingsFields: `, keys<ISettings>());
 
-// @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DEFAULT_SETTINGS: Settings = {
 	active: true,
@@ -120,7 +119,6 @@ const DEFAULT_SETTINGS: Settings = {
 	localStorageFormDataCleaned: null
 };
 
-// @ts-ignore
 if (typeof global !== 'undefined') {
 	(global as any).DEFAULT_SETTINGS = DEFAULT_SETTINGS;
 	(global as any).SETTINGS_TYPES = SETTINGS_TYPES;

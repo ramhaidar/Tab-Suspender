@@ -44,7 +44,7 @@ const mockScreenshotController = {
 
 (global as any).ScreenshotController = mockScreenshotController;
 
-function sleep(ms: number): Promise<void> {
+function _sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -118,7 +118,7 @@ describe('DBCleanup Tests', () => {
 				// Note: tabId 4 is not in usedTabIds
 			};
 
-			const today = new Date();
+			const today = new Date(Date.now());
 			const dayMs = 86400000;
 
 			const screensFromDb: IDBAddedOnIndexType[] = [
@@ -154,7 +154,7 @@ describe('DBCleanup Tests', () => {
 				3: 3
 			};
 
-			const today = new Date();
+			const today = new Date(Date.now());
 			const dayMs = 86400000;
 
 			const fdsFromDb: IDBFdsValueType[] = [
@@ -211,7 +211,7 @@ describe('DBCleanup Tests', () => {
 
 			(global as any).chrome = {
 				tabs: {
-					query: jest.fn((options, callback) => {
+					query: jest.fn((_options, callback) => {
 						// Execute callback immediately in synchronous manner for testing
 						setTimeout(() => callback(mockTabs), 0);
 					})
@@ -219,7 +219,7 @@ describe('DBCleanup Tests', () => {
 			};
 
 			// Mock database operations to complete immediately
-			mockDatabase.queryIndexByRange.mockImplementation((config, callback) => {
+			mockDatabase.queryIndexByRange.mockImplementation((_config, callback) => {
 				setTimeout(() => callback([]), 0);
 			});
 

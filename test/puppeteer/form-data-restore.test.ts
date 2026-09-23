@@ -22,10 +22,10 @@
  *   cd test/puppeteer && pnpm exec tsx form-data-restore.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -60,7 +60,7 @@ const FORM_HTML = `<!DOCTYPE html>
 
 function startHttpServer(): Promise<{ server: http.Server; url: string }> {
 	return new Promise((resolve, reject) => {
-		const server = http.createServer((req, res) => {
+		const server = http.createServer((_req, res) => {
 			res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 			res.end(FORM_HTML);
 		});
@@ -134,10 +134,11 @@ async function main(): Promise<void> {
 		runner.section('Phase B — Suspend form tab');
 
 		const tabs = await queryChromeTabs(browser);
-		const formTab = tabs.find((t) => t.url && t.url.startsWith(formUrl));
+		const formTab = tabs.find((t) => t.url?.startsWith(formUrl));
 		runner.assert(formTab != null, 'Form tab found in chrome tabs');
+		if (formTab == null) throw new Error('Form tab was not found');
 
-		const formTabId = formTab!.id;
+		const formTabId = formTab.id;
 		log(`  Form tab ID: ${formTabId}`);
 
 		// Move focus away — tab must be inactive to park
@@ -155,7 +156,7 @@ async function main(): Promise<void> {
 
 		// Get the current park tab ID (may differ from formTabId after navigation)
 		const allTabsAfterPark = await queryChromeTabs(browser);
-		const parkTab = allTabsAfterPark.find((t) => t.url && t.url.startsWith(parkUrlPrefix(extensionId)));
+		const parkTab = allTabsAfterPark.find((t) => t.url?.startsWith(parkUrlPrefix(extensionId)));
 		const parkTabId = parkTab?.id ?? formTabId;
 		log(`  park.html Chrome tab ID: ${parkTabId}`);
 

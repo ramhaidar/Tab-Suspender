@@ -46,7 +46,7 @@ class WhiteList {
 			await this.removePatternsAffectUrl(url);
 			SettingsPageController.reloadSettings()
 				.then(() => {
-					setTimeout(function () {
+					setTimeout(() => {
 						new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
 					}, 500);
 				})
@@ -78,13 +78,11 @@ class WhiteList {
 	 *
 	 */
 	private createPatternObject(pattern: string): WhiteListPattern | null {
-		'use strict';
-
 		if (!this.isWrongPattern(pattern)) {
 			const regExp = this.createRegExp(pattern);
 			if (regExp != null) return <WhiteListPattern>{ pattern: pattern, regExp: regExp };
 		}
-		if (debug) console.log('WhiteList: init Wrong pattern(skipped): ' + pattern);
+		if (debug) console.log(`WhiteList: init Wrong pattern(skipped): ${pattern}`);
 		return null;
 	}
 
@@ -92,12 +90,12 @@ class WhiteList {
 	 * Receive url string pattern without protocol section!
 	 */
 	async addPattern(pattern: string) {
-		let patternObject;
-		if (pattern != null && (patternObject = this.createPatternObject(pattern)) != null) {
+		const patternObject = pattern != null ? this.createPatternObject(pattern) : null;
+		if (patternObject != null) {
 			this.patternList.push(patternObject);
 			await this.persist();
 
-			if (debug) console.log('WhiteList: added pattern ' + pattern);
+			if (debug) console.log(`WhiteList: added pattern ${pattern}`);
 
 			chrome.notifications.clear('userInfo');
 			chrome.notifications.create(
@@ -109,18 +107,18 @@ class WhiteList {
 					message: pattern,
 					priority: 2
 				},
-				function () {
+				() => {
 					console.log('Last error:', chrome.runtime.lastError);
 				}
 			);
-		} else if (debug) console.log('WhiteList: error added pattern: ' + pattern);
+		} else if (debug) console.log(`WhiteList: error added pattern: ${pattern}`);
 	}
 
 	/**
 	 *
 	 */
 	isWrongPattern(pattern): boolean {
-		return pattern == '' || pattern == '*';
+		return pattern === '' || pattern === '*';
 	}
 
 	/**
@@ -131,12 +129,13 @@ class WhiteList {
 		if (url == null) return false;
 
 		let affected = false;
-		let i;
 		const removedPatterns = [];
-		while ((i = this.findAffectdPatternIndexByUrl(url)) != null) {
+		while (true) {
+			const i = this.findAffectdPatternIndexByUrl(url);
+			if (i == null) break;
 			affected = true;
 
-			if (debug) console.log('WhiteList: Removed pattern ' + this.patternList[i].pattern);
+			if (debug) console.log(`WhiteList: Removed pattern ${this.patternList[i].pattern}`);
 
 			removedPatterns.push(this.patternList[i].pattern);
 			this.patternList.splice(i, 1);
@@ -171,8 +170,8 @@ class WhiteList {
 		if (url == null) return null;
 
 		/* Acceptable protocols: */
-		if (url.substring(0, 7) == 'http://') return url.substring(7);
-		else if (url.substring(0, 8) == 'https://') return url.substring(8);
+		if (url.substring(0, 7) === 'http://') return url.substring(7);
+		else if (url.substring(0, 8) === 'https://') return url.substring(8);
 		else return null;
 	}
 
@@ -202,7 +201,7 @@ class WhiteList {
 		try {
 			pattern = pattern.replace(/\./g, '\\.');
 			pattern = pattern.replace(/\*/g, '.*');
-			pattern = '^' + pattern + '$';
+			pattern = `^${pattern}$`;
 			return new RegExp(pattern, 'i');
 		} catch (e) {
 			console.error(e);
@@ -216,7 +215,7 @@ class WhiteList {
 	}
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		WhiteList
 	};

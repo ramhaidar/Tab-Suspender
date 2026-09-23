@@ -95,7 +95,7 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 
 // Define parkTabGroup and unsuspendTabGroup functions globally for testing
 // These are simplified versions based on the actual implementation
-(global as any).parkTabGroup = function (tab: chrome.tabs.Tab) {
+(global as any).parkTabGroup = (tab: chrome.tabs.Tab) => {
 	if (tab == null || tab.groupId === -1) {
 		console.warn('Cannot suspend tab group: tab is not in a group');
 		return;
@@ -103,15 +103,15 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 
 	const groupId = tab.groupId;
 
-	(chrome.windows.get as jest.Mock)(tab.windowId, { populate: true }, async function (window: chrome.windows.Window) {
+	(chrome.windows.get as jest.Mock)(tab.windowId, { populate: true }, async (window: chrome.windows.Window) => {
 		let number = 0;
 		for (const j in window.tabs) {
-			if (window.tabs.hasOwnProperty(j)) {
+			if (Object.hasOwn(window.tabs, j)) {
 				const currentTab = window.tabs[j];
 				// Only suspend tabs in the same group
 				if (currentTab.groupId === groupId) {
 					const TabManager = (global as any).TabManager;
-					if (TabManager && TabManager.isTabURLAllowedForPark(currentTab)) {
+					if (TabManager?.isTabURLAllowedForPark(currentTab)) {
 						const tabManager = (global as any).tabManager;
 						if (tabManager && !(await tabManager.isExceptionTab(currentTab))) {
 							const parkTab = (global as any).parkTab;
@@ -126,7 +126,7 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	});
 };
 
-(global as any).unsuspendTabGroup = function (tab: chrome.tabs.Tab) {
+(global as any).unsuspendTabGroup = (tab: chrome.tabs.Tab) => {
 	if (tab == null || tab.groupId === -1) {
 		console.warn('Cannot unsuspend tab group: tab is not in a group');
 		return;
@@ -135,16 +135,16 @@ const HistoryOpenerController = jest.fn().mockImplementation(() => ({
 	const groupId = tab.groupId;
 	let openedIndex = 1;
 
-	(chrome.windows.get as jest.Mock)(tab.windowId, { populate: true }, function (window: chrome.windows.Window) {
+	(chrome.windows.get as jest.Mock)(tab.windowId, { populate: true }, (window: chrome.windows.Window) => {
 		for (const j in window.tabs) {
-			if (window.tabs.hasOwnProperty(j)) {
+			if (Object.hasOwn(window.tabs, j)) {
 				const currentTab = window.tabs[j];
 				// Only unsuspend tabs in the same group
 				const TabManager = (global as any).TabManager;
 				if (currentTab.groupId === groupId && TabManager && TabManager.isTabParked(currentTab)) {
-					const tmpFunction = function (currentTab: chrome.tabs.Tab) {
+					const tmpFunction = (currentTab: chrome.tabs.Tab) => {
 						const clzOpenedIndex = openedIndex++;
-						setTimeout(function () {
+						setTimeout(() => {
 							const tabManager = (global as any).tabManager;
 							if (tabManager) {
 								tabManager.unsuspendTab(currentTab);
@@ -195,7 +195,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 		(global as any).tabManager = tabManager;
 
 		// Setup unsuspendTab mock
-		unsuspendTabMock = jest.fn().mockImplementation((tab: chrome.tabs.Tab) => {
+		unsuspendTabMock = jest.fn().mockImplementation((_tab: chrome.tabs.Tab) => {
 			// Mock basic unsuspend behavior
 			return Promise.resolve();
 		});
@@ -229,7 +229,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 5, groupId: -1, url: 'https://ungrouped.com', active: false } // No group
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
@@ -272,7 +272,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 3, groupId: 10, url: 'https://pinned.com', active: false, pinned: true, audible: false } // Pinned
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
@@ -360,7 +360,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 2, windowId: 1, groupId: 10, url: 'https://tab2.com' }
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				// Only return tabs for the requested window
 				expect(windowId).toBe(1);
 				callback({ id: windowId, tabs: windowTabs });
@@ -396,7 +396,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 3, groupId: 10, url: 'https://another.com' }
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
@@ -437,7 +437,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 5, groupId: -1, url: 'chrome-extension://test/park.html?tabId=5' } // No group
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
@@ -481,7 +481,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 3, groupId: 10, url: 'chrome-extension://test/park.html?tabId=3' }
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 
@@ -576,7 +576,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 2, windowId: 1, groupId: 10, url: 'chrome-extension://test/park.html?tabId=2' }
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				// Only return tabs for the requested window
 				expect(windowId).toBe(1);
 				callback({ id: windowId, tabs: windowTabs });
@@ -610,7 +610,7 @@ describe('Tab Group Suspend/Unsuspend', () => {
 				{ ...tab, id: 3, groupId: 10, url: 'https://active3.com' }
 			];
 
-			mockChromeWindowsGet.mockImplementation((windowId, options, callback) => {
+			mockChromeWindowsGet.mockImplementation((windowId, _options, callback) => {
 				callback({ id: windowId, tabs: windowTabs });
 			});
 

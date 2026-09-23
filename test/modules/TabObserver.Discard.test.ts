@@ -246,7 +246,7 @@ describe('TabObserver — Auto-Discard of Parked Tabs', () => {
 		});
 
 		it('does NOT call discardTab when discardTabAfterSuspendWithTimeout is false', async () => {
-			settingsOverrides['discardTabAfterSuspendWithTimeout'] = false;
+			settingsOverrides.discardTabAfterSuspendWithTimeout = false;
 
 			await runTicks(5);
 
@@ -254,7 +254,7 @@ describe('TabObserver — Auto-Discard of Parked Tabs', () => {
 		});
 
 		it('respects discardTimeoutFactor: factor=2 means threshold = 60 s (6 ticks)', async () => {
-			settingsOverrides['discardTimeoutFactor'] = 2; // threshold = 30 × 2 = 60 s
+			settingsOverrides.discardTimeoutFactor = 2; // threshold = 30 × 2 = 60 s
 
 			// 5 ticks = 50 s < 60 s → no discard yet
 			await runTicks(5);

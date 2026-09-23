@@ -1,12 +1,12 @@
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
+const http = require('node:http');
+const https = require('node:https');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Parse command line args
 const args = process.argv.slice(2);
 const portIndex = args.indexOf('--port');
-const PORT = portIndex !== -1 ? parseInt(args[portIndex + 1]) : 8080;
+const PORT = portIndex !== -1 ? parseInt(args[portIndex + 1], 10) : 8080;
 const useHttps = args.includes('--https');
 
 const MIME_TYPES = {
@@ -31,7 +31,7 @@ const requestHandler = (req, res) => {
 	filePath = filePath.split('?')[0];
 
 	// Security: prevent directory traversal
-	filePath = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '');
+	filePath = path.normalize(filePath).replace(/^(\.\.[/\\])+/, '');
 
 	const fullPath = path.join(__dirname, filePath);
 	const ext = path.extname(fullPath);
@@ -73,7 +73,7 @@ const protocol = useHttps ? 'https' : 'http';
 
 if (useHttps) {
 	// Generate self-signed certificate inline for development
-	const { execSync } = require('child_process');
+	const { execSync } = require('node:child_process');
 	const certDir = path.join(__dirname, '.certs');
 	const keyPath = path.join(certDir, 'key.pem');
 	const certPath = path.join(certDir, 'cert.pem');
@@ -91,7 +91,7 @@ if (useHttps) {
 				stdio: 'pipe'
 			});
 			console.log('Certificate generated successfully');
-		} catch (e) {
+		} catch (_e) {
 			console.error('Failed to generate certificate. Make sure openssl is installed.');
 			console.error('On macOS: brew install openssl');
 			console.error('Or run without --https flag for HTTP server');

@@ -51,9 +51,7 @@
 			searchSetting.original = setting;
 			this.index.push(searchSetting);
 
-			var closureThis = this;
-
-			setting.addEvent('action', function (value, stopPropagation) {
+			setting.addEvent('action', (value, stopPropagation) => {
 				/*if(closureThis.events != null && closureThis.events.length > 0)
 					closureThis.each(function(fn){ 
 						fn();
@@ -64,7 +62,7 @@
 					searchSetting.set(value, true);
 				}
 			});
-			searchSetting.addEvent('action', function (value) {
+			searchSetting.addEvent('action', (value) => {
 				if (setting.set !== undefined) {
 					setting.set(value, true);
 				}
@@ -80,20 +78,16 @@
 			}
 
 			// Or enter search mode
-			this.index.each(function (setting) {
+			this.index.each((setting) => {
 				setting.bundle.dispose();
 			});
-			Object.each(this.groups, function (group) {
+			Object.each(this.groups, (group) => {
 				group.dispose();
 			});
 			document.body.addClass('searching');
 
 			// Filter settings
-			var result = this.index.filter(function (setting) {
-				if (setting.params.searchString.contains(searchString.trim().toLowerCase())) {
-					return true;
-				}
-			});
+			var result = this.index.filter((setting) => setting.params.searchString.contains(searchString.trim().toLowerCase()));
 
 			// Display settings
 			result.each(

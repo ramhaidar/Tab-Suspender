@@ -11,7 +11,7 @@ class TabCapture {
 	static lastWindowDevicePixelRatio: { [key: number]: number } = {};
 
 	async captureTab(tab: chrome.tabs.Tab, options?): Promise<void> {
-		if (options == null || options.checkActiveTabNotChanged != true) return this._captureTab(tab, options);
+		if (options == null || options.checkActiveTabNotChanged !== true) return this._captureTab(tab, options);
 		else {
 			const tab_ = await chrome.tabs.get(tab.id); //, function(tab) {
 
@@ -21,15 +21,12 @@ class TabCapture {
 	}
 
 	private _captureTab(tab: chrome.tabs.Tab, options?): Promise<void> {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		if (debug) console.log('_captureTab()...');
 
-		return new Promise<void>(function (resolve, reject) {
+		return new Promise<void>((resolve, reject) => {
 			try {
-				chrome.tabs.query({ currentWindow: true, active: true }, async function (tabsResult) {
-					const tabInfo = self.tabManager.getTabInfoOrCreate(tab);
+				chrome.tabs.query({ currentWindow: true, active: true }, async (tabsResult) => {
+					const tabInfo = this.tabManager.getTabInfoOrCreate(tab);
 
 					if (tabsResult.length > 0 && tabsResult[0] != null) {
 						const actualTab = tabsResult[0];
@@ -64,7 +61,7 @@ class TabCapture {
 							return;
 						}
 
-						if (tab.url.indexOf(rootExtensionUri) == 0 || actualTab.url.indexOf(rootExtensionUri) == 0) {
+						if (tab.url.indexOf(rootExtensionUri) === 0 || actualTab.url.indexOf(rootExtensionUri) === 0) {
 							// Do not need to capture self extension pages
 							resolve();
 							return;
@@ -79,16 +76,16 @@ class TabCapture {
 								return;
 							}
 
-							if (tab.status != null && (tab.status !== 'loading' || (options != null && options.tryEvenIncomplete)))
+							if (tab.status != null && (tab.status !== 'loading' || options?.tryEvenIncomplete))
 								try {
 									chrome.tabs.captureVisibleTab(
 										tab.windowId,
 										<chrome.tabs.CaptureVisibleTabOptions>{
 											format: 'jpeg',
-											quality: parseInt(await settings.get('screenshotQuality')) // TODO-v4: Cache settings.get('screenshotQuality')
+											quality: parseInt(await settings.get('screenshotQuality'), 10) // TODO-v4: Cache settings.get('screenshotQuality')
 										},
-										function (screen: string) {
-											if (screen == null || screen == '') {
+										(screen: string) => {
+											if (screen == null || screen === '') {
 												console.warn(new Error(`Empty screen captures!!! id: ${tab.id}`), { ...actualTab, favIconUrl: undefined });
 												reject(new Error(`Empty screen captures!!! id: ${tab.id}`));
 												return;
@@ -111,7 +108,7 @@ class TabCapture {
 											'Cannot access contents of url "chrome-error://chromewebdata/". Extension manifest must request permission to access this host.',*/
 													'RegExp:Cannot access contents of url "(?!(https?://[^"]{5,}))',
 													'RegExp:Cannot access contents of url "https://www.google.[^/]+/_/chrome/newtab',
-													'RegExp:Cannot access contents of url "' + rootExtensionUri + '.*',
+													`RegExp:Cannot access contents of url "${rootExtensionUri}.*`,
 													'RegExp:No window with id: \\d{1,5}\\.',
 													'Failed to capture tab: view is invisible',
 													'No active web contents to capture',
@@ -130,7 +127,7 @@ class TabCapture {
 											}
 
 											try {
-												chrome.tabs.getZoom(tab.id, function (zoomFactor) {
+												chrome.tabs.getZoom(tab.id, (zoomFactor) => {
 													tabInfo.zoomFactor = zoomFactor;
 												});
 											} catch (e) {
@@ -148,7 +145,7 @@ class TabCapture {
 													.then(async (result) => {
 														try {
 															const returnedDevicePixelRatio = result[0].result;
-															let devicePixelRatio;
+															let devicePixelRatio: number;
 															if (returnedDevicePixelRatio == null) devicePixelRatio = TabCapture.lastWindowDevicePixelRatio[tab.windowId];
 															else TabCapture.lastWindowDevicePixelRatio[tab.windowId] = devicePixelRatio = returnedDevicePixelRatio;
 
@@ -252,4 +249,4 @@ class TabCapture {
 	}
 }
 
-if (typeof module != 'undefined') module.exports = TabCapture;
+if (typeof module !== 'undefined') module.exports = TabCapture;

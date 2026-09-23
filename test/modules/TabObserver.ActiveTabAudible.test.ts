@@ -132,7 +132,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		require('../../modules/TabObserver');
 
 		// Get TabObserver from global scope (it's defined without export/import as per project rules)
-		TabObserverClass = (global as any).TabObserver || eval('TabObserver');
+		TabObserverClass = (global as any).TabObserver;
 
 		// Create TabManager instance
 		tabManager = new TabManager();
@@ -186,7 +186,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		};
 
 		// Mock chrome.windows.getAll to return our tabs
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			callback([
 				{
 					id: 1,
@@ -276,7 +276,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		let tickCount = 0;
 
 		// Mock chrome.windows.getAll
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			tickCount++;
 
 			// For ticks 1-90: User is on music tab
@@ -389,7 +389,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 		let tickCount = 0;
 
 		// Mock chrome.windows.getAll
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			tickCount++;
 
 			// Simulate race condition: on tick #91, audible is temporarily FALSE
@@ -480,7 +480,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 
 		let tickCount = 0;
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			tickCount++;
 
 			if (tickCount <= 90) {
@@ -584,7 +584,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 
 		let tickCount = 0;
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			tickCount++;
 
 			// Ticks 1-90: Music tab INACTIVE in background (but audible!)
@@ -710,7 +710,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 			discarded: false
 		};
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			callback([
 				{
 					id: 1,
@@ -761,7 +761,7 @@ describe('TabObserver - Active Tab with Audible Bug', () => {
 			discarded: false
 		};
 
-		(chrome.windows.getAll as jest.Mock).mockImplementation((options, callback) => {
+		(chrome.windows.getAll as jest.Mock).mockImplementation((_options, callback) => {
 			callback([
 				{
 					id: 1,

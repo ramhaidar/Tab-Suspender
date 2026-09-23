@@ -10,9 +10,9 @@
  *   cd test/puppeteer && pnpm exec tsx screenshot-settings.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -23,7 +23,6 @@ import {
 	getParkPages,
 	getSetting,
 	setSetting,
-	parkUrlPrefix,
 	waitForExtensionInit
 } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
@@ -82,10 +81,11 @@ async function main(): Promise<void> {
 		await sleep(500);
 
 		const tabs = await queryChromeTabs(browser);
-		const targetTab = tabs.find((t) => t.url && t.url.includes('example.com'));
+		const targetTab = tabs.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetTab != null, 'example.com tab found');
+		if (targetTab == null) throw new Error('example.com tab was not found');
 
-		const tabId = targetTab!.id;
+		const tabId = targetTab.id;
 
 		// Activate — triggers tabCapture.captureTab via onActivated
 		await page.bringToFront();
@@ -120,10 +120,11 @@ async function main(): Promise<void> {
 		await sleep(1500);
 
 		const tabs2 = await queryChromeTabs(browser);
-		const targetTab2 = tabs2.find((t) => t.url && t.url.includes('example.com'));
+		const targetTab2 = tabs2.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetTab2 != null, 'example.com tab found for phase B');
+		if (targetTab2 == null) throw new Error('Phase B example.com tab was not found');
 
-		const tabId2 = targetTab2!.id;
+		const tabId2 = targetTab2.id;
 
 		const blank2 = await browser.newPage();
 		await blank2.goto('about:blank');
@@ -142,7 +143,7 @@ async function main(): Promise<void> {
 		// Other data:image elements (icons, restore button) are always present — we check #screen.
 		const hasScreenshotImg = await parkPage.evaluate(() => {
 			const screenEl = document.getElementById('screen') as HTMLImageElement | null;
-			return screenEl != null && screenEl.src.startsWith('data:image') && screenEl.src.length > 500;
+			return screenEl?.src.startsWith('data:image') && screenEl.src.length > 500;
 		});
 
 		log(`  park.html has screenshot image: ${hasScreenshotImg}`);

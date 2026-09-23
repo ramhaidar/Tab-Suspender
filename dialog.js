@@ -4,75 +4,67 @@
  * Zadorozhniy.Sergey@gmail.com
  */
 
-(function () {
-	'use strict';
-
+(() => {
 	window.focus();
-	let overlay = document.querySelector('.overlay');
+	const overlay = document.querySelector('.overlay');
 
-	let baseUrl = parseUrlParam('url');
+	const baseUrl = parseUrlParam('url');
 	/* let dialogMode = parseUrlParam('dialog'); */
-	let separateTab = parseUrlParam('separate_tab');
-	let requesterTabId = parseUrlParam('requester_tab_id');
+	const separateTab = parseUrlParam('separate_tab');
+	const requesterTabId = parseUrlParam('requester_tab_id');
 
-	if (separateTab == 'true') overlay.classList.add('separateTab');
+	if (separateTab === 'true') overlay.classList.add('separateTab');
 
-	let closeSeparateTab;
+	const closeSeparateTab = (response) => {
+		if (separateTab === 'true') {
+			chrome.tabs.update(parseInt(requesterTabId, 10), { active: true });
+			chrome.tabs.remove(response.tabId);
+		}
+	};
 
 	function closeDialog() {
-		chrome.runtime.sendMessage(
-			{ method: '[AutomaticTabCleaner:hideDialog]' },
-			(closeSeparateTab = function (response) {
-				if (separateTab == 'true') {
-					chrome.tabs.update(parseInt(requesterTabId), { active: true });
-					chrome.tabs.remove(response.tabId);
-				}
-			})
-		);
+		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:hideDialog]' }, closeSeparateTab);
 	}
 
-	if (separateTab != 'true') overlay.addEventListener('click', closeDialog);
+	if (separateTab !== 'true') overlay.addEventListener('click', closeDialog);
 
 	document.querySelector('#cancelButton').addEventListener('click', closeDialog);
 
-	let addWhitelistHandler;
-	document.getElementById('addButton').addEventListener(
-		'click',
-		(addWhitelistHandler = function () {
-			chrome.runtime.sendMessage(
-				{
-					method: '[AutomaticTabCleaner:addToWhiteList]',
-					hideDialog: true,
-					pattern: constructUrl({ final: true })
-				},
-				closeSeparateTab
-			);
-		})
-	);
+	const addWhitelistHandler = () => {
+		chrome.runtime.sendMessage(
+			{
+				method: '[AutomaticTabCleaner:addToWhiteList]',
+				hideDialog: true,
+				pattern: constructUrl({ final: true })
+			},
+			closeSeparateTab
+		);
+	};
+	document.getElementById('addButton').addEventListener('click', addWhitelistHandler);
 
-	document.onkeydown = function (evt) {
+	document.onkeydown = (evt) => {
 		evt = evt || window.event;
-		if (evt.keyCode == 27) {
+		if (evt.keyCode === 27) {
 			closeDialog();
-		} else if (evt.keyCode == 13) addWhitelistHandler();
+		} else if (evt.keyCode === 13) addWhitelistHandler();
 	};
 
 	document.getElementById('pattern').value = baseUrl;
 
-	let parser = document.createElement('a');
+	const parser = document.createElement('a');
 	parser.href = baseUrl;
 
-	let subDomains = parser.host.split('.');
+	const subDomains = parser.host.split('.');
 	let subPaths = [];
 	let pathname = parser.pathname;
 	if (pathname.length > 0) {
-		if (pathname.substr(0, 1) == '/') pathname = pathname.substr(1);
-		if (pathname.length > 1 && pathname.substr(pathname.length - 1) == '/') pathname = pathname.substr(0, pathname.length - 1);
+		if (pathname.substr(0, 1) === '/') pathname = pathname.substr(1);
+		if (pathname.length > 1 && pathname.substr(pathname.length - 1) === '/') pathname = pathname.substr(0, pathname.length - 1);
 	}
-	if (pathname != '' && pathname != '/') subPaths = pathname.split('/');
+	if (pathname !== '' && pathname !== '/') subPaths = pathname.split('/');
 
-	let siteSlider = document.getElementById('siteSlider');
-	let pageSlider = document.getElementById('pageSlider');
+	const siteSlider = document.getElementById('siteSlider');
+	const pageSlider = document.getElementById('pageSlider');
 
 	document.getElementById('pattern').value = constructUrl(); //"*"+subDomains.join('.')+(subPaths.length>0?"/":"")+subPaths.join("/")+"/*";
 
@@ -102,23 +94,21 @@
 	}
 
 	function constructUrl(options) {
-		'use strict';
-
 		let domain;
 		if (subDomains.length > 2) {
-			let subSubDomains = subDomains.slice(siteSlider.value /*,subDomains.length-1*/);
+			const subSubDomains = subDomains.slice(siteSlider.value /*,subDomains.length-1*/);
 			domain = subSubDomains.join('.');
 		} else domain = subDomains.join('.');
 
 		let path;
 		if (subPaths.length > 0) {
 			if (subPaths != null) {
-				let subSubPath = subPaths.slice(0, pageSlider.value);
+				const subSubPath = subPaths.slice(0, pageSlider.value);
 				path = subSubPath.join('/');
 			} else path = '/';
 		} else path = subPaths.join('/');
 
-		return '*' + domain + (path ? '/' : '') + path + (!options || options['final'] == false ? '/' : '') + '*';
+		return `*${domain}${path ? '/' : ''}${path}${!options || options.final === false ? '/' : ''}*`;
 	}
 
 	/************************/
@@ -126,10 +116,8 @@
 	/************************/
 
 	function parseUrlParam(val) {
-		'use strict';
-
 		let tmp = [];
-		let parts = window.location.search.substr(1).split('&');
+		const parts = window.location.search.substr(1).split('&');
 
 		for (let i = 0; i < parts.length; i++) {
 			tmp = parts[i].split('=');

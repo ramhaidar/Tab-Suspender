@@ -972,13 +972,13 @@ describe('TabManager', () => {
 	});
 
 	describe('Disable Screenshots Functionality', () => {
-		let TabCapture: any;
+		let _TabCapture: any;
 		let ScreenshotController: any;
 
 		beforeEach(() => {
 			// Re-import modules
 			const TabCaptureModule = require('../../modules/TabCapture');
-			TabCapture = TabCaptureModule.TabCapture;
+			_TabCapture = TabCaptureModule.TabCapture;
 
 			const ScreenshotControllerModule = require('../../modules/ScreenshotController');
 			ScreenshotController = ScreenshotControllerModule.ScreenshotController;

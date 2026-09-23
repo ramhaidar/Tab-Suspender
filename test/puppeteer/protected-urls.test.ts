@@ -18,9 +18,9 @@
  *   cd test/puppeteer && pnpm exec tsx protected-urls.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import { getExtensionId, evalInSW, queryChromeTabs, parkUrlPrefix } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabsBefore = await queryChromeTabs(browser);
-		const settingsTab = tabsBefore.find((t) => t.url && t.url.startsWith('chrome://settings'));
+		const settingsTab = tabsBefore.find((t) => t.url?.startsWith('chrome://settings'));
 
 		if (settingsTab) {
 			log(`  chrome://settings tab found, ID: ${settingsTab.id}`);
@@ -109,14 +109,14 @@ async function main(): Promise<void> {
 			const parkPrefix = parkUrlPrefix(extensionId);
 			const tabsAfter = await queryChromeTabs(browser);
 			const stillSettings = tabsAfter.find((t) => t.id === settingsTab.id);
-			const newParkTabs = tabsAfter.filter((t) => t.url && t.url.startsWith(parkPrefix));
+			const newParkTabs = tabsAfter.filter((t) => t.url?.startsWith(parkPrefix));
 
 			runner.assert(
-				stillSettings != null && stillSettings.url.startsWith('chrome://settings'),
+				stillSettings?.url?.startsWith('chrome://settings') === true,
 				'chrome://settings tab remained on chrome://settings after park attempt'
 			);
 			// There should not be a new park page for the settings tab
-			const parkForSettings = newParkTabs.find((t) => t.url && t.url.includes(`tabId=${settingsTab.id}`));
+			const parkForSettings = newParkTabs.find((t) => t.url?.includes(`tabId=${settingsTab.id}`));
 			runner.softAssert(parkForSettings == null, 'No park.html appeared for the chrome://settings tab');
 		} else {
 			log('  chrome://settings tab not found — skipping integration sub-check');

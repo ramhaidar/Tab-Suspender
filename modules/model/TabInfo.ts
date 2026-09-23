@@ -98,16 +98,14 @@ class TabInfo implements ITabInfo {
 	}
 
 	toObject(): ITabInfo {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
 		const object = {};
 
 		// Execution-time only fields that should NOT be serialized
 		const excludedFields = ['_markedForLoadSuspended', '_originalUrlBeforeSuspend'];
 
-		Object.getOwnPropertyNames(this).forEach(function (propName: string) {
+		Object.getOwnPropertyNames(this).forEach((propName: string) => {
 			if (propName.startsWith('_') && !excludedFields.includes(propName)) {
-				object[propName.substring(1)] = self[propName];
+				object[propName.substring(1)] = this[propName];
 			}
 		});
 
@@ -117,7 +115,7 @@ class TabInfo implements ITabInfo {
 	static fromObject(iTabInfo: ITabInfo): TabInfo {
 		const tabInfo = new TabInfo(<chrome.tabs.Tab>{});
 
-		Object.getOwnPropertyNames(iTabInfo).forEach(function (propName: string) {
+		Object.getOwnPropertyNames(iTabInfo).forEach((propName: string) => {
 			tabInfo[propName] = iTabInfo[propName];
 		});
 
@@ -349,7 +347,7 @@ class TabInfo implements ITabInfo {
 	}
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		TabInfo
 	};

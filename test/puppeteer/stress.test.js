@@ -17,9 +17,9 @@
  */
 
 import puppeteer from 'puppeteer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
@@ -380,7 +380,9 @@ async function main() {
 
 		if (issues.length > 0) {
 			log('\n  Failed checks:');
-			issues.forEach((i) => log(`    • ${i}`));
+			issues.forEach((i) => {
+				log(`    • ${i}`);
+			});
 		}
 
 		process.exit(failed > 0 ? 1 : 0);

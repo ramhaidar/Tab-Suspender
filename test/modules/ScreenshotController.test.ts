@@ -33,7 +33,7 @@ const mockDatabase = {
 	get: jest.fn().mockResolvedValue(true) // Default: screenshots enabled
 };
 
-function sleep(ms: number): Promise<void> {
+function _sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -199,11 +199,11 @@ describe('ScreenshotController Tests', () => {
 			const tabId = 1;
 			const sessionId = 123456;
 
-			mockDatabase.queryIndex.mockImplementation((config, callback) => {
+			mockDatabase.queryIndex.mockImplementation((_config, callback) => {
 				callback(null); // No screen found
 			});
 
-			let result: any = undefined;
+			let result: any;
 			await ScreenshotController.getScreen(tabId, sessionId, (screen) => {
 				result = screen;
 			});
@@ -221,9 +221,9 @@ describe('ScreenshotController Tests', () => {
 			// Mock the promise to resolve immediately
 			mockDatabase.getInitializedPromise.mockResolvedValue(undefined);
 
-			let callbackCalled = false;
+			let _callbackCalled = false;
 			await ScreenshotController.getScreen(tabId, sessionId, () => {
-				callbackCalled = true;
+				_callbackCalled = true;
 			});
 
 			// Should have tried to wait for initialization
@@ -241,7 +241,7 @@ describe('ScreenshotController Tests', () => {
 			const neverResolvingPromise = new Promise(() => {}); // Never resolves
 			mockDatabase.getInitializedPromise.mockReturnValue(neverResolvingPromise);
 
-			let callbackResult: any = undefined;
+			let callbackResult: any;
 			let callbackCallCount = 0;
 
 			await ScreenshotController.getScreen(tabId, sessionId, (result) => {
@@ -280,7 +280,7 @@ describe('ScreenshotController Tests', () => {
 			// Mock rejecting promise to trigger retry
 			mockDatabase.getInitializedPromise.mockRejectedValue(new Error('DB init failed'));
 
-			let retryCount = 0;
+			let _retryCount = 0;
 			const originalGetScreen = ScreenshotController.getScreen;
 
 			// Spy on getScreen to track retry calls
@@ -288,12 +288,12 @@ describe('ScreenshotController Tests', () => {
 				.spyOn(ScreenshotController, 'getScreen')
 				.mockImplementation((id: any, sessionId: any, callback: (result: any) => void, currentRetryCount: number = 0) => {
 					if ((currentRetryCount as number) < 2) {
-						retryCount = currentRetryCount as number;
+						_retryCount = currentRetryCount as number;
 						// Call original method to test actual retry logic
 						return originalGetScreen.call(ScreenshotController, id, sessionId, callback, currentRetryCount);
 					} else {
 						// On final retry, call callback with null
-						(callback as Function)(null);
+						(callback as (result: null) => void)(null);
 						done();
 					}
 				});
@@ -365,7 +365,7 @@ describe('ScreenshotController Tests', () => {
 				pixRat: 1
 			};
 
-			mockDatabase.queryIndex.mockImplementation((config, callback) => {
+			mockDatabase.queryIndex.mockImplementation((_config, callback) => {
 				callback({ screen: 'db-screen', pixRat: 1 });
 			});
 
@@ -404,7 +404,7 @@ describe('ScreenshotController Tests', () => {
 			};
 
 			// Mock database to return fallback data
-			mockDatabase.queryIndex.mockImplementation((config, callback) => {
+			mockDatabase.queryIndex.mockImplementation((_config, callback) => {
 				callback({
 					screen: dbScreen,
 					pixRat: dbPixelRatio
@@ -437,9 +437,9 @@ describe('ScreenshotController Tests', () => {
 			// Set up cache that's still initializing (screen is null)
 			// This simulates the scenario where TabManager creates the cache and calls getScreen
 			// from within the promise callback, which would cause a deadlock without the fix
-			let promiseResolve: () => void;
+			let _promiseResolve: () => void;
 			const cachePromise = new Promise<void>((resolve) => {
-				promiseResolve = resolve;
+				_promiseResolve = resolve;
 			});
 
 			(global as any).getScreenCache = {
@@ -500,7 +500,7 @@ describe('ScreenshotController Tests', () => {
 				getScreenPromise: new Promise<void>((resolve) => {
 					// Inside the promise, TabManager would call getScreen
 					// Mock database to return data when queried
-					mockDatabase.queryIndex.mockImplementation((config, callback) => {
+					mockDatabase.queryIndex.mockImplementation((_config, callback) => {
 						callback({
 							screen: dbScreen,
 							pixRat: dbPixelRatio
@@ -544,7 +544,7 @@ describe('ScreenshotController Tests', () => {
 				return Promise.resolve(true);
 			});
 
-			let resultScreen: any = undefined;
+			let resultScreen: any;
 			let callbackCalled = false;
 
 			await ScreenshotController.getScreen(tabId, sessionId, (screen) => {
@@ -619,7 +619,7 @@ describe('ScreenshotController Tests', () => {
 			]);
 
 			// Mock retrieval
-			mockDatabase.queryIndex.mockImplementation((config, callback) => {
+			mockDatabase.queryIndex.mockImplementation((_config, callback) => {
 				callback({
 					screen: screenData,
 					pixRat: pixelRatio

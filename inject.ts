@@ -11,14 +11,12 @@
 
 /*** Function for Automated puppeteer Tests only DoNotRemove ***/
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function getTabId() {
+async function _getTabId() {
 	return await chrome.runtime.sendMessage({ method: '[TS:getTabId]' });
 }
 
-(function () {
-	'use strict';
-
-	window.addEventListener('pageshow', function () {
+(() => {
+	window.addEventListener('pageshow', () => {
 		resotreForm();
 	});
 
@@ -44,21 +42,21 @@ async function getTabId() {
 		return true;
 	}
 
-	const changeEventCallback = function () {
+	const changeEventCallback = () => {
 		void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:TabChangedRequestFromInject]' });
 	};
 
-	const onevent = function (e) {
+	const onevent = (e) => {
 		if (riseEvent()) dropEvent(e);
 	};
 
 	function resotreForm() {
-		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getFormRestoreDataAndRemove]' }, function (response) {
+		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getFormRestoreDataAndRemove]' }, (response) => {
 			if (response == null) {
 				return;
 			}
 
-			if (window.location.href != response.url) {
+			if (window.location.href !== response.url) {
 				return;
 			}
 
@@ -73,7 +71,7 @@ async function getTabId() {
 	function errorLog(exception) {
 		void chrome.runtime.sendMessage({
 			method: '[AutomaticTabCleaner:trackError]',
-			message: 'Error in Inject: ' + (exception ? exception.message : ''),
+			message: `Error in Inject: ${exception ? exception.message : ''}`,
 			stack: exception ? exception.stack : ''
 		});
 	}
@@ -88,8 +86,8 @@ async function getTabId() {
 	 * Down event
 	 */
 	let interval = null;
-	const dropEventIntervalController = function () {
-		if (count == 0) {
+	const dropEventIntervalController = () => {
+		if (count === 0) {
 			if (interval != null) {
 				clearInterval(interval);
 				interval = null;
@@ -99,7 +97,7 @@ async function getTabId() {
 
 		count--;
 
-		if (count == 0) {
+		if (count === 0) {
 			if (interval != null) {
 				clearInterval(interval);
 				interval = null;
@@ -113,7 +111,7 @@ async function getTabId() {
 			count--;
 			changeEventCallback();
 		} else {
-			if (count == 0) return;
+			if (count === 0) return;
 
 			if (interval == null) {
 				interval = setInterval(dropEventIntervalController, waitWindow / 2);
@@ -132,17 +130,17 @@ async function getTabId() {
 
 	document.body.addEventListener(
 		'change',
-		function (e) {
+		(e) => {
 			let messageSent = false;
-			//@ts-ignore
+			const target = e.target;
 			if (
-				e.target.tagName != null &&
-				(e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') &&
-				e.target.hidden != true
+				target instanceof HTMLElement &&
+				(target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea') &&
+				!target.hidden
 			) {
 				if (calcNotCompleteInputsLength() <= 3) {
 					for (const i in notCompleteInputs) {
-						if (!document.body.contains(notCompleteInputs[i]) || notCompleteInputs[i].value == null || notCompleteInputs[i].value == '') {
+						if (!document.body.contains(notCompleteInputs[i]) || notCompleteInputs[i].value == null || notCompleteInputs[i].value === '') {
 							const element = notCompleteInputs.splice(Number(i), 1);
 							if (debug) console.log('Input removed: ', element);
 							if (!messageSent) {
@@ -157,8 +155,8 @@ async function getTabId() {
 
 				for (const i in notCompleteInputs) if (notCompleteInputs[i] === e.target) return;
 
-				//@ts-ignore
-				if (e.target.value != null && e.target.value != '') notCompleteInputs.push(e.target);
+				//@ts-expect-error
+				if (e.target.value != null && e.target.value !== '') notCompleteInputs.push(e.target);
 
 				if (calcNotCompleteInputsLength() > 2) {
 					void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:MarkPageAsNonCompleteInput]' });
@@ -178,8 +176,7 @@ async function getTabId() {
 	// Track Ctrl+Click (Cmd+Click on Mac) on links to open tabs in suspended mode
 	document.addEventListener(
 		'click',
-		function (e) {
-			// @ts-ignore
+		(e) => {
 			const target = e.target as HTMLElement;
 			const link = target.closest('a');
 
@@ -201,7 +198,7 @@ async function getTabId() {
 
 	let suspendedPagesUrls = [];
 
-	chrome.runtime.onMessage.addListener(function (request: any, sender, sendResponse) {
+	chrome.runtime.onMessage.addListener((request: any, _sender, sendResponse) => {
 		if (request.method === '[AutomaticTabCleaner:backupSuspendedPagesUrls]') {
 			suspendedPagesUrls = request.suspendedUrls;
 			console.log('susPgsUrls: ', suspendedPagesUrls.length);
@@ -210,7 +207,7 @@ async function getTabId() {
 			const _request: RequestParkPageFromInject = request as RequestParkPageFromInject;
 			const closureTabId = _request.tabId;
 			const width = _request.width;
-			const height = _request.height;
+			const _height = _request.height;
 			/* Try to change origin */
 			try {
 				const elements = document.getElementsByTagName('img');
@@ -221,22 +218,22 @@ async function getTabId() {
 				console.error('[AutomaticTabCleaner:ParkPageFromInject]: ', e);
 			}
 
-			if (width != null) document.body.style.width = width + 'px';
+			if (width != null) document.body.style.width = `${width}px`;
 
-			// @ts-ignore
+			// @ts-expect-error
 			html2canvas(
 				document.body,
 				{
-					onrendered: async function (canvas) {
+					onrendered: async (canvas) => {
 						document.body.appendChild(canvas);
 
 						try {
 							let url = chrome.runtime.getURL('park.html');
-							url += '?tabId=' + encodeURIComponent(closureTabId);
-							url += '&sessionId=' + encodeURIComponent(_request.sessionId);
-							url += '&title=' + encodeURIComponent(document.title);
-							url += '&url=' + encodeURIComponent(_request.url ? _request.url : window.location.href);
-							url += '&icon=' + encodeURIComponent(getOriginalFaviconUrl());
+							url += `?tabId=${encodeURIComponent(closureTabId)}`;
+							url += `&sessionId=${encodeURIComponent(_request.sessionId)}`;
+							url += `&title=${encodeURIComponent(document.title)}`;
+							url += `&url=${encodeURIComponent(_request.url ? _request.url : window.location.href)}`;
+							url += `&icon=${encodeURIComponent(getOriginalFaviconUrl())}`;
 
 							await chrome.runtime.sendMessage(canvas.toDataURL('image/jpeg', _request.screenshotQuality / 100));
 
@@ -261,7 +258,7 @@ async function getTabId() {
 		} else if (request.method === '[AutomaticTabCleaner:getOriginalFaviconUrl]') {
 			sendResponse(getOriginalFaviconUrl());
 		} else if (request.method === '[AutomaticTabCleaner:highliteFavicon]') {
-			setTimeout(function () {
+			setTimeout(() => {
 				highlite(request.highliteInfo);
 			}, 0);
 		} else if (request.method === '[AutomaticTabCleaner:CollectPageState]') {
@@ -284,12 +281,12 @@ async function getTabId() {
 	function collectVideoTime() {
 		if (document.location.href.indexOf('https://www.youtube.com/watch') === 0) {
 			const video = document.querySelector('video');
-			const time = video ? parseInt(video.currentTime.toFixed(0)) : 0;
+			const time = video ? parseInt(video.currentTime.toFixed(0), 10) : 0;
 
 			// Update Video Time Url
 			const pushState = window.history.pushState;
 			const url = new URL(document.location.href);
-			url.searchParams.set('t', time + 's');
+			url.searchParams.set('t', `${time}s`);
 
 			pushState.apply(history, [null, document.title, url.href]);
 
@@ -309,13 +306,13 @@ async function getTabId() {
 
 		const iframe = document.createElement('iframe');
 		iframe.id = WIZARD_FRAME_ID;
-		iframe.src = chrome.runtime.getURL('wizard.html?dialog=page&url=' + document.location.href);
+		iframe.src = chrome.runtime.getURL(`wizard.html?dialog=page&url=${document.location.href}`);
 		iframe.style.position = 'fixed';
 		iframe.style.top = '0px';
 		iframe.style.left = '0px';
 		iframe.style.width = '100%';
 		iframe.style.height = '100%';
-		//@ts-ignore
+		//@ts-expect-error
 		iframe.style.zIndex = 10000000;
 		iframe.frameBorder = 'none';
 		document.getElementsByTagName('html')[0].appendChild(iframe);
@@ -333,13 +330,13 @@ async function getTabId() {
 
 		const iframe = document.createElement('iframe');
 		iframe.id = ADD_TO_WHITELIST_FRAME_ID;
-		iframe.src = chrome.runtime.getURL('dialog.html?dialog=page&url=' + document.location.href);
+		iframe.src = chrome.runtime.getURL(`dialog.html?dialog=page&url=${document.location.href}`);
 		iframe.style.position = 'fixed';
 		iframe.style.top = '0px';
 		iframe.style.left = '0px';
 		iframe.style.width = '100%';
 		iframe.style.height = '100%';
-		//@ts-ignore
+		//@ts-expect-error
 		iframe.style.zIndex = 10000000;
 		iframe.frameBorder = 'none';
 		document.getElementsByTagName('html')[0].appendChild(iframe); //document.body.appendChild(iframe);
@@ -354,13 +351,13 @@ async function getTabId() {
 	const links = faviconInfo.domFavicons;
 	const img = new Image();
 
-	let originalFaviconUrl;
-	let originalCanvas;
+	let originalFaviconUrl: string | undefined;
+	let originalCanvas: HTMLCanvasElement | undefined;
 
-	let originalIconUrlBase64;
+	let originalIconUrlBase64: string | undefined;
 
 	extractIconBase64();
-	window.addEventListener('load', function () {
+	window.addEventListener('load', () => {
 		setTimeout(extractIconBase64, 1000);
 	});
 
@@ -368,7 +365,7 @@ async function getTabId() {
 		return originalFaviconUrl;
 	}
 
-	function extractIconBase64(faviconUrl?, retries?) {
+	function extractIconBase64(_faviconUrl?, retries?) {
 		if (retries == null) {
 			retries = 1;
 		}
@@ -421,12 +418,13 @@ async function getTabId() {
 		lockImg = new Image();
 		lockImg.crossOrigin = 'anonymous';
 
-		img.onload = function () {
+		img.onload = () => {
 			lockImg.src = lockImgSrc;
 		};
 
-		lockImg.onload = function () {
-			let canvas, ctx;
+		lockImg.onload = () => {
+			let canvas: HTMLCanvasElement;
+			let ctx: CanvasRenderingContext2D;
 
 			if (originalCanvas == null) {
 				canvas = window.document.createElement('canvas');
@@ -503,7 +501,7 @@ async function getTabId() {
 
 	function getFaviconInfo() {
 		const domFavicons = [];
-		let faviconUrl = undefined;
+		let faviconUrl: string | null | undefined;
 
 		const nodeList = document.getElementsByTagName('link');
 
@@ -521,7 +519,7 @@ async function getTabId() {
 			else {
 				const url = window.location.href;
 				const arr = url.split('/');
-				const result = arr[0] + '//' + arr[2] + '/favicon.ico';
+				const result = `${arr[0]}//${arr[2]}/favicon.ico`;
 				faviconUrl = result;
 			}
 
@@ -529,22 +527,30 @@ async function getTabId() {
 	}
 
 	function hebernateFormData() {
-		let namedDomInputs;
-		let domTextareas;
-		let namedDomTextareas;
-		let domSelects;
-		let namedDomSelects;
-		let foundOne;
-		let foundSelects;
-		let foundTexts;
-		let j, k, input, name, select, textarea, type, val, len1;
+		let namedDomInputs: NodeListOf<HTMLInputElement>;
+		let domTextareas: NodeListOf<HTMLTextAreaElement>;
+		let namedDomTextareas: NodeListOf<HTMLTextAreaElement>;
+		let domSelects: NodeListOf<HTMLSelectElement>;
+		let namedDomSelects: NodeListOf<HTMLSelectElement>;
+		let foundOne: boolean;
+		let foundSelects: Record<number, string[]>;
+		let foundTexts: Record<number, string>;
+		let j: number,
+			k: number,
+			input: HTMLInputElement,
+			name: string,
+			select: HTMLSelectElement,
+			textarea: HTMLTextAreaElement,
+			type: string,
+			val: string,
+			len1: number;
 
 		function isVisible(element) {
-			return element.style.display != 'none' && element.style.visibility != 'hidden';
+			return element.style.display !== 'none' && element.style.visibility !== 'hidden';
 		}
 
-		let actualInputs;
-		const inputs = {};
+		let actualInputs: Record<number, string>;
+		const inputs: Record<string, Record<number, string>> = {};
 		const domInputs = document.querySelectorAll('input');
 
 		for (let i = 0, len = domInputs.length; i < len; i++) {
@@ -556,7 +562,7 @@ async function getTabId() {
 			actualInputs = {};
 			k = 0;
 			foundOne = false; // TODO:....
-			namedDomInputs = document.querySelectorAll('input[name="' + name + '"]');
+			namedDomInputs = document.querySelectorAll(`input[name="${name}"]`);
 			for (let j = 0, len1 = namedDomInputs.length; j < len1; j++) {
 				input = namedDomInputs[j];
 				++k;
@@ -575,13 +581,13 @@ async function getTabId() {
 						break;
 					default:
 						actualInputs[k] = input.value;
-						if (input.value != null && input.value != '') foundOne = true;
+						if (input.value != null && input.value !== '') foundOne = true;
 				}
 			}
 			if (foundOne) inputs[name] = actualInputs;
 		}
 
-		const selects = {};
+		const selects: Record<string, Record<number, string[]>> = {};
 		domSelects = document.querySelectorAll('select');
 		for (let i = 0, len = domSelects.length; i < len; i++) {
 			select = domSelects[i];
@@ -592,20 +598,20 @@ async function getTabId() {
 			k = 0;
 			foundOne = false;
 
-			namedDomSelects = document.querySelectorAll('select[name="' + name + '"]');
+			namedDomSelects = document.querySelectorAll(`select[name="${name}"]`);
 			for (j = 0, len1 = namedDomSelects.length; j < len1; j++) {
 				select = namedDomSelects[j];
 				++k;
 				if (!isVisible(select)) continue;
 				val = select.options[select.selectedIndex].value;
 				foundOne = true;
-				if (val instanceof Array) foundSelects[k] = val;
+				if (Array.isArray(val)) foundSelects[k] = val;
 				else foundSelects[k] = [val];
 			}
 			if (foundOne) selects[name] = foundSelects;
 		}
 
-		const texts = {};
+		const texts: Record<string, Record<number, string>> = {};
 		domTextareas = document.querySelectorAll('textarea');
 		for (let i = 0, len = domTextareas.length; i < len; i++) {
 			textarea = domTextareas[i];
@@ -615,19 +621,19 @@ async function getTabId() {
 			foundTexts = {};
 			k = 0;
 			foundOne = false;
-			namedDomTextareas = document.querySelectorAll('textarea[name="' + name + '"]');
+			namedDomTextareas = document.querySelectorAll(`textarea[name="${name}"]`);
 			for (j = 0, len1 = namedDomTextareas.length; j < len1; j++) {
 				textarea = namedDomTextareas[j];
 				++k;
 				if (!isVisible(textarea)) continue;
 				foundTexts[k] = textarea.value;
-				if (textarea.value != null && textarea.value != '') foundOne = true;
+				if (textarea.value != null && textarea.value !== '') foundOne = true;
 			}
 			if (foundOne) texts[name] = foundTexts;
 		}
 
 		const collectedFormData = {
-			timestamp: new Date().getTime(),
+			timestamp: Date.now(),
 			inputs: inputs,
 			texts: texts,
 			selects: selects
@@ -643,7 +649,7 @@ async function getTabId() {
 		}
 
 		for (const name in savedData.inputs) {
-			const inputs = document.querySelectorAll('input[name="' + name + '"]'); //$('input[name="' + name + '"]');
+			const inputs = document.querySelectorAll(`input[name="${name}"]`); //$('input[name="' + name + '"]');
 			let i = 0;
 			for (let _i = 0, _len = inputs.length; _i < _len; _i++) {
 				const input = inputs[_i];
@@ -651,11 +657,11 @@ async function getTabId() {
 				if (i in savedData.inputs[name]) {
 					const val = savedData.inputs[name][i];
 					try {
-						//@ts-ignore
+						//@ts-expect-error
 						switch (input.type) {
 							case 'checkbox':
 							case 'radio':
-								// @ts-ignore
+								// @ts-expect-error
 								input.checked = val === 'checked';
 								fireEvent(input, 'change');
 								break;
@@ -673,7 +679,7 @@ async function getTabId() {
 							case 'tel':
 							case 'url':
 							case 'week':
-								//@ts-ignore
+								//@ts-expect-error
 								input.value = val;
 								fireEvent(input, 'change');
 						}
@@ -686,14 +692,14 @@ async function getTabId() {
 
 		for (const name in savedData.texts) {
 			const savedTexts = savedData.texts[name];
-			const texts = document.querySelectorAll('textarea[name="' + name + '"]');
+			const texts = document.querySelectorAll(`textarea[name="${name}"]`);
 			let i = 0;
 			for (let _j = 0, _len1 = texts.length; _j < _len1; _j++) {
 				const textarea = texts[_j];
 				++i;
 				if (i in savedTexts) {
 					try {
-						//@ts-ignore
+						//@ts-expect-error
 						textarea.value = savedTexts[i];
 						fireEvent(textarea, 'change');
 					} catch (e) {
@@ -706,11 +712,11 @@ async function getTabId() {
 		const _results = [];
 		for (const name in savedData.selects) {
 			const savedSelects = savedData.selects[name];
-			const selects = document.querySelectorAll('select[name="' + name + '"]');
+			const selects = document.querySelectorAll(`select[name="${name}"]`);
 			let i = 0;
 			_results.push(
-				(function () {
-					let _k, _len2, _results1;
+				(() => {
+					let _k: number, _len2: number, _results1: undefined[];
 
 					_results1 = [];
 					for (_k = 0, _len2 = selects.length; _k < _len2; _k++) {
@@ -718,9 +724,9 @@ async function getTabId() {
 						++i;
 						if (i in savedSelects) {
 							try {
-								//@ts-ignore
-								if (select.value == savedSelects[i]) continue;
-								//@ts-ignore
+								//@ts-expect-error
+								if (select.value === savedSelects[i]) continue;
+								//@ts-expect-error
 								select.value = savedSelects[i];
 								fireEvent(select, 'change');
 							} catch (e) {

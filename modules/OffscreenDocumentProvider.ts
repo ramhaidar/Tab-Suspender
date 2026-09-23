@@ -16,16 +16,13 @@ class OffscreenDocumentProvider {
 	private readonly documentCreatedPromise: Promise<void>;
 
 	constructor() {
-		this.documentCreatedPromise = new Promise<void>(async (resolve, reject) => {
-			await new Promise((r) => setTimeout(r, 1500));
-
-			try {
+		this.documentCreatedPromise = new Promise<void>((resolve) => setTimeout(resolve, 1500))
+			.then(async () => {
 				// Check if an offscreen document already exists
 				const hasDocument = await chrome.offscreen.hasDocument();
 
 				if (hasDocument) {
 					console.log('Offscreen Document already exists, skipping creation');
-					resolve();
 					return;
 				}
 
@@ -36,12 +33,11 @@ class OffscreenDocumentProvider {
 					justification: 'Need to migrate from localStorage, monitor battery status, and sync suspended tabs backup via iframe'
 				});
 				console.log('Offscreen Document Created successfully');
-				resolve();
-			} catch (error) {
+			})
+			.catch((error) => {
 				console.error('Error creating offscreen document:', error);
-				reject(error);
-			}
-		});
+				throw error;
+			});
 	}
 
 	async extractOldSettings(settingsKeys: string[]) {
@@ -64,12 +60,12 @@ class OffscreenDocumentProvider {
 		return localStorageData;
 	}
 
-	async cleanupFormDatas() {
-		return new Promise<void>(async (resolve) => {
-			console.log('CleanupFormDatas started...');
+	async cleanupFormDatas(): Promise<void> {
+		console.log('CleanupFormDatas started...');
 
-			await this.documentCreatedPromise;
+		await this.documentCreatedPromise;
 
+		await new Promise<void>((resolve, reject) => {
 			const messageListener = (message) => {
 				if (message.method === '[TS:offscreenDocument:cleanupComplete]') {
 					console.log(`CleanupFormDatas - Complete.`);
@@ -87,9 +83,14 @@ class OffscreenDocumentProvider {
 				justification: 'reason for needing the document'
 			});*/
 
-			await chrome.runtime.sendMessage({
-				method: '[TS:offscreenDocument:startFormDatasCleanup]'
-			});
+			chrome.runtime
+				.sendMessage({
+					method: '[TS:offscreenDocument:startFormDatasCleanup]'
+				})
+				.catch((error) => {
+					chrome.runtime.onMessage.removeListener(messageListener);
+					reject(error);
+				});
 		});
 	}
 }

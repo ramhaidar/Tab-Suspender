@@ -10,8 +10,9 @@
 			"!!**/pnpm-lock.yaml",
 			"!!uninstall-survey",
 			"!!lib",
+			"!!**/lib/*.js",
 			"!!popup.css",
-			"!!*.min.js"
+			"!!**/*.min.js"
 		]
 	},
 	"formatter": {

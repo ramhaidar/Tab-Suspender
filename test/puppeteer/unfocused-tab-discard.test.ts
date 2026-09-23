@@ -21,10 +21,10 @@
  *   cd test/puppeteer && pnpm exec tsx unfocused-tab-discard.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import { getExtensionId, evalInSW, getSetting, setSetting, waitForExtensionInit } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';

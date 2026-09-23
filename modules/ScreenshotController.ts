@@ -12,14 +12,13 @@ class ScreenshotController {
 		database.queryIndexCount(
 			{
 				IDB: {
-					// @ts-ignore
 					table: SCREENS_DB_NAME,
 					index: 'PK'
 				},
 				WebSQL: {
 					//query: 'select count(*) from screens where id = ? and sessionId = ?'
 				},
-				params: [typeof tabId === 'string' ? parseInt(tabId) : tabId, parseInt(sessionId)]
+				params: [typeof tabId === 'string' ? parseInt(tabId, 10) : tabId, parseInt(sessionId, 10)]
 			},
 			callback
 		);
@@ -31,7 +30,7 @@ class ScreenshotController {
 
 		//id = tabManager.findReplacedTabId(id);
 
-		if (debugScreenCache) console.log('getScreen called for tabId: ' + id, Date.now());
+		if (debugScreenCache) console.log(`getScreen called for tabId: ${id}`, Date.now());
 
 		// Check if screenshots are disabled
 		if (!(await settings.get('screenshotsEnabled'))) {
@@ -39,14 +38,14 @@ class ScreenshotController {
 			return;
 		}
 
-		if (database.isInitialized() != true) {
+		if (database.isInitialized() !== true) {
 			if (retryCount >= MAX_RETRIES) {
 				console.error('getScreen DB initialization failed after max retries for tabId:', id);
 				callback(null);
 				return;
 			}
 
-			console.log('getScreen DB is not initialized yet waiting...: ' + id, Date.now(), 'retry:', retryCount);
+			console.log(`getScreen DB is not initialized yet waiting...: ${id}`, Date.now(), 'retry:', retryCount);
 
 			const timeoutId = setTimeout(() => {
 				console.warn('getScreen DB initialization timeout for tabId:', id, 'retry:', retryCount);
@@ -55,11 +54,11 @@ class ScreenshotController {
 
 			database
 				.getInitializedPromise()
-				.then(function () {
+				.then(() => {
 					clearTimeout(timeoutId);
 					void ScreenshotController.getScreen(id, sessionId, callback, retryCount);
 				})
-				.catch(function (error) {
+				.catch((error) => {
 					clearTimeout(timeoutId);
 					console.error('getScreen DB initialization error for tabId:', id, 'error:', error, 'retry:', retryCount);
 					void ScreenshotController.getScreen(id, sessionId, callback, retryCount + 1);
@@ -72,7 +71,7 @@ class ScreenshotController {
 		}
 
 		if (getScreenCache != null) {
-			if (getScreenCache.sessionId == sessionId && getScreenCache.tabId == id) {
+			if (getScreenCache.sessionId === sessionId && getScreenCache.tabId === id) {
 				// Check if cache is still being initialized (screen is null) to avoid deadlock
 				if (getScreenCache.screen == null) {
 					if (debugScreenCache) console.log('Cache is still initializing, skipping to avoid deadlock');
@@ -96,23 +95,22 @@ class ScreenshotController {
 		database.queryIndex(
 			{
 				IDB: {
-					// @ts-ignore
 					table: SCREENS_DB_NAME,
 					index: 'PK'
 				},
 				WebSQL: {
 					/*query: 'select screen from screens where id = ? and sessionId = ?'*/
 				},
-				params: [parseInt(id), parseInt(sessionId)]
+				params: [parseInt(id, 10), parseInt(sessionId, 10)]
 			},
-			function (fields) {
+			(fields) => {
 				if (fields == null) {
 					callback(null);
 					return;
 				}
 
 				if (debugScreenCache) console.log('getScreen result: ', Date.now());
-				callback(fields['screen'], fields['pixRat'] || 1);
+				callback(fields.screen, fields.pixRat || 1);
 			}
 		);
 	}
@@ -126,7 +124,7 @@ class ScreenshotController {
 			}
 
 			const metadata = {
-				id: typeof id === 'string' ? parseInt(id) : id,
+				id: typeof id === 'string' ? parseInt(id, 10) : id,
 				sessionId: TSSessionId,
 				added_on: date ? date : new Date(),
 				screen: screen,
@@ -136,7 +134,6 @@ class ScreenshotController {
 			await database.putV2([
 				{
 					IDB: {
-						// @ts-ignore
 						table: SCREENS_DB_NAME,
 						data: metadata
 					}
@@ -154,7 +151,7 @@ class ScreenshotController {
 	}
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		ScreenshotController
 	};

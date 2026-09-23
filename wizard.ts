@@ -8,13 +8,13 @@
 /*chrome.tabs.query({ currentWindow: true, active: true }, async function (tabs) {
 	arguments[arguments.length - 1](x);\n" +*/
 
-document.addEventListener('DOMContentLoaded', function () {
-	(function () {
-		'use strict';
-
+document.addEventListener('DOMContentLoaded', () => {
+	(() => {
 		window.focus();
-		let overlay = document.querySelector('.overlay');
-		let closeDialog;
+		const overlay = document.querySelector('.overlay');
+		const closeDialog = () => {
+			void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:hideDialog]' });
+		};
 
 		trackErrors('wizard', true);
 
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			// Localize text content with data-i18n attribute
 			const elementsWithDataI18n = document.querySelectorAll('[data-i18n]');
 			for (const i in elementsWithDataI18n)
-				if (elementsWithDataI18n.hasOwnProperty(i)) {
+				if (Object.hasOwn(elementsWithDataI18n, i)) {
 					const msgKey = elementsWithDataI18n[i].getAttribute('data-i18n');
 					if (msgKey != null) {
 						const localizedMsg = chrome.i18n.getMessage(msgKey);
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			// Localize HTML content with data-i18n-html attribute
 			const elementsWithDataI18nHtml = document.querySelectorAll('[data-i18n-html]');
 			for (const i in elementsWithDataI18nHtml)
-				if (elementsWithDataI18nHtml.hasOwnProperty(i)) {
+				if (Object.hasOwn(elementsWithDataI18nHtml, i)) {
 					const msgKey = elementsWithDataI18nHtml[i].getAttribute('data-i18n-html');
 					if (msgKey != null) {
 						const localizedMsg = chrome.i18n.getMessage(msgKey);
@@ -52,41 +52,36 @@ document.addEventListener('DOMContentLoaded', function () {
 			method: '[AutomaticTabCleaner:installed]'
 		});
 
-		overlay.addEventListener(
-			'click',
-			(closeDialog = function () {
-				void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:hideDialog]' });
-			})
-		);
+		overlay.addEventListener('click', closeDialog);
 
-		let WIZARD_TITLE = chrome.i18n.getMessage('wizardTitle') || 'Tab Suspender Wizard';
+		const WIZARD_TITLE = chrome.i18n.getMessage('wizardTitle') || 'Tab Suspender Wizard';
 
 		document.querySelector('#defaultsButton').addEventListener('click', closeDialog);
 
-		document.onkeydown = function (evt) {
-			// @ts-ignore
+		document.onkeydown = (evt) => {
+			// @ts-expect-error
 			evt = evt || window.event;
-			if (evt.keyCode == 27) {
+			if (evt.keyCode === 27) {
 				closeDialog();
 			}
 		};
 
-		let tooltipSpan = document.getElementById('tooltip-span');
+		const tooltipSpan = document.getElementById('tooltip-span');
 
-		window.onmousemove = function (e) {
-			let x = e.clientX,
+		window.onmousemove = (e) => {
+			const x = e.clientX,
 				y = e.clientY;
-			tooltipSpan.style.top = y + 5 + 'px';
-			tooltipSpan.style.left = x - 240 + 'px';
+			tooltipSpan.style.top = `${y + 5}px`;
+			tooltipSpan.style.left = `${x - 240}px`;
 		};
 
 		function getCurrentStepNumber() {
-			return parseInt(document.querySelector('.dialog-content.active-step').getAttribute('step'));
+			return parseInt(document.querySelector('.dialog-content.active-step').getAttribute('step'), 10);
 		}
 
-		let stepElements = document.querySelectorAll('.dialog-content');
+		const stepElements = document.querySelectorAll('.dialog-content');
 
-		let stepListener = function (delta) {
+		const stepListener = (delta) => {
 			restartVideo();
 
 			let currentElementStep = getCurrentStepNumber();
@@ -96,16 +91,16 @@ document.addEventListener('DOMContentLoaded', function () {
 			$(stepElements[currentElementStep - 1 + delta]).fadeIn(500);
 
 			/* Recalculate current step */
-			currentElementStep = parseInt(document.querySelector('.dialog-content.active-step').getAttribute('step'));
+			currentElementStep = parseInt(document.querySelector('.dialog-content.active-step').getAttribute('step'), 10);
 			console.log('Step: ', currentElementStep);
 
 			document.getElementById('wizardTitle').innerText = WIZARD_TITLE;
 			const stepText =
 				chrome.i18n.getMessage('wizardStep', [currentElementStep.toString(), stepElements.length.toString()]) ||
-				'( step ' + currentElementStep + ' of ' + stepElements.length + ' )';
+				`( step ${currentElementStep} of ${stepElements.length} )`;
 			document.getElementById('wizardStepIndicator').innerText = stepText;
 
-			if (currentElementStep == 3) $('input[type="radio"].closeRadio').change();
+			if (currentElementStep === 3) $('input[type="radio"].closeRadio').change();
 
 			refreshNextButton(currentElementStep);
 			refreshPreviousButton(currentElementStep);
@@ -116,27 +111,27 @@ document.addEventListener('DOMContentLoaded', function () {
 			updatePage4();
 		};
 
-		document.getElementById('nextButton').addEventListener('click', function () {
+		document.getElementById('nextButton').addEventListener('click', () => {
 			stepListener(+1);
 		});
-		document.getElementById('finishButton').addEventListener('click', function () {
+		document.getElementById('finishButton').addEventListener('click', () => {
 			stepListener(+1);
 		});
-		document.getElementById('previousButton').addEventListener('click', function () {
+		document.getElementById('previousButton').addEventListener('click', () => {
 			stepListener(-1);
 		});
-		document.getElementById('defaultsButton').addEventListener('click', function () {
+		document.getElementById('defaultsButton').addEventListener('click', () => {
 			stepListener(stepElements.length - getCurrentStepNumber());
 		});
-		document.getElementById('closeButton').addEventListener('click', function () {
+		document.getElementById('closeButton').addEventListener('click', () => {
 			try {
-				chrome.tabs.query({ currentWindow: true /*, active: true*/ }, function (tabs) {
+				chrome.tabs.query({ currentWindow: true /*, active: true*/ }, (tabs) => {
 					try {
-						let indexes = [];
-						let activeIndex;
+						const indexes = [];
+						let activeIndex: number | undefined;
 						for (let i = 0; i < tabs.length; i++) {
 							indexes[tabs[i].index] = tabs[i];
-							if (tabs[i].active == true) activeIndex = tabs[i].index;
+							if (tabs[i].active === true) activeIndex = tabs[i].index;
 						}
 						if (activeIndex != null) void chrome.tabs.update(indexes[activeIndex - 1].id, { active: true });
 						// eslint-disable-next-line no-empty
@@ -167,17 +162,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 
 		function refreshSkipButton(step) {
-			if (step == 1) addClass(document.getElementById('defaultsButton'), 'active');
+			if (step === 1) addClass(document.getElementById('defaultsButton'), 'active');
 			else removeClass(document.getElementById('defaultsButton'), 'active');
 		}
 
 		function refreshFinishButton(step) {
-			if (step == stepElements.length - 1) addClass(document.getElementById('finishButton'), 'active');
+			if (step === stepElements.length - 1) addClass(document.getElementById('finishButton'), 'active');
 			else removeClass(document.getElementById('finishButton'), 'active');
 		}
 
 		function refreshCloseButton(step) {
-			if (step == stepElements.length) addClass(document.getElementById('closeButton'), 'active');
+			if (step === stepElements.length) addClass(document.getElementById('closeButton'), 'active');
 			else removeClass(document.getElementById('closeButton'), 'active');
 		}
 
@@ -186,12 +181,18 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 
 		function addClass(element, className) {
-			if (element.className.indexOf(className) == -1) element.className = element.className + ' ' + className;
+			if (element.className.indexOf(className) === -1) element.className = `${element.className} ${className}`;
 		}
 
-		let timeoutPrettifer;
-		(function () {
-			// @ts-ignore
+		const timeoutPrettifer = function (seconds: number) {
+			//console.log("P: "+seconds);
+			const numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
+			const numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+			if (this != null && this.max > 3600) return `${numhours}:${numminutes < 10 ? `${numminutes}0` : numminutes}`;
+			else return (numhours > 0 ? `${numhours} hour` : '') + (numhours < 1 || (numhours > 1 && numminutes > 0) ? `${numminutes} min ` : '');
+		};
+		(() => {
+			// @ts-expect-error
 			$('.js-range-slider-suspend-timeout').ionRangeSlider({
 				grid: true,
 				min: 0,
@@ -205,17 +206,8 @@ document.addEventListener('DOMContentLoaded', function () {
 				keyboard: true,
 				keyboard_step: 1.1,
 				prettify_enabled: true,
-				prettify: (timeoutPrettifer = function (seconds) {
-					//console.log("P: "+seconds);
-					let numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
-					let numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
-					if (this != null && this.max > 3600) return numhours + ':' + (numminutes < 10 ? numminutes + '0' : numminutes);
-					else
-						return (
-							(numhours > 0 ? numhours + ' hour' : '') + (numhours < 1 || (numhours > 1 && numminutes > 0) ? numminutes + ' min ' : '')
-						);
-				}),
-				onFinish: function (data) {
+				prettify: timeoutPrettifer,
+				onFinish: (data) => {
 					console.log('onFinish', data);
 					void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', timeout: data.from });
 				}
@@ -223,8 +215,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		})();
 
 		let prettifyVarCountRecicleKeep = 0;
-		(function () {
-			// @ts-ignore
+		(() => {
+			// @ts-expect-error
 			$('.js-range-slider-recicle-keep').ionRangeSlider({
 				grid: true,
 				force_edges: true,
@@ -236,13 +228,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				keyboard: true,
 				keyboard_step: 0.9,
 				prettify_enabled: true,
-				prettify: function (seconds) {
+				prettify: (seconds) => {
 					prettifyVarCountRecicleKeep++;
 
 					if (prettifyVarCountRecicleKeep < 6) return seconds;
 					else return chrome.i18n.getMessage('wizard_recycleKeepSliderValue', [seconds]); //"...and if there are more than <b style='font-size: 14px;'>"+seconds+"</b> opened tabs";
 				},
-				onFinish: function (data) {
+				onFinish: (data) => {
 					void chrome.runtime.sendMessage({
 						method: '[AutomaticTabCleaner:updateTimeout]',
 						limitOfOpenedTabs: data.from
@@ -252,8 +244,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		})();
 
 		let prettifyVarCountRecicleAfter = 0;
-		(function () {
-			// @ts-ignore
+		(() => {
+			// @ts-expect-error
 			$('.js-range-slider-recicle-after').ionRangeSlider({
 				grid: true,
 				force_edges: true,
@@ -265,20 +257,20 @@ document.addEventListener('DOMContentLoaded', function () {
 				keyboard: true,
 				keyboard_step: 0.5,
 				prettify_enabled: true,
-				prettify: function (seconds) {
+				prettify: (seconds) => {
 					prettifyVarCountRecicleAfter++;
 					//debugger;
-					let numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
-					let numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+					const numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
+					const numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
 
-					let result =
-						(numhours > 0 ? numhours + ' hour' + (numhours > 1 ? 's ' : ' ') : '') +
-						(numminutes > 0 ? numminutes + ' min ' : numhours <= 0 ? '0' : '');
+					const result =
+						(numhours > 0 ? `${numhours} hour${numhours > 1 ? 's ' : ' '}` : '') +
+						(numminutes > 0 ? `${numminutes} min ` : numhours <= 0 ? '0' : '');
 
 					if (prettifyVarCountRecicleAfter < 6) return result;
 					else return chrome.i18n.getMessage('wizard_recycleAfterSliderValue', [result]); //"Suspender will close tabs after <b style='font-size: 14px;'>"+ result + "</b> of inactivity";
 				},
-				onFinish: function (data) {
+				onFinish: (data) => {
 					console.log('onFinish', data);
 
 					void chrome.runtime.sendMessage({
@@ -318,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		document.getElementById('debugCheckbox').onchange = () => {
 			void chrome.runtime.sendMessage({
 				method: '[AutomaticTabCleaner:updateTimeout]',
-				// @ts-ignore
+				// @ts-expect-error
 				sendErrors: document.getElementById('debugCheckbox').checked === true
 			});
 		};
@@ -326,12 +318,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		function restartVideo() {
 			const tutorialVideo = $('#tutorialVideo');
 			if (tutorialVideo.is(':visible')) {
-				// @ts-ignore
+				// @ts-expect-error
 				tutorialVideo[0].play();
 			} else {
-				// @ts-ignore
+				// @ts-expect-error
 				tutorialVideo[0].pause();
-				// @ts-ignore
+				// @ts-expect-error
 				tutorialVideo[0].load();
 			}
 		}
@@ -343,15 +335,15 @@ document.addEventListener('DOMContentLoaded', function () {
 				method: '[AutomaticTabCleaner:popupQuery]',
 				tab: { id: 0, url: '' }
 			});
-			// @ts-ignore
-			let timeout = parseInt(res.timeout);
+			// @ts-expect-error
+			const timeout = parseInt(res.timeout, 10);
 			document.getElementById('resultTimeoutValue').innerText = timeoutPrettifer(timeout).trim();
 
 			restartVideo();
 		}
 
 		/* READ DEFAULT CONFIGURATION */
-		void (async function () {
+		void (async () => {
 			//let BG = chrome.extension.getBackgroundPage();
 			//let res = BG.popupQuery({ id: 0, url: '' });
 			const res: PopupQueryBGResponse = await chrome.runtime.sendMessage({
@@ -368,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				$('input:radio[name=closeRadio][value=yes]').click(); //.attr('checked', 'checked');
 			else $('input:radio[name=closeRadio][value=no]').click(); //.attr('checked', 'checked');
 
-			// @ts-ignore
+			// @ts-expect-error
 			document.getElementById('debugCheckbox').checked = res.sendErrors;
 		})();
 	})();

@@ -1,14 +1,14 @@
-let trackError = async (error: Error) => {};
-let trackView = async (viewName: string, info?: object) => {};
+let trackError = async (_error: Error) => {};
+let trackView = async (_viewName: string, _info?: object) => {};
 
-function trackErrors(pageName /* For example 'popup' */, buttons /* true/false */) {
-	const tsErrorGaKey = 'ts_error';
-	const sendErrorsKey = 'sendErrors';
+function trackErrors(pageName /* For example 'popup' */, _buttons /* true/false */) {
+	const _tsErrorGaKey = 'ts_error';
+	const _sendErrorsKey = 'sendErrors';
 	const extensionRootPath = chrome.runtime.getURL('');
 
-	const eventsAccumulator = [];
+	const _eventsAccumulator = [];
 
-	trackError = async function (error: Error) {
+	trackError = async (error: Error) => {
 		void chrome.runtime.sendMessage({
 			method: '[TS:offscreenDocument:sendError]',
 			type: 'error',
@@ -19,7 +19,7 @@ function trackErrors(pageName /* For example 'popup' */, buttons /* true/false *
 		});
 	};
 
-	trackView = async function (viewName: string, info?: object) {
+	trackView = async (viewName: string, info?: object) => {
 		void chrome.runtime.sendMessage({
 			method: '[TS:offscreenDocument:sendError]',
 			type: 'event',
@@ -31,7 +31,7 @@ function trackErrors(pageName /* For example 'popup' */, buttons /* true/false *
 	};
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		trackErrors,
 		trackError,

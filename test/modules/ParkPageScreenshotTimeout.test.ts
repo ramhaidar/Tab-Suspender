@@ -188,7 +188,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 			let pageRendered = false;
 
 			await screenPromise
-				.then((data: any) => {
+				.then((_data: any) => {
 					// Handle success - would draw screenshot
 					pageRendered = true;
 				})
@@ -473,7 +473,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 	describe('historyFallback timeout (Issue #27 Fix #5)', () => {
 		it('should use 1500ms timeout instead of 500ms', () => {
 			let fallbackExecuted = false;
-			let hasHistory = false;
+			const hasHistory = false;
 			let navigationAttempted = false;
 
 			const historyFallback = () => {
@@ -529,7 +529,7 @@ describe('Park Page Screenshot Timeout Tests', () => {
 
 		it('should prevent double navigation with navigationAttempted flag', () => {
 			let fallbackCount = 0;
-			let hasHistory = false;
+			const hasHistory = false;
 			let navigationAttempted = false;
 
 			const historyFallback = () => {

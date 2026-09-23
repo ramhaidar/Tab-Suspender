@@ -1,24 +1,22 @@
-'use strict';
-
 const extensionUrl = chrome.runtime.getURL('');
 const emptyScreen = '/img/no_preview_available.png';
 const chromeStore = '/img/Chrome-Store-Logo.png';
 const extension = '/img/Chrome-Extension.jpg';
 
 // eslint-disable-next-line no-redeclare,no-unused-vars,@typescript-eslint/no-unused-vars
-function drawPreviewTile(tile, options) {
-	let divLine = document.createElement('div');
+function _drawPreviewTile(tile, options) {
+	const divLine = document.createElement('div');
 	divLine.classList.add('mx-auto');
 	divLine.innerHTML =
 		'<div class="card">\n' +
 		'<a ' +
-		(!options || !options.noHref ? 'href="' + tile.url + '"' : '') +
+		(!options?.noHref ? `href="${tile.url}"` : '') +
 		' target="_blank" class="card-img-a">' +
-		`  <img class="card-img-top ${options && options.popuped ? 'popuped' : ''}">\n` +
+		`  <img class="card-img-top ${options?.popuped ? 'popuped' : ''}">\n` +
 		'</a>' +
 		'  <div class="card-body">\n' +
-		(options && options.close ? '	<img src="/img/Close_Icon_24.png" class="delete-btn" title="Close Tab">' : '') +
-		(!options || !options.noTitle
+		(options?.close ? '	<img src="/img/Close_Icon_24.png" class="delete-btn" title="Close Tab">' : '') +
+		(!options?.noTitle
 			? '    <h5 class="card-title">' +
 				'<a href="' +
 				tile.url +
@@ -29,7 +27,7 @@ function drawPreviewTile(tile, options) {
 				'</a>' +
 				'</h5>\n'
 			: '') +
-		(!options || !options.noUrl
+		(!options?.noUrl
 			? '<p class="card-text">' +
 				'<a href="' +
 				tile.url +
@@ -38,22 +36,22 @@ function drawPreviewTile(tile, options) {
 				'</a>' +
 				'</p>\n'
 			: '') +
-		(options && options.noTime ? '' : '<p class="card-text time">' + timeConverter(tile.timestamp) + '</p>\n') +
+		(options?.noTime ? '' : `<p class="card-text time">${timeConverter(tile.timestamp)}</p>\n`) +
 		'  </div>\n' +
 		'</div>';
 
-	let img = divLine.getElementsByTagName('img')[0];
+	const img = divLine.getElementsByTagName('img')[0];
 
-	let tmpF = function (imgElement) {
+	const tmpF = (imgElement) => {
 		let timeoutId;
 
 		$(imgElement).hover(
-			function () {
+			() => {
 				//if (imgElement.src.indexOf('chrome-extension://') == 0)
 				//	return;
 
 				if (!timeoutId) {
-					timeoutId = window.setTimeout(function () {
+					timeoutId = window.setTimeout(() => {
 						timeoutId = null; // EDIT: added this line
 
 						if (!imgElement.classList.contains('clicked')) imgElement.classList.add('zoom');
@@ -69,7 +67,7 @@ function drawPreviewTile(tile, options) {
 					});
 				}
 			},
-			function () {
+			() => {
 				if (timeoutId) {
 					window.clearTimeout(timeoutId);
 					timeoutId = null;
@@ -101,9 +99,9 @@ function drawPreviewTile(tile, options) {
 }
 
 function timeConverter(UNIX_timestamp) {
-	let a = new Date(UNIX_timestamp);
-	let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-	let year = a.getFullYear();
+	const a = new Date(UNIX_timestamp);
+	const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	const year = a.getFullYear();
 	let month = months[a.getMonth()];
 	let date = a.getDate();
 	let hour = a.getHours();
@@ -116,6 +114,6 @@ function timeConverter(UNIX_timestamp) {
 	min = (min < 10 ? '0' : '') + min;
 	sec = (sec < 10 ? '0' : '') + sec;
 
-	let time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec;
+	const time = `${date} ${month} ${year} ${hour}:${min}:${sec}`;
 	return time;
 }

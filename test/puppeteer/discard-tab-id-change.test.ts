@@ -26,13 +26,12 @@
  *   cd test/puppeteer && pnpm exec tsx discard-tab-id-change.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
-	evalInSW,
 	suspendTabById,
 	discardTabById,
 	unsuspendTabById,
@@ -76,10 +75,11 @@ async function main(): Promise<void> {
 		await sleep(1500);
 
 		const tabs = await queryChromeTabs(browser);
-		const targetTab = tabs.find((t) => t.url && t.url.includes('example.com'));
+		const targetTab = tabs.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetTab != null, 'example.com tab found');
+		if (targetTab == null) throw new Error('example.com tab was not found');
 
-		const tabId = targetTab!.id;
+		const tabId = targetTab.id;
 
 		// Move focus away — tab must be inactive to park
 		const blankPage = await browser.newPage();
@@ -93,10 +93,11 @@ async function main(): Promise<void> {
 
 		const tabsAfterSuspend = await queryChromeTabs(browser);
 		const parkPrefix = parkUrlPrefix(extensionId);
-		const parkTab = tabsAfterSuspend.find((t) => t.url && t.url.startsWith(parkPrefix));
+		const parkTab = tabsAfterSuspend.find((t) => t.url?.startsWith(parkPrefix));
 		runner.assert(parkTab != null, 'park.html tab exists after suspend');
+		if (parkTab == null) throw new Error('park.html tab was not found after suspend');
 
-		const parkTabId = parkTab!.id;
+		const parkTabId = parkTab.id;
 		log(`  park.html tab ID: ${parkTabId}`);
 
 		// ══════════════════════════════════════════════════════════════════════════
@@ -118,7 +119,7 @@ async function main(): Promise<void> {
 		);
 
 		// Use the current tab ID (may be same or new after discard)
-		const currentParkTab = tabsAfterDiscard.find((t) => t.url && t.url.startsWith(parkPrefix)) ?? discardedTab;
+		const currentParkTab = tabsAfterDiscard.find((t) => t.url?.startsWith(parkPrefix)) ?? discardedTab;
 		const currentParkTabId = currentParkTab?.id ?? parkTabId;
 		log(`  Current park tab ID after discard: ${currentParkTabId}`);
 

@@ -364,7 +364,8 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const originRefId = message.originRefId;
 
 			const isMatch =
-				(!isNaN(myTabId) && messageTabId && myTabId === messageTabId) || (!isNaN(myTabId) && originRefId && myTabId === originRefId);
+				(!Number.isNaN(myTabId) && messageTabId && myTabId === messageTabId) ||
+				(!Number.isNaN(myTabId) && originRefId && myTabId === originRefId);
 
 			expect(isMatch).toBe(true);
 		});
@@ -384,8 +385,8 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const messageTabId = message.tab.id;
 			const originRefId = message.originRefId;
 
-			const matchWithCurrent = !isNaN(myTabId) && messageTabId && myTabId === messageTabId;
-			const matchWithOrigin = !isNaN(myTabId) && originRefId && myTabId === originRefId;
+			const matchWithCurrent = !Number.isNaN(myTabId) && messageTabId && myTabId === messageTabId;
+			const matchWithOrigin = !Number.isNaN(myTabId) && originRefId && myTabId === originRefId;
 			const isMatch = matchWithCurrent || matchWithOrigin;
 
 			expect(matchWithCurrent).toBe(false); // 100 !== 101
@@ -410,7 +411,8 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const originRefId = message.originRefId;
 
 			const isMatch =
-				(!isNaN(myTabId) && messageTabId && myTabId === messageTabId) || (!isNaN(myTabId) && originRefId && myTabId === originRefId);
+				(!Number.isNaN(myTabId) && messageTabId && myTabId === messageTabId) ||
+				(!Number.isNaN(myTabId) && originRefId && myTabId === originRefId);
 
 			expect(isMatch).toBe(false); // Should NOT match
 		});

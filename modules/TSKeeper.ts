@@ -9,13 +9,13 @@
  *
  * This code is kept for backward compatibility but may not be effective in MV3.
  */
-let heartbeatInterval;
+let heartbeatInterval: ReturnType<typeof setInterval>;
 
 // Disabled - using offscreen document heartbeat instead
 // void startHeartbeat();
 
 async function runHeartbeat() {
-	await chrome.storage.local.set({ 'last-heartbeat': new Date().getTime() });
+	await chrome.storage.local.set({ 'last-heartbeat': Date.now() });
 }
 
 /**
@@ -24,7 +24,7 @@ async function runHeartbeat() {
  * stopHeartbeat once that work is complete.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function startHeartbeat() {
+async function _startHeartbeat() {
 	// Run the heartbeat once at service worker startup.
 	void runHeartbeat().then(() => {
 		// Then again every 20 seconds.
@@ -33,7 +33,7 @@ async function startHeartbeat() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function stopHeartbeat() {
+async function _stopHeartbeat() {
 	clearInterval(heartbeatInterval);
 }
 
@@ -42,6 +42,6 @@ async function stopHeartbeat() {
  * the heartbeat has never run before.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function getLastHeartbeat() {
+async function _getLastHeartbeat() {
 	return (await chrome.storage.local.get('last-heartbeat'))['last-heartbeat'];
 }

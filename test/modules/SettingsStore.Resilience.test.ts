@@ -24,10 +24,14 @@ function makeMockStorage(localData: Record<string, any> = {}, syncData: Record<s
 				Object.assign(localData, data);
 			}),
 			remove: jest.fn().mockImplementation(async (keys: string | string[]) => {
-				(Array.isArray(keys) ? keys : [keys]).forEach((k) => delete localData[k]);
+				(Array.isArray(keys) ? keys : [keys]).forEach((k) => {
+					delete localData[k];
+				});
 			}),
 			clear: jest.fn().mockImplementation(async () => {
-				Object.keys(localData).forEach((k) => delete localData[k]);
+				Object.keys(localData).forEach((k) => {
+					delete localData[k];
+				});
 			})
 		},
 		sync: {

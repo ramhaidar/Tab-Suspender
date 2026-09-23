@@ -15,10 +15,10 @@
  *   cd test/puppeteer && pnpm exec tsx restore-modes.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -62,7 +62,7 @@ async function suspendAndRestore(
 	await sleep(1000);
 
 	const tabs = await queryChromeTabs(browser);
-	const tab = tabs.find((t) => t.url && t.url.startsWith('http://127.0.0.1'));
+	const tab = tabs.find((t) => t.url?.startsWith('http://127.0.0.1'));
 	if (!tab) return null;
 
 	// Focus away so the target tab is inactive
@@ -77,7 +77,7 @@ async function suspendAndRestore(
 
 	// Find current park tab ID (may equal tab.id)
 	const allTabs = await queryChromeTabs(browser);
-	const parkTab = allTabs.find((t) => t.url && t.url.startsWith(parkUrlPrefix(extensionId)));
+	const parkTab = allTabs.find((t) => t.url?.startsWith(parkUrlPrefix(extensionId)));
 	const parkTabId = parkTab?.id ?? tab.id;
 
 	log(`  [${modeName}] Restoring tab ${parkTabId}...`);
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
 	log('Browser launched');
 
 	const originalReload = await (async () => {
-		const extensionId = await getExtensionId(browser);
+		const _extensionId = await getExtensionId(browser);
 		return getSetting(browser, 'reloadTabOnRestore');
 	})();
 
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
 		runner.assert((await getSetting(browser, 'reloadTabOnRestore')) === false, 'reloadTabOnRestore set to false');
 
 		const urlA = await suspendAndRestore(browser, extensionId, testUrl, 'bfcache');
-		runner.assert(urlA != null && urlA.includes('127.0.0.1'), `reloadTabOnRestore=false: tab restored to original URL (got: ${urlA})`);
+		runner.assert(urlA?.includes('127.0.0.1') === true, `reloadTabOnRestore=false: tab restored to original URL (got: ${urlA})`);
 
 		await sleep(500);
 
@@ -143,7 +143,7 @@ async function main(): Promise<void> {
 		runner.assert((await getSetting(browser, 'reloadTabOnRestore')) === true, 'reloadTabOnRestore set to true');
 
 		const urlB = await suspendAndRestore(browser, extensionId, testUrl, 'reload');
-		runner.assert(urlB != null && urlB.includes('127.0.0.1'), `reloadTabOnRestore=true: tab restored to original URL (got: ${urlB})`);
+		runner.assert(urlB?.includes('127.0.0.1') === true, `reloadTabOnRestore=true: tab restored to original URL (got: ${urlB})`);
 
 		// ══════════════════════════════════════════════════════════════════════════
 		//  TEARDOWN

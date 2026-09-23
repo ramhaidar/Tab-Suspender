@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+// Jest globals are provided by the test environment.
 
 // Mock Chrome APIs
 const mockTabsQuery = jest.fn();

@@ -14,10 +14,10 @@
  *   cd test/puppeteer && pnpm exec tsx hover-restore.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -28,8 +28,7 @@ import {
 	getSetting,
 	setSetting,
 	waitForAnyTabToLeaveParked,
-	waitForExtensionInit,
-	parkUrlPrefix
+	waitForExtensionInit
 } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
 
@@ -90,16 +89,17 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabs = await queryChromeTabs(browser);
-		const targetTab = tabs.find((t) => t.url && t.url.startsWith('http://127.0.0.1'));
+		const targetTab = tabs.find((t) => t.url?.startsWith('http://127.0.0.1'));
 		runner.assert(targetTab != null, 'target tab opened');
+		if (targetTab == null) throw new Error('target tab was not found');
 
 		// Focus away so target tab becomes inactive
 		const blankPage = await browser.newPage();
 		await blankPage.goto('about:blank');
 		await sleep(300);
 
-		log(`  Suspending tab ${targetTab!.id}...`);
-		await suspendTabById(browser, targetTab!.id);
+		log(`  Suspending tab ${targetTab?.id}...`);
+		await suspendTabById(browser, targetTab.id);
 		await waitForParkPages(browser, extensionId, 1, 15000);
 		log('  park.html appeared');
 
@@ -143,7 +143,7 @@ async function main(): Promise<void> {
 		// Wait for any tab to leave the park URL and land on our test server
 		const restoredUrl = await waitForAnyTabToLeaveParked(browser, extensionId, '127.0.0.1', 20000).catch(() => null);
 
-		runner.assert(restoredUrl != null && restoredUrl.includes('127.0.0.1'), `Tab restored to original URL via hover (got: ${restoredUrl})`);
+		runner.assert(restoredUrl?.includes('127.0.0.1') === true, `Tab restored to original URL via hover (got: ${restoredUrl})`);
 
 		await blankPage.close().catch(() => {});
 
@@ -170,15 +170,16 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabs2 = await queryChromeTabs(browser);
-		const targetTab2 = tabs2.find((t) => t.url && t.url.startsWith('http://127.0.0.1'));
+		const targetTab2 = tabs2.find((t) => t.url?.startsWith('http://127.0.0.1'));
 		runner.assert(targetTab2 != null, 'target tab opened for Phase B');
+		if (targetTab2 == null) throw new Error('Phase B target tab was not found');
 
 		const blankPage2 = await browser.newPage();
 		await blankPage2.goto('about:blank');
 		await sleep(300);
 
-		log(`  Suspending tab ${targetTab2!.id}...`);
-		await suspendTabById(browser, targetTab2!.id);
+		log(`  Suspending tab ${targetTab2?.id}...`);
+		await suspendTabById(browser, targetTab2.id);
 		await waitForParkPages(browser, extensionId, 1, 15000);
 		log('  park.html appeared (Phase B)');
 
@@ -186,7 +187,7 @@ async function main(): Promise<void> {
 		runner.assert(parkPages2.length >= 1, `park page found for Phase B (got ${parkPages2.length})`);
 
 		const parkPage2 = parkPages2[0];
-		const parkUrlBefore = parkPage2.url();
+		const _parkUrlBefore = parkPage2.url();
 
 		await parkPage2.waitForSelector('#resoteImg', { visible: true, timeout: 10000 }).catch(() => {});
 		// Also wait for the onmouseover handler so we test the real restoreEvent='click' behavior

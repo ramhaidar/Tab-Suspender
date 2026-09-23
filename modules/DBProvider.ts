@@ -9,11 +9,9 @@
  */
 // eslint-disable-next-line no-redeclare
 function DBProvider(dbImplementation, options) {
-	'use strict';
-
 	this.concreteDBProvider = null;
 
-	if (dbImplementation == 'IndexedDB')
+	if (dbImplementation === 'IndexedDB')
 		// eslint-disable-next-line no-undef
 		this.concreteDBProvider = new IndexedDBProvider(options);
 	// eslint-disable-next-line no-undef
@@ -83,7 +81,7 @@ DBProvider.prototype.open = function (options) {
 	return this.concreteDBProvider.open(options);
 };
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		DBProvider
 	};

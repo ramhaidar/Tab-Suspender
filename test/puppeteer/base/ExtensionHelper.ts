@@ -1,4 +1,4 @@
-import type { Browser, Page } from 'puppeteer';
+import type { Browser } from 'puppeteer';
 import type { ChromeTab, TabInfosMap } from './types.js';
 import { sleep } from './BrowserHelper.js';
 
@@ -210,7 +210,7 @@ export async function waitForTabToRestore(browser: Browser, tabId: number, timeo
 		);
 		if (json) {
 			const tab = JSON.parse(json);
-			if (tab && tab.url && !tab.url.includes('park.html')) return tab.url as string;
+			if (tab?.url && !tab.url.includes('park.html')) return tab.url as string;
 		}
 		await sleep(500);
 	}
@@ -223,7 +223,7 @@ export async function waitForAnyTabWithUrl(browser: Browser, urlPart: string, ti
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		const tabs = await queryChromeTabs(browser);
-		const found = tabs.find((t) => t.url && t.url.includes(urlPart));
+		const found = tabs.find((t) => t.url?.includes(urlPart));
 		if (found) return found;
 		await sleep(500);
 	}
@@ -242,7 +242,7 @@ export async function waitForAnyTabToLeaveParked(
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		const tabs = await queryChromeTabs(browser);
-		const found = tabs.find((t) => t.url && t.url.includes(expectedOriginalUrlPart) && !t.url.startsWith(prefix));
+		const found = tabs.find((t) => t.url?.includes(expectedOriginalUrlPart) && !t.url.startsWith(prefix));
 		if (found) return found.url;
 		await sleep(500);
 	}

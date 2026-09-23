@@ -19,10 +19,10 @@
  *   cd test/puppeteer && pnpm exec tsx whitelist-ignore.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import { getExtensionId, evalInSW, queryChromeTabs, getParkPages, parkUrlPrefix, waitForExtensionInit } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
@@ -65,7 +65,7 @@ async function tryToSuspend(
 	await sleep(1000);
 
 	const tabs = await queryChromeTabs(browser);
-	const tab = tabs.find((t) => t.url && t.url.startsWith(testUrl));
+	const tab = tabs.find((t) => t.url?.startsWith(testUrl));
 	if (!tab) return { parked: false, tabId: -1 };
 
 	const tabId = tab.id;
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
 	fs.mkdirSync(SESSION_DIR, { recursive: true });
 
 	const { server, url: testUrl } = await startServer();
-	const testHost = new URL(testUrl).hostname + ':' + new URL(testUrl).port;
+	const testHost = `${new URL(testUrl).hostname}:${new URL(testUrl).port}`;
 	const whitelistPattern = `*${testHost}*`;
 	log(`HTTP server: ${testUrl}`);
 	log(`Whitelist pattern: ${whitelistPattern}`);
@@ -178,10 +178,11 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabs = await queryChromeTabs(browser);
-		const ignoreTab = tabs.find((t) => t.url && t.url.startsWith(testUrl));
+		const ignoreTab = tabs.find((t) => t.url?.startsWith(testUrl));
 		runner.assert(ignoreTab != null, 'Test tab found for ignore test');
+		if (ignoreTab == null) throw new Error('Test tab was not found for ignore test');
 
-		const ignoreTabId = ignoreTab!.id;
+		const ignoreTabId = ignoreTab.id;
 
 		// Mark tab as ignored
 		await evalInSW(browser, `ignoreList.addToIgnoreTabList(${ignoreTabId})`);

@@ -208,7 +208,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 			expect(tabInfoAfter3?.time).toBe(30);
 
 			// Simulate settings change: reduce timeout to 30 s
-			settingsOverrides['timeout'] = 30;
+			settingsOverrides.timeout = 30;
 			tabObserver.settingsChanged();
 
 			// Drain the stateOnly tick fired by settingsChanged()
@@ -270,14 +270,14 @@ describe('TabObserver — Settings Change (11.4)', () => {
 			tabObserver = new TabObserverClass(tabManager);
 
 			// Start with a short timeout
-			settingsOverrides['timeout'] = 30;
+			settingsOverrides.timeout = 30;
 
 			// 2 ticks → time = 20 s (below 30 s threshold)
 			await runTicks(2);
 			expect((global as any).parkTab).not.toHaveBeenCalled();
 
 			// Increase timeout so the tab is no longer over the threshold
-			settingsOverrides['timeout'] = 90;
+			settingsOverrides.timeout = 90;
 			tabObserver.settingsChanged();
 			await Promise.resolve();
 			await Promise.resolve();
@@ -311,7 +311,7 @@ describe('TabObserver — Settings Change (11.4)', () => {
 			}
 
 			// Ticker is still operational after repeated restarts
-			settingsOverrides['timeout'] = 10;
+			settingsOverrides.timeout = 10;
 			await runTicks(1);
 			expect((global as any).parkTab).toHaveBeenCalledWith(expect.objectContaining({ id: tab.id }), tab.id);
 		});

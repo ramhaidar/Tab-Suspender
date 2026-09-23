@@ -76,19 +76,19 @@ describe('TabCapture Race Condition Tests', () => {
 		});
 
 		// Mock chrome.tabs.captureVisibleTab
-		mockChrome.tabs.captureVisibleTab = jest.fn((windowId, options, callback) => {
+		mockChrome.tabs.captureVisibleTab = jest.fn((_windowId, _options, callback) => {
 			const fakeScreenshot = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
 			// Call callback asynchronously to simulate real Chrome API behavior
 			process.nextTick(() => callback(fakeScreenshot));
 		});
 
 		// Mock chrome.tabs.getZoom
-		mockChrome.tabs.getZoom = jest.fn((tabId, callback) => {
+		mockChrome.tabs.getZoom = jest.fn((_tabId, callback) => {
 			process.nextTick(() => callback(1));
 		});
 
 		// Mock chrome.scripting.executeScript
-		mockChrome.scripting.executeScript = jest.fn((config) => {
+		mockChrome.scripting.executeScript = jest.fn((_config) => {
 			return Promise.resolve([{ result: 2 }]); // devicePixelRatio = 2
 		});
 
@@ -165,7 +165,7 @@ describe('TabCapture Race Condition Tests', () => {
 
 			const captureOrder: string[] = [];
 
-			mockScreenshotController.addScreen.mockImplementation(async (tabId, screen, devicePixelRatio) => {
+			mockScreenshotController.addScreen.mockImplementation(async (_tabId, _screen, _devicePixelRatio) => {
 				await new Promise((resolve) => setTimeout(resolve, 30));
 				captureOrder.push('screenshot-stored');
 			});
@@ -253,7 +253,7 @@ describe('TabCapture Race Condition Tests', () => {
 
 			const operations: string[] = [];
 
-			mockScreenshotController.addScreen.mockImplementation(async (tabId, screen, devicePixelRatio) => {
+			mockScreenshotController.addScreen.mockImplementation(async (_tabId, _screen, _devicePixelRatio) => {
 				await new Promise((resolve) => setTimeout(resolve, 40));
 				operations.push('addScreen-completed');
 			});
@@ -281,7 +281,7 @@ describe('TabCapture Race Condition Tests', () => {
 
 			let captureCount = 0;
 
-			mockScreenshotController.addScreen.mockImplementation(async (tabId, screen, devicePixelRatio) => {
+			mockScreenshotController.addScreen.mockImplementation(async (_tabId, _screen, _devicePixelRatio) => {
 				await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
 				captureCount++;
 			});
@@ -480,7 +480,7 @@ describe('TabCapture Race Condition Tests', () => {
 				windowId: 1
 			};
 
-			mockChrome.tabs.query = jest.fn((query, callback) => {
+			mockChrome.tabs.query = jest.fn((_query, callback) => {
 				process.nextTick(() => callback([{ ...mockTab }]));
 			});
 
@@ -497,7 +497,7 @@ describe('TabCapture Race Condition Tests', () => {
 				windowId: 1
 			};
 
-			mockChrome.tabs.query = jest.fn((query, callback) => {
+			mockChrome.tabs.query = jest.fn((_query, callback) => {
 				process.nextTick(() => callback([{ ...mockTab }]));
 			});
 
@@ -514,7 +514,7 @@ describe('TabCapture Race Condition Tests', () => {
 				windowId: 1
 			};
 
-			mockChrome.tabs.query = jest.fn((query, callback) => {
+			mockChrome.tabs.query = jest.fn((_query, callback) => {
 				process.nextTick(() => callback([{ ...mockTab }]));
 			});
 
@@ -544,7 +544,7 @@ describe('TabCapture Race Condition Tests', () => {
 				timeline.push({ event, timestamp: Date.now() - startTime });
 			};
 
-			mockChrome.tabs.captureVisibleTab = jest.fn((windowId, options, callback) => {
+			mockChrome.tabs.captureVisibleTab = jest.fn((_windowId, _options, callback) => {
 				setTimeout(() => {
 					logEvent('screenshot-captured');
 					callback('data:image/jpeg;base64,fake');
@@ -556,7 +556,7 @@ describe('TabCapture Race Condition Tests', () => {
 				return Promise.resolve([{ result: 2 }]);
 			});
 
-			mockScreenshotController.addScreen.mockImplementation(async (tabId, screen, devicePixelRatio) => {
+			mockScreenshotController.addScreen.mockImplementation(async (_tabId, _screen, _devicePixelRatio) => {
 				await new Promise((resolve) => setTimeout(resolve, 30));
 				logEvent('screenshot-stored');
 			});

@@ -105,12 +105,10 @@ class TabManager {
 	}
 
 	private loadTabInfos() {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
 		chrome.storage.local
 			.get(this.TAB_INFOS_KEY)
 			.then(async (result) => {
-				const loadedITabInfosCompressedBase64: string = result[self.TAB_INFOS_KEY];
+				const loadedITabInfosCompressedBase64: string = result[this.TAB_INFOS_KEY];
 
 				if (loadedITabInfosCompressedBase64 != null && loadedITabInfosCompressedBase64.trim().length > 0) {
 					const iTabInfosCompressedArrayBuffer = this.base64ToArrayBuffer(loadedITabInfosCompressedBase64);
@@ -119,7 +117,7 @@ class TabManager {
 					//const loadedITabInfos: { [key: number]: ITabInfo } = result[self.TAB_INFOS_KEY];
 
 					for (const propertyName in loadedITabInfos) {
-						if (loadedITabInfos.hasOwnProperty(propertyName)) {
+						if (Object.hasOwn(loadedITabInfos, propertyName)) {
 							const tabInfo = TabInfo.fromObject(loadedITabInfos[propertyName]);
 							// Reset inactivity timer on service-worker restart so tabs that were
 							// near the suspension threshold don't get suspended immediately after
@@ -127,7 +125,7 @@ class TabManager {
 							if (!tabInfo.parked) {
 								tabInfo.time = 0;
 							}
-							self.tabInfos[propertyName] = tabInfo;
+							this.tabInfos[propertyName] = tabInfo;
 						}
 					}
 					console.log(`tabInfos loaded`);
@@ -139,23 +137,20 @@ class TabManager {
 	private readonly TAB_INFOS_KEY = 'tabInfos';
 
 	constructor() {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		this.loadTabInfos();
 
 		this.startCommonLoop();
 
 		/** Event ******************************************************************************
 		 tabs.onCreated - add to list */
-		chrome.tabs.onCreated.addListener(async function (tab: chrome.tabs.Tab) {
-			const tabInfo = self.createNewTabInfo(tab);
+		chrome.tabs.onCreated.addListener(async (tab: chrome.tabs.Tab) => {
+			const tabInfo = this.createNewTabInfo(tab);
 
 			if (trace) console.trace(`Tab[${tab.id}] Created`, tab);
 
-			self.checkAndTurnOffAutoDiscardable(tab);
+			this.checkAndTurnOffAutoDiscardable(tab);
 
-			self.historyOpenerController.onNewTab(tab);
+			this.historyOpenerController.onNewTab(tab);
 
 			// Check if tab should be suspended (Ctrl+Click or Cmd+Click)
 			if (nextTabShouldBeSuspended && tab.active === false && (await settings.get('suspendOnCtrlClick'))) {
@@ -190,7 +185,7 @@ class TabManager {
 			}
 
 			if (tab.active === false)
-				if ((await settings.get('openUnfocusedTabDiscarded')) == true) {
+				if ((await settings.get('openUnfocusedTabDiscarded')) === true) {
 					tabInfo.markedForDiscard = true;
 				}
 		});
@@ -198,19 +193,19 @@ class TabManager {
 		/** Event ******************************************************************************
 		 tabs.onReplaced */
 		chrome.tabs.onReplaced.addListener((addedTabId: number, removedTabId: number) => {
-			self.onTabReplaceDetected(addedTabId, removedTabId);
+			this.onTabReplaceDetected(addedTabId, removedTabId);
 		});
 
 		/** Event ******************************************************************************
 		 tabs.onUpdated */
 		chrome.tabs.onUpdated.addListener((_tabId: number, changeInfo: TabChangeInfo, tab: chrome.tabs.Tab) => {
-			const tabInfo = self.getTabInfoOrCreate(tab);
+			const tabInfo = this.getTabInfoOrCreate(tab);
 
 			this.historyOpenerController.onTabUpdate(_tabId, changeInfo);
 
 			if (trace) console.trace(`Tab[${tab.id}] updated: `, changeInfo, tab);
 
-			if (changeInfo.discarded == false && tab.active == true && TabManager.isTabParked(tab) && getScreenCache == null)
+			if (changeInfo.discarded === false && tab.active === true && TabManager.isTabParked(tab) && getScreenCache == null)
 				try {
 					const sessionId = parseUrlParam(tab.url, 'sessionId');
 					const tabId = parseUrlParam(tab.url, 'tabId');
@@ -238,9 +233,9 @@ class TabManager {
 				}
 
 			try {
-				if (tab.active == false && tab.status === 'loading') {
-					if (tabInfo.markedForDiscard == true) {
-						if (tab.favIconUrl != null && tab.title != null && tab.title != tab.url) {
+				if (tab.active === false && tab.status === 'loading') {
+					if (tabInfo.markedForDiscard === true) {
+						if (tab.favIconUrl != null && tab.title != null && tab.title !== tab.url) {
 							console.log('Discarding Tab: ', tab.url);
 							discardTab(tab.id);
 							tabInfo.discarded = true;
@@ -295,11 +290,11 @@ class TabManager {
 								// Check if we have favicon or reached max attempts
 								if (updatedTab.favIconUrl || attempts >= MAX_ATTEMPTS) {
 									let url = parkUrl;
-									url += '?tabId=' + encodeURIComponent(updatedTab.id);
-									url += '&title=' + encodeURIComponent(updatedTab.title || 'New Tab');
-									url += '&url=' + encodeURIComponent(originalUrl);
-									url += '&sessionId=' + encodeURIComponent(TSSessionId);
-									if (updatedTab.favIconUrl) url += '&icon=' + encodeURIComponent(updatedTab.favIconUrl);
+									url += `?tabId=${encodeURIComponent(updatedTab.id)}`;
+									url += `&title=${encodeURIComponent(updatedTab.title || 'New Tab')}`;
+									url += `&url=${encodeURIComponent(originalUrl)}`;
+									url += `&sessionId=${encodeURIComponent(TSSessionId)}`;
+									if (updatedTab.favIconUrl) url += `&icon=${encodeURIComponent(updatedTab.favIconUrl)}`;
 
 									// Clear flags
 									tabInfo.markedForLoadSuspended = false;
@@ -308,7 +303,7 @@ class TabManager {
 									chrome.tabs
 										.update(updatedTab.id, { url: url })
 										.then(() => {
-											self.markTabParked(updatedTab);
+											this.markTabParked(updatedTab);
 										})
 										.catch(console.error);
 								} else {
@@ -326,9 +321,9 @@ class TabManager {
 				}
 			}
 
-			if (debug && Object.keys(changeInfo).length == 1 && Object.keys(changeInfo)[0] == 'title') return;
+			if (debug && Object.keys(changeInfo).length === 1 && Object.keys(changeInfo)[0] === 'title') return;
 
-			if (Object.keys(changeInfo).length == 1 && Object.keys(changeInfo)[0] == 'favIconUrl') return;
+			if (Object.keys(changeInfo).length === 1 && Object.keys(changeInfo)[0] === 'favIconUrl') return;
 
 			let captured = false;
 
@@ -339,7 +334,7 @@ class TabManager {
 
 				if (tab.active === true) {
 					if (TabManager.isTabURLAllowedForPark(tab)) {
-						setTimeout(function () {
+						setTimeout(() => {
 							void tabCapture.captureTab(tab);
 						}, 150);
 						captured = true;
@@ -350,13 +345,13 @@ class TabManager {
 				}
 
 				if (TabManager.isTabParked(tab))
-					chrome.tabs.getZoom(tab.id, function (zoomFactor) {
-						if (zoomFactor != 1.0) chrome.tabs.setZoom(tab.id, 1.0).catch(console.error);
+					chrome.tabs.getZoom(tab.id, (zoomFactor) => {
+						if (zoomFactor !== 1.0) chrome.tabs.setZoom(tab.id, 1.0).catch(console.error);
 					});
 			}
 
 			if (changeInfo.url != null) {
-				if (tabInfo.parkedUrl != null && tabInfo.parkedUrl != changeInfo.url) {
+				if (tabInfo.parkedUrl != null && tabInfo.parkedUrl !== changeInfo.url) {
 					// Clear parkedUrl only when navigating to a new regular URL (not parkUrl)
 					if (changeInfo.url.indexOf(parkUrl) !== 0) {
 						tabInfo.parkedUrl = null;
@@ -366,13 +361,13 @@ class TabManager {
 
 			if (TabManager.isTabParked(tab)) {
 				tabInfo.parked = true;
-				if (changeInfo.discarded != null && changeInfo.discarded == false) tabInfo.discarded = false;
+				if (changeInfo.discarded != null && changeInfo.discarded === false) tabInfo.discarded = false;
 			} else {
 				tabInfo.parked = false;
 
-				if (tab.active == true)
-					if (!captured && changeInfo.status != 'loading')
-						setTimeout(function () {
+				if (tab.active === true)
+					if (!captured && changeInfo.status !== 'loading')
+						setTimeout(() => {
 							void tabCapture.captureTab(tab);
 						}, 150);
 			}
@@ -382,17 +377,17 @@ class TabManager {
 		  tabs.onRemoved - load if unloaded, remove from list
 		 ***************************************************************************************/
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		chrome.tabs.onRemoved.addListener(function (tabId, removeInfo: chrome.tabs.TabRemoveInfo) {
+		chrome.tabs.onRemoved.addListener((tabId, _removeInfo: chrome.tabs.TabRemoveInfo) => {
 			if (trace) console.trace(`Tab[${tabId}] removed`);
 
-			self.markTabClosed(tabId);
+			this.markTabClosed(tabId);
 
-			self.historyOpenerController.onRemoveTab(tabId);
+			this.historyOpenerController.onRemoveTab(tabId);
 		});
 
 		/** Event ******************************************************************************
 		 tabs.onSelectionChanged - load if unloaded, reset inactivity */
-		chrome.tabs.onActivated.addListener(function (activeInfo) {
+		chrome.tabs.onActivated.addListener((activeInfo) => {
 			//console.log(`Fired: OnTab Activated: ${activeInfo.tabId}`, activeInfo);
 
 			const processedPromise = new Promise<chrome.tabs.Tab>((resolve, reject) => {
@@ -434,11 +429,11 @@ class TabManager {
 					console.log(`OnTab Activated: ${activeInfo.tabId}`, tab);
 					//}
 
-					self.markTabActivated(tab);
+					this.markTabActivated(tab);
 
 					try {
 						if (TabManager.isTabParked(tab)) {
-							if (await settings.get('autoRestoreTab')) self.unsuspendTab(tab);
+							if (await settings.get('autoRestoreTab')) this.unsuspendTab(tab);
 						} else if (!tab.discarded && (await settings.get('animateTabIconSuspendTimeout')))
 							chrome.tabs
 								.sendMessage(activeInfo.tabId, {
@@ -451,10 +446,10 @@ class TabManager {
 					}
 
 					try {
-						if (/*isTabURLAllowedForPark(tab) &&*/ !TabManager.isTabParked(tab) && tab.url.indexOf(sessionsPageUrl) == -1) {
+						if (/*isTabURLAllowedForPark(tab) &&*/ !TabManager.isTabParked(tab) && tab.url.indexOf(sessionsPageUrl) === -1) {
 							if (!tab.discarded)
-								(function (closureTab) {
-									setTimeout(function () {
+								((closureTab) => {
+									setTimeout(() => {
 										void tabCapture.captureTab(closureTab, <CaptureTabOptions>{ checkActiveTabNotChanged: true });
 									}, 400);
 								})(tab);
@@ -464,9 +459,9 @@ class TabManager {
 					}
 
 					try {
-						if (tab.url.indexOf(sessionsPageUrl) == 0)
+						if (tab.url.indexOf(sessionsPageUrl) === 0)
 							chrome.tabs.sendMessage(tab.id, { method: '[AutomaticTabCleaner:updateSessions]' }).catch(console.error);
-						if (tab.url.indexOf(historyPageUrl) == 0)
+						if (tab.url.indexOf(historyPageUrl) === 0)
 							chrome.tabs.sendMessage(tab.id, { method: '[AutomaticTabCleaner:updateHistoryPage]' }).catch(console.error);
 					} catch (e) {
 						console.error(e);
@@ -489,10 +484,10 @@ class TabManager {
 
 		chrome.tabs.get(addedTabId, (tab) => {
 			if (tab == null) return;
-			if (tab.url.indexOf(parkUrl) == 0) {
+			if (tab.url.indexOf(parkUrl) === 0) {
 				const originTabId = parseUrlParam(tab.url, 'tabId');
 
-				if (originTabId == removedTabId.toString()) {
+				if (originTabId === removedTabId.toString()) {
 					this.tabInfos[addedTabId].originRefId = removedTabId;
 				} else {
 					this.tabInfos[removedTabId] = structuredClone(this.tabInfos[removedTabId]);
@@ -514,18 +509,15 @@ class TabManager {
 	}
 
 	private startCommonLoop() {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		if (this.commonInterval != null) {
 			clearInterval(this.commonInterval);
 			this.commonInterval = null;
 		}
 
-		// @ts-ignore
+		// @ts-expect-error
 		this.commonInterval = setInterval(() => {
-			void self.storeTabInfos();
-			self.clearClosedTabs();
+			void this.storeTabInfos();
+			this.clearClosedTabs();
 		}, this.COMMON_LOOP_PERIOD_MS);
 	}
 
@@ -536,34 +528,31 @@ class TabManager {
 	/*** Methods **/
 
 	init(options: IntOptions) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		// get all windows with tabs
-		chrome.windows.getAll({ populate: true }, async function (wins) {
+		chrome.windows.getAll({ populate: true }, async (wins) => {
 			try {
-				let i, j, id, firstWindow;
+				let i: string, j: string, id: number, firstWindow: number | undefined;
 				// get all tabs, init array with 0 inactive time
 				for (i in wins) {
-					if (wins.hasOwnProperty(i)) {
+					if (Object.hasOwn(wins, i)) {
 						if (firstWindow == null) firstWindow = wins[i].id;
 
 						for (j in wins[i].tabs) {
-							if (wins[i].tabs.hasOwnProperty(j)) {
+							if (Object.hasOwn(wins[i].tabs, j)) {
 								id = wins[i].tabs[j].id;
 
 								/* TURN OFF AUTO DISCARDABLE */
-								self.checkAndTurnOffAutoDiscardable(wins[i].tabs[j]);
+								this.checkAndTurnOffAutoDiscardable(wins[i].tabs[j]);
 
 								// HISTORY SUPPORT LOGIC
-								self.historyOpenerController.collectInitialTabState(wins[i].tabs[j]);
+								this.historyOpenerController.collectInitialTabState(wins[i].tabs[j]);
 
-								if (options == null || options.reloadSettings == null || options.reloadSettings == false)
-									if (TabManager.isTabURLAllowedForPark(wins[i].tabs[j]) && wins[i].tabs[j].discarded == false)
+								if (options == null || options.reloadSettings == null || options.reloadSettings === false)
+									if (TabManager.isTabURLAllowedForPark(wins[i].tabs[j]) && wins[i].tabs[j].discarded === false)
 										tabCapture.injectJS(id, wins[i].tabs[j]);
 
 								/* COLLECT TABS INFO */
-								self.getTabInfoOrCreate(wins[i].tabs[j]);
+								this.getTabInfoOrCreate(wins[i].tabs[j]);
 							}
 						}
 					}
@@ -575,11 +564,11 @@ class TabManager {
 	}
 
 	async unsuspendTab(tab: chrome.tabs.Tab) {
-		if (tab.discarded == true) {
+		if (tab.discarded === true) {
 			markForUnsuspend(tab);
 			chrome.tabs.reload(tab.id).catch(console.error);
 		} else {
-			if (tab.status == 'loading') {
+			if (tab.status === 'loading') {
 				// park.html is still loading — honour reloadTabOnRestore:
 				// true  → navigate directly to avoid a race with the not-yet-ready page script
 				// false → write the marker; park.ts reads it via parkData.isTabMarkedForUnsuspend
@@ -620,12 +609,13 @@ class TabManager {
 	}
 
 	private deleteTab(tabId: string) {
-		if (this.tabInfos.hasOwnProperty(tabId)) delete this.tabInfos[tabId];
+		if (Object.hasOwn(this.tabInfos, tabId)) delete this.tabInfos[tabId];
 	}
 
 	public createNewTabInfo(tab: chrome.tabs.Tab): TabInfo {
 		const tabInfo = new TabInfo(tab);
-		return (this.tabInfos[tab.id] = tabInfo);
+		this.tabInfos[tab.id] = tabInfo;
+		return tabInfo;
 	}
 
 	getTabInfoOrCreate(tab: chrome.tabs.Tab): TabInfo {
@@ -633,7 +623,7 @@ class TabManager {
 
 		/* If Parked Tab (Usually after browser restart) */
 		if (tabInfo == null && tab.url.startsWith(parkUrl)) {
-			const removedTabId = parseInt(parseUrlParam(tab.url, 'tabId'));
+			const removedTabId = parseInt(parseUrlParam(tab.url, 'tabId'), 10);
 			const originalUrl = parseUrlParam(tab.url, 'url');
 			console.log(`Found parked[${removedTabId}] Tab[${tab.id}] without TabInfo, starting id replace..`);
 			if (this.tabInfos[removedTabId] == null) {
@@ -655,7 +645,7 @@ class TabManager {
 		try {
 			return this.tabInfos[tabId];
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		} catch (e) {}
+		} catch (_e) {}
 	}
 	findReplacedTabById(tabId: number): TabInfo {
 		let tab = this.getTabInfoById(tabId);
@@ -690,11 +680,11 @@ class TabManager {
 	markTabParked(tab: chrome.tabs.Tab) {
 		const tabInfo = this.getTabInfoOrCreate(tab);
 		if (tabInfo.parkedUrl != null) {
-			if (extractHostname(tabInfo.parkedUrl) == extractHostname(tabInfo.lstCapUrl)) tabInfo.parkedCount += 1;
+			if (extractHostname(tabInfo.parkedUrl) === extractHostname(tabInfo.lstCapUrl)) tabInfo.parkedCount += 1;
 			else tabInfo.parkedCount = 0;
 		} else tabInfo.parkedCount += 1;
 
-		if (tab.url.indexOf(parkUrl) == 0)
+		if (tab.url.indexOf(parkUrl) === 0)
 			tabInfo.parkedUrl = TabManager.getParameterByName('url', tab.url); //getTabInfo(tab).lstCapUrl;
 		else tabInfo.parkedUrl = tab.url;
 
@@ -722,7 +712,7 @@ class TabManager {
 	public calculateAndMarkClosedTabs(openedChromeTabs: { [key: number]: chrome.tabs.Tab }) {
 		const suspendedChromeTabs = {};
 		Object.values(openedChromeTabs).forEach((tab) => {
-			if (tab.url.indexOf(parkUrl) == 0) {
+			if (tab.url.indexOf(parkUrl) === 0) {
 				const originTabId = parseUrlParam(tab.url, 'tabId');
 				suspendedChromeTabs[originTabId] = tab;
 			}
@@ -732,7 +722,7 @@ class TabManager {
 		const GRACE_PERIOD_MS = 30000; // 30 seconds
 
 		for (const tabId in this.tabInfos) {
-			if (this.tabInfos.hasOwnProperty(tabId)) {
+			if (Object.hasOwn(this.tabInfos, tabId)) {
 				const tabInfo = this.tabInfos[tabId];
 				if (openedChromeTabs[tabId] == null && suspendedChromeTabs[tabId] == null) {
 					if (tabInfo.closed == null) {
@@ -761,7 +751,7 @@ class TabManager {
 
 	clearClosedTabs() {
 		for (const tabId in this.tabInfos) {
-			if (this.tabInfos.hasOwnProperty(tabId)) {
+			if (Object.hasOwn(this.tabInfos, tabId)) {
 				const tabInfo = this.tabInfos[tabId];
 				if (tabInfo == null) {
 					console.warn(`TabInfo[${tabId}] exist, but undefined!`);
@@ -781,7 +771,7 @@ class TabManager {
 		if (TabManager.isAudible(tab) && (await settings.get('ignoreAudible'))) return true;
 
 		// Pinned Tab
-		if (tab.pinned == true && (await settings.get('pinned'))) return true;
+		if (tab.pinned === true && (await settings.get('pinned'))) return true;
 
 		// Grouped Tab
 		if (tab.groupId !== -1 && (await settings.get('ignoreSuspendGroupedTabs'))) return true;
@@ -803,7 +793,6 @@ class TabManager {
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const tabsInSplitView = await chrome.tabs.query({
 						windowId: tab.windowId,
-						// @ts-ignore - splitViewId is Chrome 145+ API
 						splitViewId: splitViewId
 					} as any);
 
@@ -860,8 +849,8 @@ class TabManager {
 	/*** Static ***/
 	static isTabURLAllowedForPark(tab: chrome.tabs.Tab) {
 		return (
-			tab.url.substring(0, tab.url.indexOf(':')) == 'http' ||
-			(tab.url.substring(0, tab.url.indexOf(':')) == 'https' &&
+			tab.url.substring(0, tab.url.indexOf(':')) === 'http' ||
+			(tab.url.substring(0, tab.url.indexOf(':')) === 'https' &&
 				tab.url.indexOf(TabManager.CHROME_STORE_URL_1) < 0 &&
 				tab.url.indexOf(TabManager.CHROME_STORE_URL_2) < 0) ||
 			tab.url === wizardPageUrl
@@ -882,7 +871,7 @@ class TabManager {
 	}
 
 	static isAudible(tab: chrome.tabs.Tab) {
-		return typeof tab.audible == 'boolean' && tab.audible == true;
+		return typeof tab.audible === 'boolean' && tab.audible === true;
 	}
 
 	static isPassGroupedTabsRules(tab: chrome.tabs.Tab, ignoreCloseGroupedTabs: boolean) {
@@ -893,8 +882,8 @@ class TabManager {
 		//debugger;
 		if (!url) url = window.location.href;
 		// eslint-disable-next-line no-useless-escape
-		name = name.replace(/[\[\]]/g, '\\$&');
-		const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+		name = name.replace(/[[\]]/g, '\\$&');
+		const regex = new RegExp(`[?&]${name}(=([^&#]*)|&|#|$)`),
 			results = regex.exec(url);
 		if (!results) return null;
 		if (!results[2]) return '';
@@ -903,14 +892,14 @@ class TabManager {
 
 	static tabExist(windows: chrome.windows.Window[], tabId: number) {
 		for (const i in windows)
-			if (windows.hasOwnProperty(i))
+			if (Object.hasOwn(windows, i))
 				for (const j in windows[i].tabs)
-					if (windows[i].tabs.hasOwnProperty(j)) if (windows[i].tabs[j].id == tabId) return windows[i].tabs[j];
+					if (Object.hasOwn(windows[i].tabs, j)) if (windows[i].tabs[j].id === tabId) return windows[i].tabs[j];
 		return null;
 	}
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		TabManager
 	};

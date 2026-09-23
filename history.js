@@ -4,8 +4,8 @@
  * Zadorozhniy.Sergey@gmail.com
  */
 
-(function () {
-	let pageSize = 30;
+(() => {
+	const pageSize = 30;
 	const isDarkModeEnabled = isDarkMode();
 
 	if (isDarkModeEnabled) {
@@ -24,9 +24,9 @@
 
 	const drawContent = () => {
 		//chrome.runtime.getBackgroundPage(function(bgpage) {
-		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getParkHistory]' }, function (res) {
-			let parkHistory = res.parkHistory;
-			let closeHistory = res.closeHistory;
+		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getParkHistory]' }, (res) => {
+			const parkHistory = res.parkHistory;
+			const closeHistory = res.closeHistory;
 
 			new DrawHistory(parkHistory, 'park', 0, 30);
 
@@ -50,8 +50,8 @@
 
 	drawContent();
 
-	setTimeout(function () {
-		chrome.runtime.onMessage.addListener(function (request) {
+	setTimeout(() => {
+		chrome.runtime.onMessage.addListener((request) => {
 			if (request.method === '[AutomaticTabCleaner:updateHistoryPage]') {
 				console.log('updateHistoryPage..');
 				drawContent();
@@ -67,27 +67,25 @@
 
 	DrawHistory.prototype.drawNextPage = function (closeHistory, targetDiv, from, to) {
 		this.to = to;
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		let self = this;
-		document.getElementById(targetDiv + 'Div').innerHTML = '';
+		document.getElementById(`${targetDiv}Div`).innerHTML = '';
 		if (closeHistory) {
 			for (let i = from; i < to && i < closeHistory.length; i++) {
-				let divLine = drawPreviewTile(closeHistory[i]);
+				const divLine = drawPreviewTile(closeHistory[i]);
 
-				let currentDiv = document.getElementById(targetDiv + 'Div');
+				const currentDiv = document.getElementById(`${targetDiv}Div`);
 				currentDiv.appendChild(divLine);
 			}
 
-			if (from == 0 && closeHistory.length > to) {
-				let next = document.createElement('a');
-				next.id = targetDiv + '_next_btn';
+			if (from === 0 && closeHistory.length > to) {
+				const next = document.createElement('a');
+				next.id = `${targetDiv}_next_btn`;
 				next.href = '#';
 				next.innerText = 'More History...';
-				next.onclick = function () {
-					self.drawNextPage(closeHistory, targetDiv, self.to, self.to + pageSize);
+				next.onclick = () => {
+					this.drawNextPage(closeHistory, targetDiv, this.to, this.to + pageSize);
 					return false;
 				};
-				document.getElementById(targetDiv + 'Container').appendChild(next);
+				document.getElementById(`${targetDiv}Container`).appendChild(next);
 			}
 		}
 	};

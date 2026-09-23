@@ -24,7 +24,7 @@ class ContextMenuController {
 		if (ContextMenuController.menuIdMap == null) {
 			this.menus = this.getMenusInfo(extUrl);
 
-			chrome.commands.getAll(function (commands) {
+			chrome.commands.getAll((commands) => {
 				if (debug) console.log('Commands:', commands);
 
 				ContextMenuController.menuIdMap = contextMenuController.createMenu(commands);
@@ -64,15 +64,15 @@ class ContextMenuController {
 				for (const i in commands) {
 					if (commands[i] == null || commands[i].name == null) continue;
 
-					if (commands[i].name == this.menus[j]._command) this.menus[j].title += commands[i].shortcut;
+					if (commands[i].name === this.menus[j]._command) this.menus[j].title += commands[i].shortcut;
 				}
 
 				commandMap[this.menus[j]._command] = this.menus[j].onclick;
 
-				delete this.menus[j]['_command'];
+				delete this.menus[j]._command;
 			}
 
-			if (this.menus[j]._width != null) delete this.menus[j]['_width'];
+			if (this.menus[j]._width != null) delete this.menus[j]._width;
 
 			if (!this.menus[j].invisible) {
 				const id = chrome.contextMenus.create({
@@ -84,11 +84,11 @@ class ContextMenuController {
 			}
 		}
 
-		chrome.commands.onCommand.addListener(function (command) {
+		chrome.commands.onCommand.addListener((command) => {
 			if (debug) console.log('Command:', command);
 
 			if (commandMap[command] != null) {
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
 					if (tabs.length > 0 && tabs[0] != null) commandMap[command](null, tabs[0]);
 				});
 			}
@@ -101,7 +101,7 @@ class ContextMenuController {
 
 	private bindOnClick() {
 		chrome.contextMenus.onClicked.addListener((info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => {
-			const onclick = this.menus.find((menu) => menu?.id == info.menuItemId)?.onclick;
+			const onclick = this.menus.find((menu) => menu?.id === info.menuItemId)?.onclick;
 			if (onclick != null) {
 				onclick(info, tab);
 			}
@@ -110,9 +110,6 @@ class ContextMenuController {
 
 	/*** Data ***/
 	getMenusInfo(extUrl: string): MenuInfo[] {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		return [
 			{
 				id: this.TOP_MENU_ID,
@@ -123,7 +120,7 @@ class ContextMenuController {
 			{
 				title: 'Suspend Tab',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					parkTab(tab, tab.id);
 				},
 				parentId: this.TOP_MENU_ID,
@@ -144,7 +141,7 @@ class ContextMenuController {
 				id: 'add_to_white_list',
 				title: 'Add to Whitelist...',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (info, tab) => {
 					if (info == null || info.checked) {
 						if (!whiteList.isURIException(tab.url)) {
 							void chrome.tabs.sendMessage(tab.id, { method: '[AutomaticTabCleaner:DrawAddPageToWhiteListDialog]' }).catch(console.error);
@@ -181,7 +178,7 @@ class ContextMenuController {
 				id: 'suspend-all',
 				title: 'Suspend all',
 				contexts: ['all'],
-				onclick: function () {
+				onclick: () => {
 					parkTabs(null);
 				},
 				parentId: this.TOP_MENU_ID
@@ -189,7 +186,7 @@ class ContextMenuController {
 			{
 				title: 'Suspend all Other',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					parkTabs(tab);
 				},
 				parentId: this.TOP_MENU_ID,
@@ -200,7 +197,7 @@ class ContextMenuController {
 			{
 				title: 'Suspend Window',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					parkTabs(tab, tab.windowId);
 				},
 				parentId: this.TOP_MENU_ID,
@@ -210,7 +207,7 @@ class ContextMenuController {
 			{
 				title: 'Suspend Tab Group',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					if (tab.groupId !== -1) {
 						parkTabGroup(tab);
 					}
@@ -222,7 +219,7 @@ class ContextMenuController {
 			{
 				title: 'Unsuspend all Tabs',
 				contexts: ['all'],
-				onclick: function () {
+				onclick: () => {
 					unsuspendTabs();
 				},
 				parentId: this.TOP_MENU_ID,
@@ -232,7 +229,7 @@ class ContextMenuController {
 			{
 				title: 'Unsuspend Window',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					unsuspendTabs(tab.windowId);
 				},
 				parentId: this.TOP_MENU_ID,
@@ -242,7 +239,7 @@ class ContextMenuController {
 			{
 				title: 'Unsuspend Tab Group',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					if (tab.groupId !== -1) {
 						unsuspendTabGroup(tab);
 					}
@@ -250,18 +247,18 @@ class ContextMenuController {
 				parentId: this.TOP_MENU_ID,
 				id: 'unsuspend-tab-group',
 				_command: 'unsuspend-tab-group',
-				documentUrlPatterns: [extUrl + '**']
+				documentUrlPatterns: [`${extUrl}**`]
 			},
 			{
 				title: 'Unsuspend Current Tab',
 				contexts: ['all'],
-				onclick: function (info, tab) {
-					self.tabManager.unsuspendTab(tab);
+				onclick: (_info, tab) => {
+					this.tabManager.unsuspendTab(tab);
 				},
 				parentId: this.TOP_MENU_ID,
 				id: 'unsuspend-current-tab',
 				_command: 'unsuspend-current-tab',
-				documentUrlPatterns: [extUrl + '**']
+				documentUrlPatterns: [`${extUrl}**`]
 			},
 			{
 				id: 'separator-3',
@@ -275,7 +272,7 @@ class ContextMenuController {
 				type: 'checkbox',
 				title: 'Ignore Current Tab',
 				contexts: ['all'],
-				onclick: function (info, tab) {
+				onclick: (info, tab) => {
 					if (info == null || info.checked) {
 						ignoreList.addToIgnoreTabList(tab.id);
 					} else {
@@ -292,11 +289,11 @@ class ContextMenuController {
 				contexts: ['all'],
 				title: 'Suspend or Unsuspend Current Tab (in one HotKey)',
 				parentId: this.TOP_MENU_ID,
-				onclick: function (info, tab) {
+				onclick: (_info, tab) => {
 					if (!tab.url.startsWith(extUrl)) {
 						void parkTab(tab, tab.id);
 					} else {
-						self.tabManager.unsuspendTab(tab);
+						this.tabManager.unsuspendTab(tab);
 					}
 				},
 				_command: 'suspend-or-unsuspend-current-tab'
@@ -313,8 +310,8 @@ class ContextMenuController {
 				id: 'change-hotkeys',
 				title: 'Change Hotkeys...',
 				contexts: ['all'],
-				onclick: function () {
-					chrome.tabs.create({ url: 'chrome://extensions/configureCommands' }, function () {});
+				onclick: () => {
+					chrome.tabs.create({ url: 'chrome://extensions/configureCommands' }, () => {});
 				},
 				parentId: this.TOP_MENU_ID
 			},
@@ -336,7 +333,7 @@ class ContextMenuController {
 				id: 'settings',
 				title: 'Settings...',
 				contexts: ['all'],
-				onclick: function () {
+				onclick: () => {
 					SettingsPageController.openSettings();
 				},
 				parentId: this.TOP_MENU_ID

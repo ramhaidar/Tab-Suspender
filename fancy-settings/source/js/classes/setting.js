@@ -9,13 +9,11 @@
 	// Resolves __MSG_key__ placeholders using chrome.i18n (same mechanism as manifest.json)
 	function resolveText(text) {
 		if (typeof text !== 'string') return text;
-		return text.replace(/__MSG_(\w+)__/g, function (match, key) {
-			return chrome.i18n.getMessage(key) || match;
-		});
+		return text.replace(/__MSG_(\w+)__/g, (match, key) => chrome.i18n.getMessage(key) || match);
 	}
 
 	let DOMContentLoaded;
-	document.addEventListener('DOMContentLoaded', function () {
+	document.addEventListener('DOMContentLoaded', () => {
 		if (DOMContentLoaded) return;
 		DOMContentLoaded = true;
 
@@ -42,7 +40,7 @@
 
 		initialize: function (params) {
 			this.params = params;
-			this.params.searchString = '•' + this.params.tab + '•' + this.params.group + '•';
+			this.params.searchString = `•${this.params.tab}•${this.params.group}•`;
 
 			this.createDOM();
 			this.setupDOM();
@@ -60,7 +58,7 @@
 		addEvents: function () {
 			this.element.addEvent(
 				'change',
-				function (event) {
+				function (_event) {
 					if (this.params.name !== undefined) {
 						settings.set(this.params.name, this.get());
 					}
@@ -133,7 +131,7 @@
 
 		initialize: function (params) {
 			this.params = params;
-			this.params.searchString = '•' + this.params.tab + '•' + this.params.group + '•';
+			this.params.searchString = `•${this.params.tab}•${this.params.group}•`;
 
 			this.createDOM();
 			this.setupDOM();
@@ -165,12 +163,12 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 
 			if (this.params.text !== undefined) {
 				this.element.set('value', resolveText(this.params.text));
-				this.params.searchString += this.params.text + '•';
+				this.params.searchString += `${this.params.text}•`;
 			}
 
 			this.element.inject(this.container);
@@ -235,12 +233,12 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 
 			if (this.params.text !== undefined) {
 				this.element.set('placeholder', resolveText(this.params.text));
-				this.params.searchString += this.params.text + '•';
+				this.params.searchString += `${this.params.text}•`;
 			}
 
 			if (this.params.masked === true) {
@@ -265,7 +263,7 @@
 		},
 
 		addEvents: function () {
-			var change = function (event) {
+			var change = function (_event) {
 				if (this.params.name !== undefined) {
 					settings.set(this.params.name, this.get());
 				}
@@ -358,12 +356,12 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 
 			if (this.params.text !== undefined) {
 				this.element.set('placeholder', resolveText(this.params.text));
-				this.params.searchString += this.params.text + '•';
+				this.params.searchString += `${this.params.text}•`;
 			}
 
 			if (this.params.masked === true) {
@@ -388,7 +386,7 @@
 		},
 
 		addEvents: function () {
-			var change = function (event) {
+			var change = function (_event) {
 				if (this.params.name !== undefined) {
 					settings.set(this.params.name, this.get());
 				}
@@ -399,15 +397,15 @@
 			this.element.addEvent('change', change);
 			this.element.addEvent('keyup', change);
 
-			this.httpInput.addEvent('focus', function (event) {
+			this.httpInput.addEvent('focus', (_event) => {
 				document.getElementById('exceptionCheckFilter').focus();
 			});
 
-			var check = function (event) {
+			var check = (_event) => {
 				var value = document.getElementById('exceptionCheckFilter').value;
-				if (value == '') value = 'mail.google.com';
+				if (value === '') value = 'mail.google.com';
 
-				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:uriExceptionCheck]', uri: 'http://' + value }, function (res) {
+				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:uriExceptionCheck]', uri: `http://${value}` }, (res) => {
 					if (res.isException) {
 						document.getElementById('exceptionCheckResult').innerHTML = 'In the White List (This link will not be suspended)';
 						document.getElementById('exceptionCheckResult').title = 'This link will not be suspended.';
@@ -420,9 +418,9 @@
 				});
 			};
 
-			this.input.addEvent('keydown', function (event) {
+			this.input.addEvent('keydown', (event) => {
 				//debugger;
-				if (event.event.keyCode == 13) {
+				if (event.event.keyCode === 13) {
 					check(event);
 				}
 			});
@@ -458,12 +456,12 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 
 			if (this.params.text !== undefined) {
 				this.element.set('placeholder', resolveText(this.params.text));
-				this.params.searchString += this.params.text + '•';
+				this.params.searchString += `${this.params.text}•`;
 			}
 
 			if (this.params.masked === true) {
@@ -477,7 +475,7 @@
 		},
 
 		addEvents: function () {
-			var change = function (event) {
+			var change = function (_event) {
 				if (this.params.name !== undefined) {
 					settings.set(this.params.name, this.get());
 				}
@@ -526,7 +524,7 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 		},
 
@@ -552,7 +550,7 @@
 
 		initialize: function (params) {
 			this.params = params;
-			this.params.searchString = '•' + this.params.tab + '•' + this.params.group + '•';
+			this.params.searchString = `•${this.params.tab}•${this.params.group}•`;
 
 			this.createDOM();
 			this.setupDOM();
@@ -605,7 +603,7 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 
 			if (this.params.max !== undefined) {
@@ -638,10 +636,10 @@
 		},
 
 		addEvents: function () {
-			var listener;
+			var _listener;
 			this.element.addEvent(
 				'change',
-				function (event) {
+				function (_event) {
 					if (this.params.name !== undefined) {
 						settings.set(this.params.name, this.get());
 					}
@@ -655,7 +653,7 @@
 				}.bind(this)
 			);
 
-			var decrement = function (event) {
+			var decrement = function (_event) {
 				var value =
 					Number.from(this.element.get('value')) -
 					(this.element.get('value') <= this.params.stepChangeIfGreatThen
@@ -663,21 +661,21 @@
 						: this.params.step2
 							? this.params.step2
 							: this.params.step);
-				if (value >= this.params.min && this.get() != value) this.set(value);
+				if (value >= this.params.min && this.get() !== value) this.set(value);
 			};
 
 			this.lt.addEvent('click', decrement.bind(this));
 
 			this.lt.addEvent(
 				'mousedown',
-				function (event) {
+				function (_event) {
 					this.arrowInterval = setInterval(decrement.bind(this), 100);
 				}.bind(this)
 			);
 
 			this.lt.addEvent(
 				'mouseup',
-				function (event) {
+				function (_event) {
 					if (this.arrowInterval != null) {
 						clearInterval(this.arrowInterval);
 						this.arrowInterval = null;
@@ -685,7 +683,7 @@
 				}.bind(this)
 			);
 
-			var increment = function (event) {
+			var increment = function (_event) {
 				var value =
 					Number.from(this.element.get('value')) +
 					(this.element.get('value') >= this.params.stepChangeIfGreatThen
@@ -694,21 +692,21 @@
 							: this.params.step
 						: this.params.step);
 
-				if (value <= this.params.max && this.get() != value) this.set(value);
+				if (value <= this.params.max && this.get() !== value) this.set(value);
 			};
 
 			this.gt.addEvent('click', increment.bind(this));
 
 			this.gt.addEvent(
 				'mousedown',
-				function (event) {
+				function (_event) {
 					this.arrowInterval = setInterval(increment.bind(this), 100);
 				}.bind(this)
 			);
 
 			this.gt.addEvent(
 				'mouseup',
-				function (event) {
+				function (_event) {
 					if (this.arrowInterval != null) {
 						clearInterval(this.arrowInterval);
 						this.arrowInterval = null;
@@ -765,7 +763,7 @@
 			}
 			this.params.options.each(
 				function (option) {
-					this.params.searchString += (option[1] || option[0]) + '•';
+					this.params.searchString += `${option[1] || option[0]}•`;
 
 					new Element('option', {
 						value: option[0],
@@ -779,7 +777,7 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.container);
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 
 			this.element.inject(this.container);
@@ -815,7 +813,7 @@
 			}
 			this.params.options.each(
 				function (option) {
-					this.params.searchString += (option[1] || option[0]) + '•';
+					this.params.searchString += `${option[1] || option[0]}•`;
 
 					new Element('option', {
 						value: option[0],
@@ -857,7 +855,7 @@
 				function (option) {
 					var optionID, container;
 
-					this.params.searchString += (option[1] || option[0]) + '•';
+					this.params.searchString += `${option[1] || option[0]}•`;
 
 					optionID = String.uniqueID();
 					container = new Element('div', {
@@ -890,14 +888,14 @@
 			if (this.params.label !== undefined) {
 				this.label.set('html', this.params.label);
 				this.label.inject(this.bundle, 'top');
-				this.params.searchString += this.params.label + '•';
+				this.params.searchString += `${this.params.label}•`;
 			}
 		},
 
 		addEvents: function () {
 			this.bundle.addEvent(
 				'change',
-				function (event) {
+				function (_event) {
 					if (this.params.name !== undefined) {
 						settings.set(this.params.name, this.get());
 					}
@@ -908,21 +906,13 @@
 		},
 
 		get: function () {
-			var checkedEl = this.elements.filter(
-				function (el) {
-					return el.get('checked');
-				}.bind(this)
-			);
-			return checkedEl[0] && checkedEl[0].get('value');
+			var checkedEl = this.elements.filter(((el) => el.get('checked')).bind(this));
+			return checkedEl[0]?.get('value');
 		},
 
 		set: function (value, noChangeEvent) {
-			var desiredEl = this.elements.filter(
-				function (el) {
-					return el.get('value') === value;
-				}.bind(this)
-			);
-			desiredEl[0] && desiredEl[0].set('checked', true);
+			var desiredEl = this.elements.filter(((el) => el.get('value') === value).bind(this));
+			desiredEl[0]?.set('checked', true);
 
 			if (noChangeEvent !== true) {
 				this.bundle.fireEvent('change');
@@ -954,7 +944,7 @@
 				colorPicker: 'ColorPicker'
 			};
 
-			if (types.hasOwnProperty(params.type)) {
+			if (Object.hasOwn(types, params.type)) {
 				bundle = new Bundle[types[params.type]](params);
 				bundle.bundleContainer = this.container;
 				bundle.bundle.inject(this.container);

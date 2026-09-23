@@ -15,18 +15,18 @@ const HISTORY_KEEP_LAST_N_ITEMS = 300;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function parkTabs(requestTab?, windowId?) {
-	const callbackSingle = async function (window: chrome.windows.Window) {
+	const callbackSingle = async (window: chrome.windows.Window) => {
 		let number = 0;
 		for (const j in window.tabs)
-			if (window.tabs.hasOwnProperty(j))
-				if (requestTab == null || (requestTab != null && windowId != null) || window.tabs[j].id != requestTab.id)
+			if (Object.hasOwn(window.tabs, j))
+				if (requestTab == null || (requestTab != null && windowId != null) || window.tabs[j].id !== requestTab.id)
 					if (TabManager.isTabURLAllowedForPark(window.tabs[j]))
 						if (!(await tabManager.isExceptionTab(window.tabs[j])))
 							await parkTab(window.tabs[j], window.tabs[j].id, { bulkNumber: window.tabs[j].discarded ? number++ : null });
 	};
 
-	const callbackAll = async function (windows: chrome.windows.Window[]) {
-		for (const wi in windows) if (windows.hasOwnProperty(wi)) await callbackSingle(windows[wi]);
+	const callbackAll = async (windows: chrome.windows.Window[]) => {
+		for (const wi in windows) if (Object.hasOwn(windows, wi)) await callbackSingle(windows[wi]);
 	};
 
 	if (windowId != null) chrome.windows.get(windowId, { populate: true }, callbackSingle);
@@ -42,10 +42,10 @@ function parkTabGroup(tab: chrome.tabs.Tab) {
 
 	const groupId = tab.groupId;
 
-	chrome.windows.get(tab.windowId, { populate: true }, async function (window: chrome.windows.Window) {
+	chrome.windows.get(tab.windowId, { populate: true }, async (window: chrome.windows.Window) => {
 		let number = 0;
 		for (const j in window.tabs) {
-			if (window.tabs.hasOwnProperty(j)) {
+			if (Object.hasOwn(window.tabs, j)) {
 				const currentTab = window.tabs[j];
 				// Only suspend tabs in the same group
 				if (currentTab.groupId === groupId) {
@@ -62,7 +62,7 @@ function parkTabGroup(tab: chrome.tabs.Tab) {
 
 function genYoutubeUrlWithTimeMark(url, videoTime) {
 	const urlWithTimeMark = new URL(url);
-	urlWithTimeMark.searchParams.set('t', videoTime + 's');
+	urlWithTimeMark.searchParams.set('t', `${videoTime}s`);
 	return urlWithTimeMark.href;
 }
 
@@ -70,10 +70,10 @@ function genYoutubeUrlWithTimeMark(url, videoTime) {
 async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 	if (!TabManager.isTabURLAllowedForPark(tab)) return;
 
-	if (tab.discarded && (options == null || options.reloaded == false)) {
-		void chrome.tabs.reload(tabId).then(function () {
+	if (tab.discarded && (options == null || options.reloaded === false)) {
+		void chrome.tabs.reload(tabId).then(() => {
 			setTimeout(
-				function () {
+				() => {
 					void parkTab(tab, tabId, { reloaded: true });
 				},
 				options != null && options.bulkNumber > 0 ? options.bulkNumber * 1000 : 1000
@@ -84,7 +84,7 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 
 	/* Save history
 	 * TODO: Move to HistoryController */
-	let pageState;
+	let pageState: Awaited<ReturnType<typeof formRestoreController.collectPageState>>;
 	try {
 		pageState = await formRestoreController.collectPageState(tabId);
 
@@ -94,10 +94,10 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 
 		let duplicate = false;
 		if (parkHistory.length > 0 && parkHistory[0].tabId != null && parkHistory[0].sessionId != null)
-			if (parkHistory[0].tabId == tabId && parkHistory[0].sessionId == TSSessionId) duplicate = true;
+			if (parkHistory[0].tabId === tabId && parkHistory[0].sessionId === TSSessionId) duplicate = true;
 		if (!duplicate) {
 			parkHistory.splice(0, 0, {
-				timestamp: new Date().getTime(),
+				timestamp: Date.now(),
 				url: tab.url,
 				title: tab.title,
 				tabId: tabId,
@@ -112,8 +112,8 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 
 	/* Detached from thread for collectPageState have chance to process */
 	//setTimeout(function() {
-	ScreenshotController.isScreenExist(tabId, null, async function (screenExist) {
-		if (screenExist == null || parseInt(screenExist) <= 0) {
+	ScreenshotController.isScreenExist(tabId, null, async (screenExist) => {
+		if (screenExist == null || parseInt(screenExist, 10) <= 0) {
 			if (debug) console.log('Screen Not Exist');
 
 			// Try to Capture Tab before Park
@@ -135,13 +135,13 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 			let tabParked = false;
 			const closureTabId = tabId;
 			const closureTab = tab;
-			let checkTabIsParked;
-			let checkTabIsParkedTimeout;
+			let checkTabIsParked: (() => void) | undefined;
+			let checkTabIsParkedTimeout: ReturnType<typeof setTimeout> | null;
 
-			const parkByMessage = function (closureTab, closureTabId) {
-				chrome.windows.get(closureTab.windowId, async function (win) {
+			const parkByMessage = (closureTab, closureTabId) => {
+				chrome.windows.get(closureTab.windowId, async (win) => {
 					let width = null;
-					if (closureTab.width == null || closureTab.width == 0) width = win.width - 20;
+					if (closureTab.width == null || closureTab.width === 0) width = win.width - 20;
 					const height = win.height;
 
 					chrome.tabs.sendMessage(
@@ -153,11 +153,11 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 							sessionId: TSSessionId,
 							width: width,
 							height: height,
-							screenshotQuality: parseInt(await settings.get('screenshotQuality'))
+							screenshotQuality: parseInt(await settings.get('screenshotQuality'), 10)
 						},
-						function (response) {
+						(response) => {
 							if (response != null) {
-								if (response.result == 'successful') {
+								if (response.result === 'successful') {
 									tabParked = true;
 									tabManager.markTabParked(closureTab);
 								} else if (checkTabIsParked != null) checkTabIsParked();
@@ -176,37 +176,35 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 			/*  DOMException: Failed to execute 'toDataURL' on 'HTMLCanvasElement': Tainted canvases may not be exported. */
 			/*  Try to reinject JS if parked failed */
 			/*								*/
-			checkTabIsParkedTimeout = setTimeout(
-				(checkTabIsParked = function () {
-					if (checkTabIsParkedTimeout != null) {
-						clearTimeout(checkTabIsParkedTimeout);
-						checkTabIsParkedTimeout = null;
-					}
+			checkTabIsParked = () => {
+				if (checkTabIsParkedTimeout != null) {
+					clearTimeout(checkTabIsParkedTimeout);
+					checkTabIsParkedTimeout = null;
+				}
 
-					if (tabParked == false /* && isPageHasNonCompleteInput == false*/) {
-						tabCapture.injectJS(closureTabId, closureTab);
-						parkByMessage(closureTab, closureTabId);
-					}
-				}),
-				10000
-			);
+				if (tabParked === false /* && isPageHasNonCompleteInput == false*/) {
+					tabCapture.injectJS(closureTabId, closureTab);
+					parkByMessage(closureTab, closureTabId);
+				}
+			};
+			checkTabIsParkedTimeout = setTimeout(checkTabIsParked, 10000);
 		} else
 			try {
 				if (debug) console.log('Screen Exist');
 
 				//check if parked
 				if (tab != null) {
-					chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:getOriginalFaviconUrl]' }, function (originalFaviconUrl) {
+					chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:getOriginalFaviconUrl]' }, (originalFaviconUrl) => {
 						if (debug) console.log('originalFaviconUrl: ', originalFaviconUrl);
 
 						let url = parkUrl;
-						url += '?tabId=' + encodeURIComponent(tabId);
-						url += '&title=' + encodeURIComponent(tab.title);
-						url += '&url=' + encodeURIComponent(tab.url);
-						url += '&sessionId=' + encodeURIComponent(TSSessionId);
+						url += `?tabId=${encodeURIComponent(tabId)}`;
+						url += `&title=${encodeURIComponent(tab.title)}`;
+						url += `&url=${encodeURIComponent(tab.url)}`;
+						url += `&sessionId=${encodeURIComponent(TSSessionId)}`;
 
-						if (originalFaviconUrl != null && originalFaviconUrl != '') url += '&icon=' + encodeURIComponent(originalFaviconUrl);
-						else if (tab.favIconUrl) url += '&icon=' + encodeURIComponent(tab.favIconUrl);
+						if (originalFaviconUrl != null && originalFaviconUrl !== '') url += `&icon=${encodeURIComponent(originalFaviconUrl)}`;
+						else if (tab.favIconUrl) url += `&icon=${encodeURIComponent(tab.favIconUrl)}`;
 
 						chrome.tabs.update(tab.id, { url: url }).catch(console.error);
 					});
@@ -224,14 +222,14 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 function unsuspendTabs(windowId?: number) {
 	let openedIndex = 1;
 
-	const callbackSingle = function (window) {
+	const callbackSingle = (window) => {
 		for (const j in window.tabs)
-			if (window.tabs.hasOwnProperty(j))
+			if (Object.hasOwn(window.tabs, j))
 				if (TabManager.isTabParked(window.tabs[j])) {
-					const tmpFunction = function (j) {
+					const tmpFunction = (j) => {
 						const tab = window.tabs[j];
 						const clzOpenedIndex = openedIndex++;
-						setTimeout(function () {
+						setTimeout(() => {
 							tabManager.unsuspendTab(tab);
 						}, 1000 * clzOpenedIndex);
 					};
@@ -240,8 +238,8 @@ function unsuspendTabs(windowId?: number) {
 				}
 	};
 
-	const callbackAll = function (windows) {
-		for (const wi in windows) if (windows.hasOwnProperty(wi)) callbackSingle(windows[wi]);
+	const callbackAll = (windows) => {
+		for (const wi in windows) if (Object.hasOwn(windows, wi)) callbackSingle(windows[wi]);
 	};
 
 	if (windowId != null) chrome.windows.get(windowId, { populate: true }, callbackSingle);
@@ -258,15 +256,15 @@ function unsuspendTabGroup(tab: chrome.tabs.Tab) {
 	const groupId = tab.groupId;
 	let openedIndex = 1;
 
-	chrome.windows.get(tab.windowId, { populate: true }, function (window: chrome.windows.Window) {
+	chrome.windows.get(tab.windowId, { populate: true }, (window: chrome.windows.Window) => {
 		for (const j in window.tabs) {
-			if (window.tabs.hasOwnProperty(j)) {
+			if (Object.hasOwn(window.tabs, j)) {
 				const currentTab = window.tabs[j];
 				// Only unsuspend tabs in the same group
 				if (currentTab.groupId === groupId && TabManager.isTabParked(currentTab)) {
-					const tmpFunction = function (currentTab: chrome.tabs.Tab) {
+					const tmpFunction = (currentTab: chrome.tabs.Tab) => {
 						const clzOpenedIndex = openedIndex++;
-						setTimeout(function () {
+						setTimeout(() => {
 							tabManager.unsuspendTab(currentTab);
 						}, 1000 * clzOpenedIndex);
 					};
@@ -281,8 +279,8 @@ function unsuspendTabGroup(tab: chrome.tabs.Tab) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function markForUnsuspend(tab) {
 	const o = {
-		tabId: parseInt(parseUrlParam(tab.url, 'tabId')),
-		sessionId: parseInt(parseUrlParam(tab.url, 'sessionId')),
+		tabId: parseInt(parseUrlParam(tab.url, 'tabId'), 10),
+		sessionId: parseInt(parseUrlParam(tab.url, 'sessionId'), 10),
 		at: Date.now()
 	};
 	tabsMarkedForUnsuspend.push(o);
@@ -302,7 +300,7 @@ function closeTab(tabId, tab) {
 	/* Save history */
 	try {
 		closeHistory.splice(0, 0, {
-			timestamp: new Date().getTime(),
+			timestamp: Date.now(),
 			url: tab.url,
 			title: tab.title,
 			tabId: parseUrlParam(tab.url, 'tabId'),
@@ -326,15 +324,15 @@ function isTabMarkedForUnsuspend(tabIdStr, sessionIdStr, options?) {
 	if (tabsMarkedForUnsuspend.length <= 0) return false;
 
 	const now = Date.now();
-	const tabId = parseInt(tabIdStr);
-	const sessionId = parseInt(sessionIdStr);
+	const tabId = parseInt(tabIdStr, 10);
+	const sessionId = parseInt(sessionIdStr, 10);
 	for (let i = 0; i < tabsMarkedForUnsuspend.length; i++)
 		if (
 			now - tabsMarkedForUnsuspend[i].at <= TABS_MARKED_FOR_UNSUSPEND_TTL &&
-			tabsMarkedForUnsuspend[i].tabId == tabId &&
-			tabsMarkedForUnsuspend[i].sessionId == sessionId
+			tabsMarkedForUnsuspend[i].tabId === tabId &&
+			tabsMarkedForUnsuspend[i].sessionId === sessionId
 		) {
-			if (options && options.remove) {
+			if (options?.remove) {
 				tabsMarkedForUnsuspend.splice(i, 1);
 			}
 			return true;
@@ -364,7 +362,6 @@ async function discardTab(tabId) {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const tabsInSplitView = await chrome.tabs.query({
 					windowId: tab.windowId,
-					// @ts-ignore - splitViewId is Chrome 145+ API
 					splitViewId: splitViewId
 				} as any);
 
@@ -388,13 +385,12 @@ async function discardTab(tabId) {
 	}
 
 	// Safe to discard - not in active Split View
-	chrome.tabs.discard(tabId, function () {
+	chrome.tabs.discard(tabId, () => {
 		hasLastError();
 	});
 }
 
 // Export to global scope
-// @ts-ignore
 if (typeof global !== 'undefined') {
 	(global as any).discardTab = discardTab;
 }

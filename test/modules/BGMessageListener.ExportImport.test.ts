@@ -53,7 +53,9 @@ describe('BGMessageListener Export/Import Integration', () => {
 			}),
 			remove: jest.fn().mockImplementation(async (keys: string[] | string) => {
 				if (Array.isArray(keys)) {
-					keys.forEach((key) => delete mockStorageData[key]);
+					keys.forEach((key) => {
+						delete mockStorageData[key];
+					});
 				} else {
 					delete mockStorageData[keys];
 				}

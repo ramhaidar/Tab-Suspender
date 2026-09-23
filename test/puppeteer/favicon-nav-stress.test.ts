@@ -21,9 +21,9 @@
  *   cd test/puppeteer && pnpm exec tsx favicon-nav-stress.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import { getExtensionId, evalInSW, suspendTabById, discardTabById, waitForParkPages, getParkPages } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';

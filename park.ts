@@ -3,7 +3,6 @@
  * be reproduced in whole or in any part or form without written permission from Sergey Zadorozhniy.
  * Zadorozhniy.Sergey@gmail.com
  */
-'use strict';
 
 void (async () => {
 	// eslint-disable-next-line no-redeclare
@@ -17,23 +16,23 @@ void (async () => {
 
 	//const urlParamChache = {};
 	let backProcessed = false;
-	let title;
-	let favicon;
-	let link;
+	let title: string | null;
+	let favicon: string | null;
+	let link: HTMLLinkElement | null;
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let secondTime = false;
+	let _secondTime = false;
 	let restoreEvent = 'hover';
 	let reloadTabOnRestore = false;
 	let tabIconOpacityChange = false;
 	let tabIconStatusVisualize = false;
-	let tabId;
-	let targetUrl;
+	let tabId: string | null;
+	let targetUrl: string | null;
 	let bgScreen = null; /* TEMPORARLY VARDON'T FORGGOT TO CLEAN AFTER DRAW! */
-	let screenshotDevicePixelRatio;
+	let screenshotDevicePixelRatio: number | undefined;
 	let isTabMarkedForUnsuspend = false;
-	let parkedUrl;
-	let screenPromise;
-	let faviconDrawed;
+	let parkedUrl: string | null;
+	let screenPromise: Promise<unknown>;
+	let faviconDrawed: boolean;
 	let globalParkData: ParkPageDataBGResponse;
 
 	const url: URL = new URL(window.location.href);
@@ -47,7 +46,7 @@ void (async () => {
 		});
 	});
 
-	let DOMContentLoaded;
+	let DOMContentLoaded: boolean;
 	// @ts-expect-error
 	window.domLoadedPromise = new Promise<void>((resolve) => {
 		document.addEventListener(
@@ -62,7 +61,7 @@ void (async () => {
 					createTitleAndIcon();
 					applysUserDisplayHeight(window.innerHeight);
 					// eslint-disable-next-line no-empty,@typescript-eslint/no-unused-vars
-				} catch (e) {}
+				} catch (_e) {}
 
 				resolve();
 			},
@@ -110,7 +109,7 @@ void (async () => {
 					console.log('bgpage.getStartDiscarted(): ', parkData.startDiscarded);
 				}
 
-				if (parkData.startDiscarded == true) {
+				if (parkData.startDiscarded === true) {
 					if (Date.now() - parkData.startAt < 15000) {
 						if (DEBUG) {
 							console.log('(new Date().getTime() - bgpage.getStartedAt()) < 15000: ', Date.now() - parkData.startAt < 15000);
@@ -348,8 +347,6 @@ void (async () => {
 			// Update title and favicon if available
 			if (title) {
 				document.getElementById('title').textContent = title;
-				// @ts-expect-error
-				document.getElementById('title').href = new URLSearchParams(window.location.search).get('url');
 			}
 			if (favicon && favicon !== 'undefined' && favicon !== 'null') {
 				// @ts-expect-error
@@ -373,7 +370,7 @@ void (async () => {
 		if (title == null) title = searchParams.get('title');
 		if (document.title !== title) document.title = title;
 
-		link = document.getElementById('faviconLink');
+		link = document.getElementById('faviconLink') as HTMLLinkElement;
 
 		if (link != null && !force) if (link.href != null && link.href.indexOf('img/icon16_off.png') === -1) return;
 
@@ -447,7 +444,7 @@ void (async () => {
 				ctx.globalAlpha = 1;
 			}
 			ctx.drawImage(img, 0, 0);
-			if (DEBUG) console.log('tabIconStatusVisualize: ' + tabIconStatusVisualize);
+			if (DEBUG) console.log(`tabIconStatusVisualize: ${tabIconStatusVisualize}`);
 			if (tabIconStatusVisualize) {
 				drawWaterMark(canvas, ctx, img.width, callback);
 			} else {
@@ -489,12 +486,12 @@ void (async () => {
 		// Guard: if screenshotDevicePixelRatio is not set yet, use window.devicePixelRatio as fallback
 		const pixelRatio = screenshotDevicePixelRatio ?? window.devicePixelRatio ?? 1;
 
-		if (pixelRatio != 1 || globalParkData?.tabInfo?.zoomFactor != 1) {
+		if (pixelRatio !== 1 || globalParkData?.tabInfo?.zoomFactor !== 1) {
 			let scale = 1 / pixelRatio;
-			if (globalParkData?.tabInfo?.zoomFactor != null && globalParkData.tabInfo.zoomFactor != 1) {
+			if (globalParkData?.tabInfo?.zoomFactor != null && globalParkData.tabInfo.zoomFactor !== 1) {
 				scale *= globalParkData.tabInfo.zoomFactor;
 			}
-			return 'scale(' + scale + ', ' + scale + ')';
+			return `scale(${scale}, ${scale})`;
 		}
 		return '';
 	}
@@ -516,11 +513,11 @@ void (async () => {
 			if (debugPerformance) console.log('Image finally showed: ', Date.now());
 
 			applyRestoreButtonView(parkData);
-			applyBackground('#' + parkData.parkBgColor);
+			applyBackground(`#${parkData.parkBgColor}`);
 		};
 		screenImg.onerror = () => {
 			applyRestoreButtonView(parkData);
-			applyBackground('#' + parkData.parkBgColor);
+			applyBackground(`#${parkData.parkBgColor}`);
 		};
 
 		applyPixelRatio(screenImg);
@@ -530,8 +527,6 @@ void (async () => {
 			screenImg.style.display = 'none';
 			document.body.classList.add('no-screenshot');
 			document.getElementById('title').textContent = title;
-			// @ts-expect-error
-			document.getElementById('title').href = searchParams.get('url');
 			if (favicon && favicon !== 'undefined' && favicon !== 'null') {
 				// @ts-expect-error
 				document.getElementById('favicon').src = favicon;
@@ -589,13 +584,14 @@ void (async () => {
 				// Chrome changes tab ID on discard/restore, so we need to check both:
 				// 1. Current tab ID (message.tab.id) - new ID after restore
 				// 2. Origin tab ID (message.originRefId) - old ID before discard (stored in URL)
-				const myTabId = parseInt(tabId);
-				const messageTabId = message.tab && message.tab.id;
+				const myTabId = parseInt(tabId, 10);
+				const messageTabId = message.tab?.id;
 				const originRefId = message.originRefId;
 
 				// Match if either current ID or origin ID matches
 				const isMatch =
-					(!isNaN(myTabId) && messageTabId && myTabId === messageTabId) || (!isNaN(myTabId) && originRefId && myTabId === originRefId);
+					(!Number.isNaN(myTabId) && messageTabId && myTabId === messageTabId) ||
+					(!Number.isNaN(myTabId) && originRefId && myTabId === originRefId);
 
 				if (isMatch) {
 					goBack();
@@ -608,7 +604,7 @@ void (async () => {
 
 					if (message.reloadTabOnRestore != null) reloadTabOnRestore = message.reloadTabOnRestore;
 
-					if (message.parkBgColor != null) applyBackground('#' + message.parkBgColor);
+					if (message.parkBgColor != null) applyBackground(`#${message.parkBgColor}`);
 
 					if (message.screenshotCssStyle != null) applysSreenshotCssStyle(message.screenshotCssStyle);
 
@@ -632,7 +628,7 @@ void (async () => {
 			document.getElementById('screen').style.filter = '';
 			window.focus();
 
-			if (message.options && message.options.goBack) goBack();
+			if (message.options?.goBack) goBack();
 			else showNativeUrl();
 		}
 	});
@@ -642,7 +638,7 @@ void (async () => {
 		favicon = null;
 
 		// eslint-disable-next-line no-unused-vars
-		secondTime = isSecondTime();
+		_secondTime = isSecondTime();
 
 		document.getElementById('title').onclick = document.getElementById('titleImg').onclick = () => {
 			goBack();
@@ -705,7 +701,7 @@ void (async () => {
 
 		if (DEBUG) {
 			setInterval(() => {
-				console.log('hasHistory: ' + hasHistory);
+				console.log(`hasHistory: ${hasHistory}`);
 			}, 100);
 		}
 
@@ -724,13 +720,13 @@ void (async () => {
 
 	function isSecondTime() {
 		const indexOfNumberSymbol = window.location.href.lastIndexOf('#');
-		if (indexOfNumberSymbol != -1) if (location.href.substring(indexOfNumberSymbol) == '#secondTime') return true;
+		if (indexOfNumberSymbol !== -1) if (location.href.substring(indexOfNumberSymbol) === '#secondTime') return true;
 		return false;
 	}
 
 	function isFromHistory() {
 		const indexOfNumberSymbol = window.location.href.lastIndexOf('#');
-		if (indexOfNumberSymbol != -1) if (location.href.substring(indexOfNumberSymbol) == '#fromHistory') return true;
+		if (indexOfNumberSymbol !== -1) if (location.href.substring(indexOfNumberSymbol) === '#fromHistory') return true;
 		return false;
 	}
 
@@ -738,12 +734,12 @@ void (async () => {
 	let nativeUrlTimer = null;
 	let nativeUrlTimerClose = null;
 	let nativeUrlTimerCloseAfterTimeout = null;
-	let nativeUrlPosition;
-	let nativeUrlElement;
+	let nativeUrlPosition: number;
+	let nativeUrlElement: HTMLElement | null;
 	let nativeUrlElementHover = false;
 
-	let showNativeUrl;
-	let hideNativeUrl;
+	let showNativeUrl: (options?: { permanent?: boolean }) => void;
+	let hideNativeUrl: () => void;
 
 	function initNativeUrlAnimation() {
 		if (nativeUrlElement != null) return;
@@ -762,7 +758,7 @@ void (async () => {
 				// @ts-expect-error
 				const e = event.toElement || event.relatedTarget;
 				if (e) {
-					if (e.parentNode == this || (e.parentNode != null && e.parentNode.parentNode == this) || e == this) return;
+					if (e.parentNode === this || (e.parentNode != null && e.parentNode.parentNode === this) || e === this) return;
 				}
 			}
 
@@ -775,12 +771,12 @@ void (async () => {
 		};
 
 		hideNativeUrl = () => {
-			if (nativeUrlVisible != true) return;
+			if (nativeUrlVisible !== true) return;
 
 			nativeUrlTimer = null;
 
 			nativeUrlTimerClose = setInterval(() => {
-				newNativeUrlElement.style.top = --nativeUrlPosition + 'px';
+				newNativeUrlElement.style.top = `${--nativeUrlPosition}px`;
 				if (nativeUrlPosition <= -27) {
 					nativeUrlVisible = false;
 					clearInterval(nativeUrlTimerClose);
@@ -790,24 +786,24 @@ void (async () => {
 		};
 
 		showNativeUrl = (options) => {
-			if (!options || !options.permanent) clearTimeout(nativeUrlTimerCloseAfterTimeout);
+			if (!options?.permanent) clearTimeout(nativeUrlTimerCloseAfterTimeout);
 			nativeUrlTimerCloseAfterTimeout = null;
 
-			if (!options || !options.permanent) hideNativeUrl();
+			if (!options?.permanent) hideNativeUrl();
 
-			if (nativeUrlVisible != true && nativeUrlTimer == null) {
+			if (nativeUrlVisible !== true && nativeUrlTimer == null) {
 				window.getSelection().selectAllChildren(document.getElementById('nativeUrlSpan'));
 
 				nativeUrlPosition = -27;
 				nativeUrlTimer = setInterval(() => {
-					newNativeUrlElement.style.top = ++nativeUrlPosition + 'px';
+					newNativeUrlElement.style.top = `${++nativeUrlPosition}px`;
 
 					if (nativeUrlPosition >= 0) {
 						nativeUrlVisible = true;
 						clearInterval(nativeUrlTimer);
 
 						if (nativeUrlTimerCloseAfterTimeout) clearTimeout(nativeUrlTimerCloseAfterTimeout);
-						if (!options || !options.permanent)
+						if (!options?.permanent)
 							nativeUrlTimerCloseAfterTimeout = setTimeout(() => {
 								if (!nativeUrlElementHover) hideNativeUrl();
 							}, 5000);
@@ -816,11 +812,11 @@ void (async () => {
 			}
 		};
 
-		document.getElementById('nativeUrlButton').onclick = showNativeUrl;
+		document.getElementById('nativeUrlButton').onclick = () => showNativeUrl();
 
 		const loadJsCssFile = (filename, filetype) => {
 			return new Promise<void>((resolve, reject) => {
-				let fileRef;
+				let fileRef: HTMLScriptElement | HTMLLinkElement;
 				if (filetype === 'js') {
 					//if filename is a external JavaScript file
 					fileRef = document.createElement('script');
@@ -839,7 +835,7 @@ void (async () => {
 						resolve();
 					};
 				}
-				if (typeof fileRef != 'undefined') document.getElementsByTagName('head')[0].appendChild(fileRef);
+				if (typeof fileRef !== 'undefined') document.getElementsByTagName('head')[0].appendChild(fileRef);
 				else reject();
 			});
 		};
@@ -848,7 +844,6 @@ void (async () => {
 		document.getElementById('pauseIcon').onclick = () => {
 			Promise.all([loadJsCssFile('utils.js', 'js')])
 				.then(() => {
-					// @ts-ignore
 					const isDarkMode = window.isDarkMode();
 
 					const mainMenuDiv = document.createElement('div');
@@ -928,7 +923,7 @@ void (async () => {
 						};
 
 						/* Color Option */ // @ts-expect-error
-						document.getElementById('colorisInput').value = '#' + globalParkData.parkBgColor;
+						document.getElementById('colorisInput').value = `#${globalParkData.parkBgColor}`;
 						// @ts-expect-error
 						Coloris({
 							el: '.coloris'
@@ -970,7 +965,7 @@ void (async () => {
 
 		const iframe = document.createElement('iframe');
 		iframe.id = 'ATCSDialogiFrame';
-		iframe.src = chrome.runtime.getURL('dialog.html?dialog=page&url=' + searchParams.get('url'));
+		iframe.src = chrome.runtime.getURL(`dialog.html?dialog=page&url=${searchParams.get('url')}`);
 		iframe.style.position = 'fixed';
 		iframe.style.top = '0px';
 		iframe.style.left = '0px';

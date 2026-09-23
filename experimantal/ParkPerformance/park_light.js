@@ -4,23 +4,19 @@
  * Zadorozhniy.Sergey@gmail.com
  */
 
-'use strict';
-
 var loaded = false;
 
-window.addEventListener('load', function () {
+window.addEventListener('load', () => {
 	console.log('onload: ', Date.now());
 	loaded = true;
 });
 
-var isLoaded = function () {
-	return loaded;
-};
+var isLoaded = () => loaded;
 
-window.domLoadedPromise = new Promise(function (resolve, reject) {
+window.domLoadedPromise = new Promise((resolve, _reject) => {
 	document.addEventListener(
 		'DOMContentLoaded',
-		function () {
+		() => {
 			console.log('onDOMContentLoaded: ', Date.now());
 
 			resolve();
@@ -30,10 +26,10 @@ window.domLoadedPromise = new Promise(function (resolve, reject) {
 });
 
 try {
-	chrome.runtime.getBackgroundPage(function (bgpage) {
+	chrome.runtime.getBackgroundPage((bgpage) => {
 		console.log('getBackgroundPage Loaded: ', Date.now());
 
-		window.domLoadedPromise.then(function () {
+		window.domLoadedPromise.then(() => {
 			try {
 				bgpage.park_inner(window, document, console, isLoaded);
 			} catch (e) {

@@ -13,12 +13,12 @@
 			return lang;
 		}
 
-		if (this.hasOwnProperty(value)) {
+		if (Object.hasOwn(this, value)) {
 			value = this[value];
-			if (value.hasOwnProperty(lang)) {
+			if (Object.hasOwn(value, lang)) {
 				return value[lang];
-			} else if (value.hasOwnProperty('en')) {
-				return value['en'];
+			} else if (Object.hasOwn(value, 'en')) {
+				return value.en;
 			} else {
 				return Object.values(value)[0];
 			}

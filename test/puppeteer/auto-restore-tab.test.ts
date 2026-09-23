@@ -17,9 +17,9 @@
  *   cd test/puppeteer && pnpm exec tsx auto-restore-tab.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -79,10 +79,11 @@ async function main(): Promise<void> {
 		await sleep(1500);
 
 		const tabs = await queryChromeTabs(browser);
-		const targetTab = tabs.find((t) => t.url && t.url.includes('example.com'));
+		const targetTab = tabs.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetTab != null, 'example.com tab exists');
+		if (targetTab == null) throw new Error('example.com tab was not found');
 
-		const tabId = targetTab!.id;
+		const tabId = targetTab.id;
 
 		// Move focus away so the tab is inactive before suspension
 		const blankPage = await browser.newPage();
@@ -101,16 +102,17 @@ async function main(): Promise<void> {
 		// Get the park.html tab's Chrome tab ID from the URL params
 		const parkPageUrl = parkPage.url();
 		const parkedTabIdMatch = parkPageUrl.match(/[?&]tabId=(\d+)/);
-		const parkedTabId = parkedTabIdMatch ? parseInt(parkedTabIdMatch[1]) : null;
+		const parkedTabId = parkedTabIdMatch ? parseInt(parkedTabIdMatch[1], 10) : null;
 		log(`  park.html URL: ${parkPageUrl.slice(0, 100)}`);
 		log(`  original tabId from URL params: ${parkedTabId}`);
 
 		// Get the actual Chrome tab ID of the park.html tab
 		const allTabs = await queryChromeTabs(browser);
-		const parkTab = allTabs.find((t) => t.url && t.url.startsWith(parkUrlPrefix(extensionId)));
+		const parkTab = allTabs.find((t) => t.url?.startsWith(parkUrlPrefix(extensionId)));
 		runner.assert(parkTab != null, 'park.html tab found in chrome tabs');
+		if (parkTab == null) throw new Error('park.html tab was not found');
 
-		const parkTabId = parkTab!.id;
+		const parkTabId = parkTab.id;
 		log(`  park.html Chrome tab ID: ${parkTabId}`);
 
 		// ══════════════════════════════════════════════════════════════════════════

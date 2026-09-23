@@ -38,7 +38,9 @@ describe('Settings Export/Import Functionality', () => {
 			}),
 			remove: jest.fn().mockImplementation(async (keys: string[] | string) => {
 				if (Array.isArray(keys)) {
-					keys.forEach((key) => delete mockStorageData[key]);
+					keys.forEach((key) => {
+						delete mockStorageData[key];
+					});
 				} else {
 					delete mockStorageData[keys];
 				}
@@ -337,7 +339,7 @@ describe('Settings Export/Import Functionality', () => {
 
 			// Verify settings not customized maintain defaults
 			const defaultOnlyKeys = Object.keys((global as any).DEFAULT_SETTINGS)
-				.filter((key) => !Object.hasOwnProperty.call(customSettings, key))
+				.filter((key) => !Object.hasOwn(customSettings, key))
 				.filter((key) => !migrationKeys.includes(key));
 
 			for (const key of defaultOnlyKeys) {
@@ -387,7 +389,7 @@ describe('Settings Export/Import Functionality', () => {
 			};
 
 			// OLD BUGGY: This creates wrong merged defaults
-			const oldApproach = { ...(global as any).DEFAULT_SETTINGS, ...oldBuggyImportSettings };
+			const _oldApproach = { ...(global as any).DEFAULT_SETTINGS, ...oldBuggyImportSettings };
 
 			// The bug is that these become the "defaults", not the actual settings
 			// So when you try to get() a value, it would return the default, not the "set" value

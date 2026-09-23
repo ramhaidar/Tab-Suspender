@@ -39,7 +39,7 @@ class BrowserActionControl {
 	 *
 	 */
 	async updateStatus(tab) {
-		let computedIcon;
+		let computedIcon: string;
 		let isIconSet = false;
 
 		if (await this.settings.get('active')) {
@@ -72,16 +72,16 @@ class BrowserActionControl {
 
 			whitelistedTab = this.whiteList.isURIException(tab.url) || this.whiteList.isURIException(parseUrlParam(tab.url, 'url'));
 			if (whitelistedTab) {
-				this.setBrowserActionTitle(tab.id, this.extensionTitle + ': Page is in Whitelist');
+				this.setBrowserActionTitle(tab.id, `${this.extensionTitle}: Page is in Whitelist`);
 
-				chrome.contextMenus.update(this.globalMenuIdMap['add_to_white_list'], {
+				chrome.contextMenus.update(this.globalMenuIdMap.add_to_white_list, {
 					checked: true,
 					title: 'Already in Whitelist (Click to remove)'
 				});
 			} else {
 				this.setBrowserActionTitle(tab.id, this.extensionTitle);
 
-				chrome.contextMenus.update(this.globalMenuIdMap['add_to_white_list'], {
+				chrome.contextMenus.update(this.globalMenuIdMap.add_to_white_list, {
 					checked: false,
 					title: 'Add to Whitelist...'
 				});
@@ -94,7 +94,7 @@ class BrowserActionControl {
 				} else computedIcon = 'img/icon16.png';
 			}
 		}
-		if (computedIcon != lastIcon) {
+		if (computedIcon !== lastIcon) {
 			void chrome.action.setIcon({ path: computedIcon });
 			lastIcon = computedIcon;
 		}
@@ -104,10 +104,8 @@ class BrowserActionControl {
 	 *
 	 */
 	synchronizeActiveTabs() {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-		chrome.tabs.query({ active: true }, function (tabs) {
-			for (const i in tabs) if (tabs.hasOwnProperty(i)) void self.updateStatus(tabs[i]);
+		chrome.tabs.query({ active: true }, (tabs) => {
+			for (const i in tabs) if (Object.hasOwn(tabs, i)) void this.updateStatus(tabs[i]);
 		});
 	}
 
@@ -115,14 +113,11 @@ class BrowserActionControl {
 	 *
 	 */
 	setBrowserActionTitle(tabId, title) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
-		chrome.action.getTitle({ tabId: tabId }, function (actualTitle) {
-			if (!hasLastError(self.expectedExceptions))
-				if (actualTitle != title)
-					chrome.action.setTitle({ tabId: tabId, title: title }, function () {
-						hasLastError(self.expectedExceptions);
+		chrome.action.getTitle({ tabId: tabId }, (actualTitle) => {
+			if (!hasLastError(this.expectedExceptions))
+				if (actualTitle !== title)
+					chrome.action.setTitle({ tabId: tabId, title: title }, () => {
+						hasLastError(this.expectedExceptions);
 					});
 		});
 	}

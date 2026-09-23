@@ -28,7 +28,7 @@ describe('IndexedDBProvider Promise Handling Tests', () => {
 	});
 
 	afterEach(() => {
-		if (provider && provider.close) {
+		if (provider?.close) {
 			provider.close();
 		}
 
@@ -342,7 +342,7 @@ describe('IndexedDBProvider Promise Handling Tests', () => {
 
 			// Create a custom mock to track completion
 			const originalPut = provider.putV2.bind(provider);
-			provider.putV2 = async function (queries: any[]) {
+			provider.putV2 = async (queries: any[]) => {
 				const result = await originalPut(queries);
 				writeCompleted = true;
 				return result;

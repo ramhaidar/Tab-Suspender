@@ -177,7 +177,7 @@ class SessionRestoreDetector {
 	}
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		SessionRestoreDetector
 	};

@@ -24,13 +24,10 @@ class BGMessageListener {
 	constructor(tabManager: TabManager) {
 		this.tabManager = tabManager;
 
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		chrome.runtime.onMessage.addListener(
 			/* DO NOT ADD async HERE IT BROKE sendResponse??*/ (request, sender, sendResponse) => {
 				/* Screen from h2c, always devicePixelRatio=1*/
-				if (typeof request == 'string') {
+				if (typeof request === 'string') {
 					console.warn('Screen Requested', request.length);
 					if (request === 'data:,') console.error(new Error(`Damaged screen [data:,]!!!`), { favIconUrl: undefined, ...sender.tab });
 
@@ -105,7 +102,7 @@ class BGMessageListener {
 									const reader = new FileReader();
 
 									reader.onload = (event) => {
-										// @ts-ignore
+										// @ts-expect-error
 										let dataUrl: string = event.target.result;
 										const contentType = response.headers.get('Content-Type');
 										const octetStream = 'data:application/octet-stream;base64,';
@@ -161,7 +158,7 @@ class BGMessageListener {
 				} else if (request.method === '[AutomaticTabCleaner:trackError]') {
 					const error = Error(request.message);
 					error.stack = request.stack;
-					console.error('[External]: ' + request.message, error);
+					console.error(`[External]: ${request.message}`, error);
 				} else if (request.method === '[AutomaticTabCleaner:GetTabId]') {
 					sendResponse(sender.tab.id);
 				} else if (request.method === '[AutomaticTabCleaner:ParkPageFromInjectFinished]') {
@@ -207,7 +204,7 @@ class BGMessageListener {
 					if (debug) console.log('AddExceptionPatterns info Requested.');
 					void (async () => {
 						settings
-							.set('exceptionPatterns', (await settings.get('exceptionPatterns')) + '\n' + request.pattern)
+							.set('exceptionPatterns', `${await settings.get('exceptionPatterns')}\n${request.pattern}`)
 							.then(() => {
 								sendResponse({ successful: true });
 							})
@@ -255,7 +252,7 @@ class BGMessageListener {
 					unsuspendTabs(request.tab.windowId);
 					sendResponse({ successful: true });
 				} else if (request.method === '[AutomaticTabCleaner:unsuspendTab]') {
-					self.tabManager.unsuspendTab(request.tab);
+					this.tabManager.unsuspendTab(request.tab);
 					sendResponse({ successful: true });
 				} else if (request.method === '[AutomaticTabCleaner:unsuspendTabGroup]') {
 					if (debug) console.log('unsuspendTabGroup Requested.');
@@ -273,7 +270,7 @@ class BGMessageListener {
 				} else if (request.method === '[AutomaticTabCleaner:ignoreTab]') {
 					if (debug) console.log('ignoreTab Requested.');
 
-					if (request.action == 'add') ignoreList.addToIgnoreTabList(request.tabId);
+					if (request.action === 'add') ignoreList.addToIgnoreTabList(request.tabId);
 					else if (request.action === 'remove') ignoreList.removeFromIgnoreTabList(request.tabId);
 
 					sendResponse({ successful: true });
@@ -320,11 +317,11 @@ class BGMessageListener {
 					void (async () => {
 						try {
 							if (request.isTabSuspenderActive != null) await settings.set('active', request.isTabSuspenderActive);
-							else if (request.timeout != null && typeof request.timeout == 'number') await settings.set('timeout', request.timeout);
+							else if (request.timeout != null && typeof request.timeout === 'number') await settings.set('timeout', request.timeout);
 							else if (request.isCloseTabsOn != null) await settings.set('isCloseTabsOn', request.isCloseTabsOn);
-							else if (request.closeTimeout != null && typeof request.closeTimeout == 'number')
+							else if (request.closeTimeout != null && typeof request.closeTimeout === 'number')
 								await settings.set('closeTimeout', request.closeTimeout);
-							else if (request.limitOfOpenedTabs != null && typeof request.limitOfOpenedTabs == 'number')
+							else if (request.limitOfOpenedTabs != null && typeof request.limitOfOpenedTabs === 'number')
 								await settings.set('limitOfOpenedTabs', request.limitOfOpenedTabs);
 							else if (request.sendErrors != null) await settings.set('sendErrors', request.sendErrors);
 							else if (request.popup_showWindowSessionByDefault != null)
@@ -363,7 +360,7 @@ class BGMessageListener {
 
 							SettingsPageController.reloadSettings()
 								.then(() => {
-									setTimeout(function () {
+									setTimeout(() => {
 										new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
 									}, 500);
 								})
@@ -451,7 +448,7 @@ class BGMessageListener {
 
 		// For puppeteer Tests only
 		chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-			console.log('Received message from ' + sender + ': ', request);
+			console.log(`Received message from ${sender}: `, request);
 			sendResponse({ tabId: sender.tab.id });
 		});
 	}

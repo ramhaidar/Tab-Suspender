@@ -38,7 +38,7 @@ class SettingsPageController {
 
 		await preInit(<IntOptions>{ reloadSettings: true });
 
-		if (!options || !options.fromSettingsPage) settingsPageController.reloadSettingsPage();
+		if (!options?.fromSettingsPage) settingsPageController.reloadSettingsPage();
 
 		chrome.runtime
 			.sendMessage<UpdateTabSettingsBGMessage>({

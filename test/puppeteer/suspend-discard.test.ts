@@ -31,9 +31,9 @@
  */
 
 import type { Browser, Page } from 'puppeteer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -45,11 +45,9 @@ import {
 	getTabInfosCopy,
 	forceTabInfoCleanup,
 	waitForParkPages,
-	getParkPages,
-	type CleanupDiagnostics
+	getParkPages
 } from './base/ExtensionHelper.js';
 import { createTestRunner, type TestRunner } from './base/AssertHelper.js';
-import type { ChromeTab } from './base/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_DIR = path.join(__dirname, 'test-session', '.test-session-sd');

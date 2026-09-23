@@ -19,22 +19,20 @@ class HistoryOpenerController {
 		if (changeInfo.url != null)
 			if (this.isHistory(changeInfo.url)) this.historyPages[tabId] = true;
 			else if (this.historyPages[tabId] != null) {
-				if (changeInfo.url.indexOf(parkUrl) == 0) this.markTabFromHistory(tabId, changeInfo.url);
+				if (changeInfo.url.indexOf(parkUrl) === 0) this.markTabFromHistory(tabId, changeInfo.url);
 
 				delete this.historyPages[tabId];
 			}
 	}
 
 	markTabFromHistory(tabId, url) {
-		chrome.tabs.update(tabId, { url: url + '#fromHistory' }).catch(console.error);
+		chrome.tabs.update(tabId, { url: `${url}#fromHistory` }).catch(console.error);
 	}
 
 	onNewTab(tab: chrome.tabs.Tab) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
 		if (tab.openerTabId != null)
-			chrome.tabs.get(tab.openerTabId, function (oTab) {
-				if (self.isHistory(oTab.url)) self.markTabFromHistory(tab.id, tab.url || tab.pendingUrl);
+			chrome.tabs.get(tab.openerTabId, (oTab) => {
+				if (this.isHistory(oTab.url)) this.markTabFromHistory(tab.id, tab.url || tab.pendingUrl);
 			});
 	}
 
@@ -43,7 +41,7 @@ class HistoryOpenerController {
 	}
 
 	isHistory(tabUrl) {
-		return tabUrl.indexOf('chrome://history/') == 0;
+		return tabUrl.indexOf('chrome://history/') === 0;
 	}
 
 	reloadHistoryPage() {

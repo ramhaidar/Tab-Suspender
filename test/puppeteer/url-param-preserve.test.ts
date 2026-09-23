@@ -14,10 +14,10 @@
  *   cd test/puppeteer && pnpm exec tsx url-param-preserve.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -83,38 +83,40 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabs = await queryChromeTabs(browser);
-		const targetTab = tabs.find((t) => t.url && t.url.includes('?t=120'));
+		const targetTab = tabs.find((t) => t.url?.includes('?t=120'));
 		runner.assert(targetTab != null, `tab opened with ?t=120 URL (got tabs: ${tabs.map((t) => t.url).join(', ')})`);
-		log(`  Tab id=${targetTab!.id} url=${targetTab!.url}`);
+		if (targetTab == null) throw new Error('Tab with ?t=120 URL was not found');
+		log(`  Tab id=${targetTab.id} url=${targetTab.url}`);
 
 		// Focus away so target tab becomes inactive
 		const blankPage = await browser.newPage();
 		await blankPage.goto('about:blank');
 		await sleep(300);
 
-		log(`  Suspending tab ${targetTab!.id}...`);
-		await suspendTabById(browser, targetTab!.id);
+		log(`  Suspending tab ${targetTab?.id}...`);
+		await suspendTabById(browser, targetTab.id);
 		await waitForParkPages(browser, extensionId, 1, 15000);
 		await sleep(600); // give park.html time to register its chrome.runtime.onMessage listener
 		log('  park.html appeared');
 
 		// Verify the park URL encodes the original URL including ?t=120
 		const allTabs = await queryChromeTabs(browser);
-		const parkTab = allTabs.find((t) => t.url && t.url.startsWith(parkUrlPrefix(extensionId)));
+		const parkTab = allTabs.find((t) => t.url?.startsWith(parkUrlPrefix(extensionId)));
 		runner.assert(parkTab != null, 'park tab found');
+		if (parkTab == null) throw new Error('Park tab was not found');
 
-		const encodedInPark = parkTab?.url && parkTab.url.includes(encodeURIComponent('?t=120'));
+		const encodedInPark = parkTab?.url?.includes(encodeURIComponent('?t=120'));
 		runner.assert(!!encodedInPark, `park URL contains encoded ?t=120 (park URL: ${parkTab?.url?.slice(0, 120)})`);
 
 		// Restore the tab
-		log(`  Restoring tab ${parkTab!.id}...`);
-		await unsuspendTabById(browser, parkTab!.id);
+		log(`  Restoring tab ${parkTab?.id}...`);
+		await unsuspendTabById(browser, parkTab.id);
 
 		const restoredUrl = await waitForAnyTabToLeaveParked(browser, extensionId, '127.0.0.1', 20000).catch(() =>
-			waitForTabToRestore(browser, parkTab!.id, 20000).catch(() => null)
+			waitForTabToRestore(browser, parkTab.id, 20000).catch(() => null)
 		);
 
-		runner.assert(restoredUrl != null && restoredUrl.includes('?t=120'), `Restored URL contains ?t=120 (got: ${restoredUrl})`);
+		runner.assert(restoredUrl?.includes('?t=120') === true, `Restored URL contains ?t=120 (got: ${restoredUrl})`);
 
 		log(`  Restored URL: ${restoredUrl}`);
 		await blankPage.close().catch(() => {});
@@ -141,32 +143,34 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabs2 = await queryChromeTabs(browser);
-		const targetTab2 = tabs2.find((t) => t.url && t.url.includes('a=1') && t.url.includes('b=hello'));
+		const targetTab2 = tabs2.find((t) => t.url?.includes('a=1') && t.url.includes('b=hello'));
 		runner.assert(targetTab2 != null, 'tab with multi-param URL opened');
-		log(`  Tab id=${targetTab2?.id} url=${targetTab2?.url}`);
+		if (targetTab2 == null) throw new Error('Tab with multiple query params was not found');
+		log(`  Tab id=${targetTab2.id} url=${targetTab2.url}`);
 
 		const blankPage2 = await browser.newPage();
 		await blankPage2.goto('about:blank');
 		await sleep(300);
 
-		log(`  Suspending tab ${targetTab2!.id}...`);
-		await suspendTabById(browser, targetTab2!.id);
+		log(`  Suspending tab ${targetTab2?.id}...`);
+		await suspendTabById(browser, targetTab2.id);
 		await waitForParkPages(browser, extensionId, 1, 15000);
 		await sleep(600); // give park.html time to register its chrome.runtime.onMessage listener
 		log('  park.html appeared (Phase B)');
 
 		const allTabs2 = await queryChromeTabs(browser);
-		const parkTab2 = allTabs2.find((t) => t.url && t.url.startsWith(parkUrlPrefix(extensionId)));
+		const parkTab2 = allTabs2.find((t) => t.url?.startsWith(parkUrlPrefix(extensionId)));
 		runner.assert(parkTab2 != null, 'park tab found for Phase B');
+		if (parkTab2 == null) throw new Error('Phase B park tab was not found');
 
-		await unsuspendTabById(browser, parkTab2!.id);
+		await unsuspendTabById(browser, parkTab2.id);
 
 		const restoredUrl2 = await waitForAnyTabToLeaveParked(browser, extensionId, '127.0.0.1', 20000).catch(() =>
-			waitForTabToRestore(browser, parkTab2!.id, 20000).catch(() => null)
+			waitForTabToRestore(browser, parkTab2.id, 20000).catch(() => null)
 		);
 
 		runner.assert(
-			restoredUrl2 != null && restoredUrl2.includes('a=1') && restoredUrl2.includes('b=hello'),
+			restoredUrl2?.includes('a=1') === true && restoredUrl2.includes('b=hello'),
 			`Restored URL contains all query params (got: ${restoredUrl2})`
 		);
 

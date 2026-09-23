@@ -18,15 +18,14 @@
  *   cd test/puppeteer && pnpm exec tsx basic-suspend-restore.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
 	evalInSW,
 	unsuspendTabById,
-	waitForParkPages,
 	queryChromeTabs,
 	getTabInfosCopy,
 	waitForTabToRestore,
@@ -62,15 +61,13 @@ async function main(): Promise<void> {
 		await waitForExtensionInit(browser);
 
 		// Set minimum timeout so the extension auto-suspends quickly
-		originalTimeout = await getSetting<number>(browser, 'timeout');
+		originalTimeout = (await getSetting(browser, 'timeout')) as number;
 
 		// Close any stale extension tabs (e.g. wizard_background.html) that have accumulated
 		// inactivity time — they would be suspended first and confuse the test.
 		const tabsBefore = await queryChromeTabs(browser);
 		log(`  Tabs before setup: ${tabsBefore.map((t) => `id=${t.id} url=${(t.url || '').slice(0, 60)}`).join(' | ')}`);
-		const extensionTabs = tabsBefore.filter(
-			(t) => t.url && t.url.startsWith(`chrome-extension://${extensionId}`) && !t.url.includes('park.html')
-		);
+		const extensionTabs = tabsBefore.filter((t) => t.url?.startsWith(`chrome-extension://${extensionId}`) && !t.url.includes('park.html'));
 		for (const et of extensionTabs) {
 			await evalInSW(browser, `chrome.tabs.remove(${et.id})`).catch(() => {});
 			log(`  Closed extension tab ${et.id} (${et.url?.slice(0, 60)})`);
@@ -92,10 +89,11 @@ async function main(): Promise<void> {
 		await sleep(2000); // ensure tab reaches status='complete'
 
 		const tabs = await queryChromeTabs(browser);
-		const targetTab = tabs.find((t) => t.url && t.url.includes('example.com'));
+		const targetTab = tabs.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetTab != null, 'example.com tab exists before suspend');
+		if (targetTab == null) throw new Error('example.com tab was not found before suspend');
 
-		const tabId = targetTab!.id;
+		const tabId = targetTab.id;
 		const parkPrefix = parkUrlPrefix(extensionId);
 
 		// Move focus to a blank tab so example.com becomes inactive — starts the inactivity timer
@@ -118,7 +116,7 @@ async function main(): Promise<void> {
 			);
 			if (json) {
 				const t = JSON.parse(json) as { url: string } | null;
-				if (t && t.url.startsWith(parkPrefix)) {
+				if (t?.url.startsWith(parkPrefix)) {
 					parkedTabId = tabId;
 					break;
 				}
@@ -127,6 +125,7 @@ async function main(): Promise<void> {
 		}
 
 		runner.assert(parkedTabId != null, `example.com tab ${tabId} was auto-suspended to park.html`);
+		if (parkedTabId == null) throw new Error('Tab was not auto-suspended');
 
 		const tabInfos = await getTabInfosCopy(browser);
 		// Tab info is keyed by original tab ID; after replacement it may differ

@@ -51,7 +51,7 @@ const mockTabs = {
 	}),
 	update: jest.fn().mockResolvedValue(mockTab),
 	reload: jest.fn().mockResolvedValue(undefined),
-	getZoom: jest.fn().mockImplementation((tabId, callback) => {
+	getZoom: jest.fn().mockImplementation((_tabId, callback) => {
 		callback(1.0);
 	}),
 	setZoom: jest.fn().mockResolvedValue(undefined),
@@ -60,7 +60,7 @@ const mockTabs = {
 };
 
 const mockWindows = {
-	getAll: jest.fn().mockImplementation((options, callback) => {
+	getAll: jest.fn().mockImplementation((_options, callback) => {
 		const mockWindow = {
 			id: 1,
 			tabs: [mockTab]
@@ -87,17 +87,17 @@ const mockScripting = {
 };
 
 // Mock DOM APIs - use Node.js built-in TextEncoder/TextDecoder
-const NodeTextEncoder = require('util').TextEncoder;
-const NodeTextDecoder = require('util').TextDecoder;
+const NodeTextEncoder = require('node:util').TextEncoder;
+const NodeTextDecoder = require('node:util').TextDecoder;
 (global as any).TextEncoder = NodeTextEncoder;
 (global as any).TextDecoder = NodeTextDecoder;
 // Mock ReadableStream
 (global as any).ReadableStream = jest.fn().mockImplementation((options) => {
-	let controller;
+	let controller: { _chunks: unknown[]; enqueue: jest.Mock; close: jest.Mock } | undefined;
 	const readable = {
 		getReader: () => ({
 			read: jest.fn().mockImplementation(async () => {
-				if (controller && controller._chunks && controller._chunks.length > 0) {
+				if (controller?._chunks && controller._chunks.length > 0) {
 					return { value: controller._chunks.shift(), done: false };
 				}
 				return { done: true };
@@ -105,7 +105,7 @@ const NodeTextDecoder = require('util').TextDecoder;
 		})
 	};
 
-	if (options && options.start) {
+	if (options?.start) {
 		controller = {
 			_chunks: [],
 			enqueue: jest.fn((chunk) => controller._chunks.push(chunk)),
@@ -152,7 +152,7 @@ const NodeTextDecoder = require('util').TextDecoder;
 	}
 }));
 
-(global as any).Response = jest.fn().mockImplementation((body) => ({
+(global as any).Response = jest.fn().mockImplementation((_body) => ({
 	arrayBuffer: jest.fn().mockImplementation(async () => {
 		const encoder = new NodeTextEncoder();
 		const data = encoder.encode('Hello, World!');

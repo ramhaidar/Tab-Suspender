@@ -8,10 +8,10 @@ function secondsHumanise(seconds) {
 	var numseconds = (((seconds % 31536000) % 86400) % 3600) % 60;
 	return (
 		'   ' +
-		(numDays > 0 ? numDays + ' day ' : '') +
-		(numhours > 0 ? numhours + ' hours ' : '') +
-		(numminutes > 0 ? numminutes + ' minutes ' : '') +
-		(numseconds > 0 && numminutes <= 10 ? numseconds + ' seconds' : '') +
+		(numDays > 0 ? `${numDays} day ` : '') +
+		(numhours > 0 ? `${numhours} hours ` : '') +
+		(numminutes > 0 ? `${numminutes} minutes ` : '') +
+		(numseconds > 0 && numminutes <= 10 ? `${numseconds} seconds` : '') +
 		' of inactivity'
 	);
 }
@@ -110,9 +110,7 @@ this.manifest = {
 			displayModifier /*function (value) {
              "use strict";
              return Math.floor(value) + ' sec.';
-             }*/: function (seconds) {
-				return seconds + '%';
-			}
+             }*/: (seconds) => `${seconds}%`
 		},
 		{
 			tab: 'Suspend Settings',
@@ -133,14 +131,14 @@ this.manifest = {
 			group: 'Ignore options',
 			name: 'pinned-description',
 			type: 'description',
-			text: 'Ignore <a href="' + pinTabExampleHref + '" target="_blank" class="settings-link">pinned</a> tabs from being suspended'
+			text: `Ignore <a href="${pinTabExampleHref}" target="_blank" class="settings-link">pinned</a> tabs from being suspended`
 		},
 		{
 			tab: 'Suspend Settings',
 			group: 'Ignore options',
 			name: 'ignoreAudible',
 			type: 'checkbox',
-			label: 'Ignore <a href="' + audibleTabExampleHref + '" target="_blank" class="settings-link">audible</a> tab'
+			label: `Ignore <a href="${audibleTabExampleHref}" target="_blank" class="settings-link">audible</a> tab`
 		},
 		{
 			tab: 'Suspend Settings',
@@ -187,10 +185,7 @@ this.manifest = {
 			min: 10,
 			step: 1,
 			display: true,
-			displayModifier: function (value) {
-				'use strict';
-				return Math.floor(value) + ' %';
-			}
+			displayModifier: (value) => `${Math.floor(value)} %`
 		},
 		{
 			tab: 'Suspend Settings',
@@ -271,10 +266,7 @@ this.manifest = {
 			min: 1,
 			step: 1,
 			display: true,
-			displayModifier: function (value) {
-				'use strict';
-				return Math.floor(value) + ' tabs';
-			}
+			displayModifier: (value) => `${Math.floor(value)} tabs`
 		},
 		{
 			tab: 'Auto-close Tabs',
@@ -517,7 +509,7 @@ this.manifest = {
 			name: 'resetAllSettings',
 			type: 'button',
 			text: 'Reset All Settings to default',
-			onclick: function () {
+			onclick: () => {
 				if (window.confirm('Are you sure that you want to reset all Tab Suspender settings?'))
 					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:resetAllSettings]' });
 			}
@@ -535,10 +527,10 @@ this.manifest = {
 			name: 'exportAllSettings',
 			type: 'button',
 			text: 'Export Settings',
-			onclick: function () {
+			onclick: () => {
 				function download(filename, text) {
-					let element = document.createElement('a');
-					element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+					const element = document.createElement('a');
+					element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`);
 					element.setAttribute('download', filename);
 
 					element.style.display = 'none';
@@ -549,7 +541,7 @@ this.manifest = {
 					document.body.removeChild(element);
 				}
 
-				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:exportAllSettings]' }, function (response) {
+				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:exportAllSettings]' }, (response) => {
 					download('TabSuspender.cfg', response.settings);
 				});
 			}
@@ -567,8 +559,8 @@ this.manifest = {
 			name: 'importAllSettings',
 			type: 'button',
 			text: 'Import Settings',
-			onclick: function () {
-				let element = document.createElement('input');
+			onclick: () => {
+				const element = document.createElement('input');
 				element.setAttribute('type', 'file');
 				//element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
 				//element.setAttribute('download', filename);
@@ -582,7 +574,7 @@ this.manifest = {
 					console.log('changed: ', event);
 					const reader = new FileReader();
 					reader.onload = (event) => {
-						let settings = event.target.result;
+						const settings = event.target.result;
 						console.log(settings);
 						if (window.confirm('Are you sure that you want to Import New Tab Suspender settings?')) {
 							//debugger;

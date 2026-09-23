@@ -16,11 +16,11 @@
  *   cd test/puppeteer && pnpm exec tsx bulk-tab-operations.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
-import { getExtensionId, evalInSW, queryChromeTabs, waitForParkPages, getParkPages, parkUrlPrefix } from './base/ExtensionHelper.js';
+import { getExtensionId, evalInSW, queryChromeTabs, waitForParkPages, parkUrlPrefix } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
 		log('  park.html appeared for suspended tabs');
 
 		const tabsAfterSuspend = await queryChromeTabs(browser);
-		const parkTabs17 = tabsAfterSuspend.filter((t) => t.url && t.url.startsWith(parkPrefix));
+		const parkTabs17 = tabsAfterSuspend.filter((t) => t.url?.startsWith(parkPrefix));
 		const controlStillActive = tabsAfterSuspend.find((t) => t.id === activeTab?.id);
 
 		runner.assert(parkTabs17.length >= 1, `At least 1 tab suspended (got ${parkTabs17.length})`);
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
 		let parkCountAfter = parkCountBefore;
 		while (Date.now() < deadline) {
 			const currentTabs = await queryChromeTabs(browser);
-			parkCountAfter = currentTabs.filter((t) => t.url && t.url.startsWith(parkPrefix)).length;
+			parkCountAfter = currentTabs.filter((t) => t.url?.startsWith(parkPrefix)).length;
 			if (parkCountAfter === 0) break;
 			await sleep(1000);
 		}
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
 
 		// Verify example.com is back
 		const tabsAfterRestore = await queryChromeTabs(browser);
-		const exampleBack = tabsAfterRestore.find((t) => t.url && t.url.includes('example.com'));
+		const exampleBack = tabsAfterRestore.find((t) => t.url?.includes('example.com'));
 		runner.softAssert(exampleBack != null, 'example.com tab restored to original URL');
 
 		// ══════════════════════════════════════════════════════════════════════════
@@ -154,12 +154,9 @@ async function main(): Promise<void> {
 
 		const activeBeforeSuspend = await getActiveTab(browser);
 		log(`  Active tab to suspend: ID=${activeBeforeSuspend?.id} url=${activeBeforeSuspend?.url}`);
-		runner.assert(
-			activeBeforeSuspend != null && activeBeforeSuspend.url?.includes('example.com'),
-			'example.com is the active tab before force-suspend'
-		);
+		runner.assert(activeBeforeSuspend?.url?.includes('example.com'), 'example.com is the active tab before force-suspend');
 
-		const currentTabId = activeBeforeSuspend!.id;
+		const currentTabId = activeBeforeSuspend?.id;
 
 		// Simulate "Suspend Current Tab" command: parkTab(activeTab, activeTab.id)
 		await evalInSW(

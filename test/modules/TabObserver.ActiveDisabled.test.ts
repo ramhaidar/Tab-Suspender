@@ -120,11 +120,11 @@ describe('TabObserver - active: false disables auto-suspension', () => {
 		(global as any).TabManager = TabManager;
 
 		require('../../modules/TabObserver');
-		TabObserverClass = (global as any).TabObserver || eval('TabObserver');
+		TabObserverClass = (global as any).TabObserver;
 
 		tabManager = new TabManager();
 
-		(global as any).chrome.windows.getAll = jest.fn((options, callback) => {
+		(global as any).chrome.windows.getAll = jest.fn((_options, callback) => {
 			callback([{ id: 1, focused: true, tabs: [inactiveTab] }]);
 		});
 	});

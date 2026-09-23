@@ -24,7 +24,7 @@ async function popupQuery(tab) {
 	if (debug) console.log('popupQuery Requested.');
 
 	const tabURLAllowedForPark = TabManager.isTabURLAllowedForPark(tab);
-	let parked;
+	let parked: boolean | undefined;
 	try {
 		parked = tabManager.getTabInfoOrCreate(tab).parked;
 		// eslint-disable-next-line no-empty
@@ -33,7 +33,7 @@ async function popupQuery(tab) {
 		console.trace(e);
 	}
 
-	if (debug) console.log('Park alowed: ' + tabURLAllowedForPark, 'parked: ', parked == true, tab);
+	if (debug) console.log(`Park alowed: ${tabURLAllowedForPark}`, 'parked: ', parked === true, tab);
 
 	return <PopupQueryBGResponse>{
 		successful: true,
@@ -42,7 +42,7 @@ async function popupQuery(tab) {
 		TSSessionId,
 		active: await settings.get('active'),
 		timeout: await settings.get('timeout'),
-		parked: parked == true,
+		parked: parked === true,
 		pauseTics: pauseTics,
 		pauseTicsStartedFrom: pauseTicsStartedFrom,
 		// eslint-disable-next-line no-undef

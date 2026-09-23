@@ -1,4 +1,4 @@
-function changeFancySettingsHandler() {
+function _changeFancySettingsHandler() {
 	console.log('settingsChaged');
 	//TODO:!!!!!!!!!
 	chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:ReloadSettings]' });
@@ -7,19 +7,17 @@ function changeFancySettingsHandler() {
 	console.log('ReloadMessageSended!');
 }
 
-window.addEvent('domready', function () {
+window.addEvent('domready', () => {
 	// Option 1: Use the manifest:
-	new FancySettings.initWithManifest(function (settings) {
+	new FancySettings.initWithManifest((settings) => {
 		console.log(settings);
 		//settings.search.events = new Array();
-		settings.caller = function (arg) {
+		settings.caller = (_arg) => {
 			console.log('applied');
 		};
 	});
 
-	document.getElementById('donateButton').onclick = function () {
-		'use strict';
-
+	document.getElementById('donateButton').onclick = () => {
 		void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:donate]' });
 		//setTimeout(function(){window.close();}, 300);
 

@@ -10,17 +10,17 @@ class LocalStore {
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	static async get(key: string): Promise<any> {
-		this.checkKey(key);
+		LocalStore.checkKey(key);
 		return (await chrome.storage.local.get([key]))[key];
 	}
 
 	static set(key: string, value: unknown): Promise<void> {
-		this.checkKey(key);
+		LocalStore.checkKey(key);
 		return chrome.storage.local.set({ [key]: value });
 	}
 
 	static remove(key: string): Promise<void> {
-		this.checkKey(key);
+		LocalStore.checkKey(key);
 		return chrome.storage.local.remove(key);
 	}
 

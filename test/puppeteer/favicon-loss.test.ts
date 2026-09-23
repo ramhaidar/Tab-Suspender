@@ -27,9 +27,9 @@
  *   cd test/puppeteer && pnpm exec tsx favicon-loss.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import { getExtensionId, evalInSW, suspendTabById, discardTabById, waitForParkPages, getParkPages } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
@@ -118,7 +118,7 @@ async function testParkFaviconRendering(
 
 			// Measure canvas dimensions from the data URI by decoding the PNG header
 			// PNG width/height are at bytes 16-23 (big-endian uint32)
-			if (href && href.startsWith('data:image/png;base64,')) {
+			if (href?.startsWith('data:image/png;base64,')) {
 				const b64 = href.slice('data:image/png;base64,'.length);
 				try {
 					const binary = atob(b64);

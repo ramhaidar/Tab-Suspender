@@ -83,7 +83,7 @@ const TabObserver = {
 (global as any).HistoryOpenerController = HistoryOpenerController;
 (global as any).TabObserver = TabObserver;
 
-function sleep(ms: number): Promise<void> {
+function _sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -97,7 +97,7 @@ describe('TabManager Integration Tests', () => {
 	let onReplacedCallback: (addedTabId: number, removedTabId: number) => void;
 	let onUpdatedCallback: (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => void;
 	let onRemovedCallback: (tabId: number, removeInfo: chrome.tabs.TabRemoveInfo) => void;
-	let onActivatedCallback: (activeInfo: chrome.tabs.TabActiveInfo) => void;
+	let _onActivatedCallback: (activeInfo: chrome.tabs.TabActiveInfo) => void;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -122,7 +122,7 @@ describe('TabManager Integration Tests', () => {
 			onRemovedCallback = callback;
 		});
 		(global as any).chrome.tabs.onActivated.addListener = jest.fn((callback) => {
-			onActivatedCallback = callback;
+			_onActivatedCallback = callback;
 		});
 
 		// Re-import modules

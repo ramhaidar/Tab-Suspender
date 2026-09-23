@@ -4,7 +4,7 @@
 // License: LGPL v2.1
 //
 (function () {
-	var FancySettings = (this.FancySettings = new Class({
+	var FancySettings = new Class({
 		tabs: {},
 
 		initialize: function (name, icon) {
@@ -14,7 +14,7 @@
 			$('icon').set('src', icon);
 			$('settings-label').innerHTML = i18n.get('settings'); //$("settings-label").set("text", (i18n.get("settings") || "Settings"));
 			$('search-label').set('text', i18n.get('search') || 'Search');
-			$('search').set('placeholder', (i18n.get('search') || 'Search') + '...');
+			$('search').set('placeholder', `${i18n.get('search') || 'Search'}...`);
 
 			this.tab = new Tab($('tab-container'), $('content'));
 			this.search = new Search($('search'), $('search-result-container'));
@@ -72,7 +72,7 @@
 			return bundle;
 		},
 
-		align: function (settings) {
+		align: (settings) => {
 			var types, type, maxWidth;
 
 			types = ['text', 'button', 'slider', 'popupButton'];
@@ -83,7 +83,7 @@
 				throw 'invalidType';
 			}
 
-			settings.each(function (setting) {
+			settings.each((setting) => {
 				if (setting.params.type !== type) {
 					throw 'multipleTypes';
 				}
@@ -94,28 +94,28 @@
 				}
 			});
 
-			settings.each(function (setting) {
+			settings.each((setting) => {
 				var width = setting.label.offsetWidth;
 				if (width < maxWidth) {
 					if (type === 'button' || type === 'slider') {
-						setting.element.setStyle('margin-left', maxWidth - width + 2 + 'px');
-						setting.search.element.setStyle('margin-left', maxWidth - width + 2 + 'px');
+						setting.element.setStyle('margin-left', `${maxWidth - width + 2}px`);
+						setting.search.element.setStyle('margin-left', `${maxWidth - width + 2}px`);
 					} else {
-						setting.element.setStyle('margin-left', maxWidth - width + 'px');
-						setting.search.element.setStyle('margin-left', maxWidth - width + 'px');
+						setting.element.setStyle('margin-left', `${maxWidth - width}px`);
+						setting.search.element.setStyle('margin-left', `${maxWidth - width}px`);
 					}
 				}
 			});
 		}
-	}));
+	});
 
-	FancySettings.__proto__.initWithManifest = function (callback) {
+	Object.getPrototypeOf(FancySettings).initWithManifest = (callback) => {
 		var settings, output;
 
 		settings = new FancySettings(manifest.name, manifest.icon);
 		settings.manifest = {};
 
-		manifest.settings.each(function (params) {
+		manifest.settings.each((params) => {
 			output = settings.create(params);
 			if (params.name !== undefined) {
 				settings.manifest[params.name] = output;
@@ -124,10 +124,8 @@
 
 		if (manifest.alignment !== undefined) {
 			document.body.addClass('measuring');
-			manifest.alignment.each(function (group) {
-				group = group.map(function (name) {
-					return settings.manifest[name];
-				});
+			manifest.alignment.each((group) => {
+				group = group.map((name) => settings.manifest[name]);
 				settings.align(group);
 			});
 			document.body.removeClass('measuring');
@@ -137,4 +135,5 @@
 			callback(settings);
 		}
 	};
+	this.FancySettings = FancySettings;
 })();

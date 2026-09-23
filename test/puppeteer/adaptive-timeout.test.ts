@@ -32,9 +32,9 @@
  *   cd test/puppeteer && pnpm exec tsx adaptive-timeout.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { Page } from 'puppeteer';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {

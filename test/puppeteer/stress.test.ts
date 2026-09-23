@@ -14,11 +14,11 @@
  *   2. Reopen with --restore-last-session → verify suspension + extension health
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
-import { getExtensionId, parkAllTabs, queryChromeTabs, parkUrlPrefix } from './base/ExtensionHelper.js';
+import { getExtensionId, parkAllTabs, parkUrlPrefix } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

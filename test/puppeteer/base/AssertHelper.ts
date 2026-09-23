@@ -57,7 +57,9 @@ export function createTestRunner(): TestRunner {
 			log(`══════════════════════════════════════════════`);
 			if (issues.length > 0) {
 				log('\n  Failed checks:');
-				issues.forEach((i) => log(`    • ${i}`));
+				issues.forEach((i) => {
+					log(`    • ${i}`);
+				});
 			}
 		},
 

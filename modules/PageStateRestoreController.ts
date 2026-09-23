@@ -25,26 +25,22 @@ class PageStateRestoreController {
 	 *
 	 */
 	async getFormRestoreDataAndRemove(actualTabId) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		const targetMapEntry = this.getTargetMapEntry(actualTabId);
 		if (targetMapEntry == null) return null;
 
 		//void LocalStore.remove(key);
 
-		const storedTabIdInt = parseInt(targetMapEntry.storedAsTabId);
+		const storedTabIdInt = parseInt(targetMapEntry.storedAsTabId, 10);
 
-		return new Promise<FormRestoreInfo>((resolve, reject) => {
+		return new Promise<FormRestoreInfo>((resolve, _reject) => {
 			database.queryIndex(
 				{
 					IDB: {
-						// @ts-ignore
 						table: FD_DB_NAME
 					},
 					params: [storedTabIdInt]
 				},
-				function (fields) {
+				(fields) => {
 					if (fields == null) {
 						console.warn(`FD Fields list from BD is null, storedTabIdInt: ${storedTabIdInt}`);
 						resolve(null);
@@ -53,7 +49,7 @@ class PageStateRestoreController {
 
 					if (debugScreenCache) console.log('getScreen result: ', Date.now());
 
-					void self.deleteDataRecord(actualTabId);
+					void this.deleteDataRecord(actualTabId);
 
 					resolve({ formData: fields.data, url: targetMapEntry.url });
 				}
@@ -64,7 +60,6 @@ class PageStateRestoreController {
 	async deleteDataRecord(tabId: number) {
 		database.executeDelete({
 			IDB: {
-				// @ts-ignore
 				table: FD_DB_NAME,
 				params: [tabId],
 				ignoreNotFound: true
@@ -88,8 +83,8 @@ class PageStateRestoreController {
 	 */
 	async collectPageState(tabId: number) {
 		let finished = false;
-		return new Promise((resolve) => {
-			chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:CollectPageState]' }, function (response /*{ formData, videoTime }*/) {
+		return new Promise<{ videoTime?: number }>((resolve) => {
+			chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:CollectPageState]' }, (response /*{ formData, videoTime }*/) => {
 				if (debug) console.log('FData: ', response.formData);
 
 				if (response.formData && Object.keys(response.formData).length !== 0 && response.formData.constructor === Object) {
@@ -105,7 +100,6 @@ class PageStateRestoreController {
 					database.putV2([
 						{
 							IDB: {
-								// @ts-ignore
 								table: FD_DB_NAME,
 								data: data
 							}
@@ -128,7 +122,7 @@ class PageStateRestoreController {
 	 */
 	expectRestore(actualTabId, storedAsTabId, url) {
 		if (actualTabId != null && storedAsTabId != null)
-			this.tabMap[actualTabId] = { timestamp: new Date().getTime(), storedAsTabId: storedAsTabId, url: url };
+			this.tabMap[actualTabId] = { timestamp: Date.now(), storedAsTabId: storedAsTabId, url: url };
 	}
 
 	/**
@@ -136,7 +130,7 @@ class PageStateRestoreController {
 	 */
 	cleanup() {
 		for (const key in this.tabMap)
-			if (this.tabMap.hasOwnProperty(key)) if (this.isTabMapEntryOutdated(this.tabMap[key])) delete this.tabMap[key];
+			if (Object.hasOwn(this.tabMap, key)) if (this.isTabMapEntryOutdated(this.tabMap[key])) delete this.tabMap[key];
 	}
 
 	/**

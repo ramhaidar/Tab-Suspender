@@ -9,7 +9,6 @@ const SETTINGS_STORAGE_NAMESPACE = 'tabSuspenderSettings'; /* Also has duplicats
 trackErrors('settings_page', true);
 
 // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
-// @ts-ignore
 class SettingsStoreClient {
 	private readonly namespace: string = SETTINGS_STORAGE_NAMESPACE;
 
@@ -19,8 +18,8 @@ class SettingsStoreClient {
 
 	getSync(name: string) {
 		return new Promise((resolve) => {
-			chrome.storage.sync.get([name], function (result) {
-				console.log(`[GET] Sync Value currently is [${name}]: ` + result[name]);
+			chrome.storage.sync.get([name], (result) => {
+				console.log(`[GET] Sync Value currently is [${name}]: ${result[name]}`);
 				try {
 					resolve(JSON.parse(result[name]));
 				} catch {
@@ -31,7 +30,7 @@ class SettingsStoreClient {
 	}
 
 	private static genName(name: string, namespace: string) {
-		return 'store.' + (namespace ? namespace : SETTINGS_STORAGE_NAMESPACE) + '.' + name;
+		return `store.${namespace ? namespace : SETTINGS_STORAGE_NAMESPACE}.${name}`;
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,7 +39,7 @@ class SettingsStoreClient {
 			throw new Error(`SettingsStore.get(): Unknown property '${name}'`);
 		}
 
-		name = this.genName(name, namespace);
+		name = SettingsStoreClient.genName(name, namespace);
 
 		return (await chrome.storage.local.get([name]))[name];
 	}
@@ -52,7 +51,7 @@ class SettingsStoreClient {
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	static async getAll(namespace: string): Promise<object> {
-		const keys = Object.keys(DEFAULT_SETTINGS).map((key) => this.genName(key, namespace));
+		const keys = Object.keys(DEFAULT_SETTINGS).map((key) => SettingsStoreClient.genName(key, namespace));
 
 		return await chrome.storage.local.get(keys);
 	}
@@ -134,15 +133,14 @@ class SettingsStoreClient {
 	removeSync(name: string): Promise<void> {
 		return chrome.storage.sync
 			.remove([name])
-			.then(function () {
-				console.log('Sync Value removed: ' + name);
+			.then(() => {
+				console.log(`Sync Value removed: ${name}`);
 			})
 			.catch(console.error);
 	}
 }
 
 // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
-// @ts-ignore
 class SettingsStore extends SettingsStoreClient {
 	private readonly offscreenDocumentProvider: OffscreenDocumentProvider;
 	private readonly onStorageInitialized: Promise<void>;
@@ -161,7 +159,7 @@ class SettingsStore extends SettingsStoreClient {
 					console.error('[SettingsStore] sync.get() failed, continuing without sync data:', err);
 					return {} as Record<string, any>;
 				})
-				.then(async (items) => {
+				.then(async (_items) => {
 					/* TODO: Implement sync from sync server
                 if (!chrome.runtime.lastError) {
                     console.log('Retrieve Sync changes and cache locally....');
@@ -195,7 +193,7 @@ class SettingsStore extends SettingsStoreClient {
 						console.error(`Default Settings is null!`);
 					}
 
-					chrome.storage.onChanged.addListener(function (changes, namespace) {
+					chrome.storage.onChanged.addListener((changes, namespace) => {
 						if (namespace === 'sync') {
 							for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
 								// TODO: Implement sync from sync server
@@ -219,9 +217,6 @@ class SettingsStore extends SettingsStoreClient {
 	}
 
 	private async initOrMigrateSettings(offscreenDocumentProvider: OffscreenDocumentProvider, default_settings: Settings) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		// Migration from old V2 Manifest settings...
 		if (!(await this.get('localStorageMigrated'))) {
 			// Before running V2 migration check sync storage. If the flag is
@@ -232,7 +227,7 @@ class SettingsStore extends SettingsStoreClient {
 			let skipV2Migration = false;
 			try {
 				const syncResult = await chrome.storage.sync.get(['localStorageMigrated']);
-				if (syncResult['localStorageMigrated']) {
+				if (syncResult.localStorageMigrated) {
 					await this.set('localStorageMigrated', true, true); // restore to local only
 					skipV2Migration = true;
 					console.log('[SettingsStore] V2 migration already done (found in sync), skipping re-migration');
@@ -244,17 +239,17 @@ class SettingsStore extends SettingsStoreClient {
 			if (!skipV2Migration) {
 				const oldSettings = await offscreenDocumentProvider.extractOldSettings(Object.keys(default_settings));
 
-				if (oldSettings['active'] != undefined) {
+				if (oldSettings.active !== undefined) {
 					console.log(`Need to migrate Old Settings...`);
 
 					console.log(`Old Settings: `, oldSettings);
 
 					for (const key in oldSettings) {
-						if (oldSettings.hasOwnProperty(key)) {
+						if (Object.hasOwn(oldSettings, key)) {
 							const currentValue = await this.get(key);
-							if (currentValue == undefined) {
-								const value = self.checkTypeAndCast(key, oldSettings[key]);
-								if (value == null || typeof value != GET_SETTINGS_TYPE(key)) await this.set(key, default_settings[key], true);
+							if (currentValue === undefined) {
+								const value = this.checkTypeAndCast(key, oldSettings[key]);
+								if (value == null || typeof value !== GET_SETTINGS_TYPE(key)) await this.set(key, default_settings[key], true);
 								else await this.set(key, value, true);
 							}
 						}
@@ -275,9 +270,9 @@ class SettingsStore extends SettingsStoreClient {
 
 		// Store DEFAULT_SETTINGS
 		for (const key in default_settings) {
-			if (default_settings.hasOwnProperty(key)) {
+			if (Object.hasOwn(default_settings, key)) {
 				const storedValue = await this.get(key);
-				if (storedValue == undefined || typeof storedValue != GET_SETTINGS_TYPE(key)) {
+				if (storedValue === undefined || typeof storedValue !== GET_SETTINGS_TYPE(key)) {
 					// Before resetting to default, try chrome.storage.sync as a fallback.
 					// This recovers user preferences when local storage is corrupted
 					// (disk full, LevelDB crash, Chrome profile repair, etc.).
@@ -401,12 +396,9 @@ class SettingsStore extends SettingsStoreClient {
 	async removeAll() {
 		await this.removeAllSync();
 
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		await Promise.all(
 			Object.keys(DEFAULT_SETTINGS).map(async (key) => {
-				self.remove(key);
+				this.remove(key);
 			})
 		);
 
@@ -416,22 +408,19 @@ class SettingsStore extends SettingsStoreClient {
 	removeAllSync(): Promise<void> {
 		return chrome.storage.sync
 			.clear()
-			.then(function () {
+			.then(() => {
 				console.log('Sync Value removedAll: ');
 			})
 			.catch(console.error);
 	}
 
 	async toObject() {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		let value: unknown;
 		const values = {};
 
 		await Promise.all(
 			Object.keys(DEFAULT_SETTINGS).map(async (key) => {
-				value = await self.get(key);
+				value = await this.get(key);
 				// Include all settings, using default value if undefined
 				if (value !== undefined) {
 					values[key] = value;
@@ -455,7 +444,7 @@ class SettingsStore extends SettingsStoreClient {
 		const validatedSettings = {};
 
 		for (const key in values) {
-			if (values.hasOwnProperty(key)) {
+			if (Object.hasOwn(values, key)) {
 				// Only import settings that exist in DEFAULT_SETTINGS
 				if (key in DEFAULT_SETTINGS) {
 					// Type check and cast the value
@@ -511,11 +500,11 @@ class SettingsStore extends SettingsStoreClient {
 		const validatedSettings = {};
 
 		for (const key in values) {
-			if (values.hasOwnProperty(key)) {
+			if (Object.hasOwn(values, key)) {
 				// Only import settings that exist in DEFAULT_SETTINGS
 				if (key in DEFAULT_SETTINGS) {
 					// Type check and cast the value (skip if SETTINGS_TYPES not available)
-					let validatedValue;
+					let validatedValue: unknown;
 					try {
 						validatedValue = this.checkTypeAndCast(key, values[key]);
 					} catch (error) {
@@ -545,8 +534,8 @@ class SettingsStore extends SettingsStoreClient {
 }
 
 if (typeof global !== 'undefined') {
-	// @ts-ignore
+	// @ts-expect-error
 	global.SettingsStore = SettingsStore;
-	// @ts-ignore
+	// @ts-expect-error
 	global.SettingsStoreClient = SettingsStoreClient;
 }

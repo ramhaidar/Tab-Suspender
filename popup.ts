@@ -5,12 +5,10 @@
  * Zadorozhniy.Sergey@gmail.com
  */
 
-'use strict';
-
 (() => {
-	let currentTab,
-		pauseTics,
-		pauseTicsStartedFrom,
+	let currentTab: chrome.tabs.Tab,
+		pauseTics: number,
+		pauseTicsStartedFrom: number,
 		ignodeCurrentTabChecked = false,
 		tabInWhiteList = false;
 	let popupQueryBGResponse: PopupQueryBGResponse;
@@ -24,12 +22,12 @@
 		showSessions = false;
 	}
 
-	$(window).load(function () {
+	$(window).load(() => {
 		document.getElementById('slider').focus();
 		document.getElementById('main-slider').focus();
 	});
 
-	document.addEventListener('DOMContentLoaded', function () {
+	document.addEventListener('DOMContentLoaded', () => {
 		const isDarkModeEnabled = isDarkMode();
 
 		if (isDarkModeEnabled) {
@@ -60,7 +58,7 @@
 		const elementsWithLocalTitles = document.querySelectorAll('[title^="__MSG_"]');
 		console.log('Found elements with __MSG_ titles:', elementsWithLocalTitles.length);
 		for (const i in elementsWithLocalTitles)
-			if (elementsWithLocalTitles.hasOwnProperty(i)) {
+			if (Object.hasOwn(elementsWithLocalTitles, i)) {
 				// @ts-expect-error
 				const titleKey = elementsWithLocalTitles[i].title;
 				if (titleKey != null) {
@@ -78,7 +76,7 @@
 		const elementsWithDataI18n = document.querySelectorAll('[data-i18n]');
 		console.log('Found elements with data-i18n:', elementsWithDataI18n.length);
 		for (const i in elementsWithDataI18n)
-			if (elementsWithDataI18n.hasOwnProperty(i)) {
+			if (Object.hasOwn(elementsWithDataI18n, i)) {
 				const msgKey = elementsWithDataI18n[i].getAttribute('data-i18n');
 				if (msgKey != null) {
 					const localizedMsg = chrome.i18n.getMessage(msgKey);
@@ -91,15 +89,16 @@
 
 		//BG = chrome.extension.getBackgroundPage();
 
-		chrome.tabs.query({ currentWindow: true, active: true }, async function (tabs) {
+		chrome.tabs.query({ currentWindow: true, active: true }, async (tabs) => {
 			try {
 				currentTab = tabs[0];
 				//let manifest = chrome.runtime.getManifest();
 
-				const res: PopupQueryBGResponse = (popupQueryBGResponse = await chrome.runtime.sendMessage({
+				const res: PopupQueryBGResponse = await chrome.runtime.sendMessage({
 					method: '[AutomaticTabCleaner:popupQuery]',
 					tab: currentTab
-				}));
+				});
+				popupQueryBGResponse = res;
 
 				if (res.isTabInIgnoreTabList) {
 					ignodeCurrentTabChecked = true;
@@ -122,7 +121,7 @@
 				recalculatePauseStatus();
 
 				if (res.active != null) {
-					// @ts-ignore
+					// @ts-expect-error
 					$('#tabSuspenderActive').attr('checked', res.active);
 					changePausedUI(!res.active);
 				}
@@ -146,7 +145,7 @@
 					document.getElementById('sessionSection').style.display = 'none';
 				}
 
-				if (tabs[0].url.indexOf(chrome.runtime.getURL('park.html')) == 0) suspBtnSetSusp('#suspend');
+				if (tabs[0].url.indexOf(chrome.runtime.getURL('park.html')) === 0) suspBtnSetSusp('#suspend');
 
 				// Pause
 				pauseTics = res.pauseTics;
@@ -154,7 +153,7 @@
 
 				if (pauseTics > 0)
 					if (pauseInterval == null)
-						pauseInterval = setInterval(function () {
+						pauseInterval = setInterval(() => {
 							pauseTics--;
 							recalculatePauseStatus();
 						}, 1000);
@@ -193,7 +192,7 @@
 
 				if (res.limitOfOpenedTabs != null) sliderRecycleKeep.update({ from: res.limitOfOpenedTabs, disable: !res.isCloseTabsOn });
 
-				document.getElementById('versionSpan').innerText = 'v' + res.TSVersion;
+				document.getElementById('versionSpan').innerText = `v${res.TSVersion}`;
 
 				if (debug) document.getElementById('tabId').textContent = String(res.tabId);
 			} catch (e) {
@@ -201,7 +200,7 @@
 				chrome.runtime
 					.sendMessage({
 						method: '[AutomaticTabCleaner:trackError]',
-						message: 'Error in Popup' + e.message,
+						message: `Error in Popup${e.message}`,
 						stack: e.stack
 					})
 					.catch(console.error);
@@ -218,18 +217,16 @@
 			const numseconds = (((seconds % 31536000) % 86400) % 3600) % 60;
 			return (
 				'   ' +
-				(numDays > 0 ? numDays + ' day ' : '') +
-				(numhours > 0 ? numhours + ' hour ' : '') +
-				(numminutes > 0 ? numminutes + ' min ' : '') +
-				(numseconds > 0 && numminutes <= 10 ? numseconds + ' sec' : '')
+				(numDays > 0 ? `${numDays} day ` : '') +
+				(numhours > 0 ? `${numhours} hour ` : '') +
+				(numminutes > 0 ? `${numminutes} min ` : '') +
+				(numseconds > 0 && numminutes <= 10 ? `${numseconds} sec` : '')
 			);
 		}
 
-		// eslint-disable-next-line prefer-const
-		let slider;
-		// eslint-disable-next-line prefer-const
-		let sliderRecycleAfter;
-		// @ts-ignore
+		let slider: { old_from: number; options: { max: number }; update: (options: Record<string, unknown>) => void } | undefined;
+		let sliderRecycleAfter: { old_from: number; options: { max: number }; update: (options: Record<string, unknown>) => void } | undefined;
+		// @ts-expect-error
 		$('.js-range-slider').ionRangeSlider({
 			grid: true,
 			min: 0,
@@ -253,7 +250,7 @@
 				else
 					result = (numhours > 0 ? numhours + ' hour' : '') + (numhours < 1 || numhours > 1 && numminutes > 0 ? numminutes + ' min' : '');*/
 
-				setTimeout(function () {
+				setTimeout(() => {
 					updateJsRangeSliderTitle(result);
 				}, 100);
 
@@ -266,7 +263,7 @@
 
 				return result;
 			},
-			onFinish: function (data) {
+			onFinish: (data) => {
 				console.log('onFinish', data);
 				//if (data.from > 1300 && this.max === 3600) {
 				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', timeout: data.from }).catch(console.log);
@@ -279,7 +276,7 @@
 				const steps = 30;
 				const step = (targetMax - startedMax) / steps;
 				let iteration = 0;
-				const interval = setInterval(function () {
+				const interval = setInterval(() => {
 					iteration++;
 					if (iteration === steps) {
 						clearInterval(interval);
@@ -325,7 +322,7 @@
 
 				let result = (numhours > 0 ? numhours + ' h ' : '') + (numminutes > 0 ? numminutes + ' min ' : '');*/
 				const result = secondsHumanise(seconds);
-				setTimeout(function () {
+				setTimeout(() => {
 					updateRecycleAfterSliderTitle(result);
 				}, 100);
 
@@ -338,10 +335,10 @@
 
 				return (
 					chrome.i18n.getMessage('wizard_recycleAfterSliderValue', [result]) ||
-					'Can close tabs after <b class="slider-value">' + result + '</b> of tab inactivity'
+					`Can close tabs after <b class="slider-value">${result}</b> of tab inactivity`
 				);
 			},
-			onFinish: function (data) {
+			onFinish: (data) => {
 				console.log('onFinish', data);
 
 				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', closeTimeout: data.from }).catch(console.error);
@@ -367,17 +364,17 @@
 			keyboard: true,
 			keyboard_step: 0.9,
 			prettify_enabled: true,
-			prettify: function (seconds) {
-				setTimeout(function () {
+			prettify: (seconds) => {
+				setTimeout(() => {
 					updateRecycleKeepSliderTitle(seconds);
 				}, 100);
 
 				return (
 					chrome.i18n.getMessage('wizard_recycleKeepSliderValue', [seconds]) ||
-					'...and only when window have more than <b class="slider-value">' + seconds + '</b> opened tabs'
+					`...and only when window have more than <b class="slider-value">${seconds}</b> opened tabs`
 				);
 			},
-			onFinish: function (data) {
+			onFinish: (data) => {
 				chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', limitOfOpenedTabs: data.from }).catch(console.error);
 			}
 		});
@@ -392,20 +389,20 @@
 		function renderPreviews() {
 			document.getElementById('previewsBar').innerHTML = '';
 
-			chrome.windows.getCurrent({ populate: true }, function (window) {
+			chrome.windows.getCurrent({ populate: true }, (window) => {
 				const windows = [window];
 				const parkUrl = chrome.runtime.getURL('park.html');
 				const sessionsUrl = chrome.runtime.getURL('sessions.html');
 				const TSSessionId = popupQueryBGResponse.TSSessionId;
 
 				for (const wi in windows) {
-					if (windows.hasOwnProperty(wi)) {
+					if (Object.hasOwn(windows, wi)) {
 						//let tabs = [];
 						for (const j in windows[wi].tabs)
-							if (windows[wi].tabs.hasOwnProperty(j)) {
+							if (Object.hasOwn(windows[wi].tabs, j)) {
 								const tab = windows[wi].tabs[j];
-								if (tab.url.indexOf(sessionsUrl) == 0) continue;
-								const parked = tab.url.indexOf(parkUrl) == 0;
+								if (tab.url.indexOf(sessionsUrl) === 0) continue;
+								const parked = tab.url.indexOf(parkUrl) === 0;
 								const tabMeta = {
 									title: tab.title,
 									url: parked ? parseUrlParam(tab.url, 'url') : tab.url,
@@ -415,7 +412,7 @@
 									nativeWindowId: windows[wi].id
 								};
 
-								// @ts-ignore
+								// @ts-expect-error
 								const divLine: HTMLDivElement = drawPreviewTile(tabMeta, {
 									noTime: true,
 									//close: true,
@@ -425,19 +422,19 @@
 									popuped: true
 								});
 
-								(divLine.getElementsByClassName('card-img-a')[0] as HTMLDivElement).onclick = function () {
+								(divLine.getElementsByClassName('card-img-a')[0] as HTMLDivElement).onclick = () => {
 									//e.stopPropagation();
-									chrome.windows.update(tabMeta.nativeWindowId, { focused: true }, function () {
+									chrome.windows.update(tabMeta.nativeWindowId, { focused: true }, () => {
 										console.log('window Updated');
 									});
-									chrome.tabs.update(tabMeta.nativeTabId, { active: true }, function () {
+									chrome.tabs.update(tabMeta.nativeTabId, { active: true }, () => {
 										console.log('tab Updated');
 									});
 									return false;
 								};
 
-								let mousePosition;
-								(divLine.getElementsByClassName('card-img-a')[0] as HTMLDivElement).onmousemove = function (e: MouseEvent) {
+								let mousePosition: [number, number] | null = null;
+								(divLine.getElementsByClassName('card-img-a')[0] as HTMLDivElement).onmousemove = (e: MouseEvent) => {
 									//console.log(e);
 									if ((e.target as HTMLDivElement).classList.contains('zoom')) {
 										if (!mousePosition) {
@@ -447,7 +444,7 @@
 											mousePosition[1] -= e.movementY;
 										}
 										// @ts-expect-error
-										e.target.style.setProperty('transform', `scale(2.5) translateX(${parseInt(mousePosition[0] * 1.4)}px)`, 'important');
+										e.target.style.setProperty('transform', `scale(2.5) translateX(${Math.trunc(mousePosition[0] * 1.4)}px)`, 'important');
 									} else {
 										mousePosition = null;
 										(e.target as HTMLDivElement).style.transform = '';
@@ -492,8 +489,8 @@
 
 		/********************* BINDING EVENTS *******************/
 
-		// @ts-ignore
-		document.querySelector('#settings').onclick = function (options) {
+		// @ts-expect-error
+		document.querySelector('#settings').onclick = (options) => {
 			const manifest = chrome.runtime.getManifest();
 			focusOrOpenTSPage(manifest.options_page, options);
 
@@ -517,79 +514,79 @@
 			return false;
 		};
 
-		// @ts-ignore
-		document.querySelector('#suspendHistory').onclick = function (options) {
+		// @ts-expect-error
+		document.querySelector('#suspendHistory').onclick = (options) => {
 			focusOrOpenTSPage('history.html#suspended', options);
 			return false;
 		};
 
-		// @ts-ignore
-		document.querySelector('#closeHistory').onclick = function (options) {
+		// @ts-expect-error
+		document.querySelector('#closeHistory').onclick = (options) => {
 			focusOrOpenTSPage('history.html#closed', options);
 			return false;
 		};
 
-		// @ts-ignore
-		document.querySelector('#sessionManager').onclick = document.querySelector('#sessionManagerLink').onclick = function (options) {
+		// @ts-expect-error
+		document.querySelector('#sessionManager').onclick = document.querySelector('#sessionManagerLink').onclick = (options) => {
 			focusOrOpenTSPage('sessions.html', options);
 			return false;
 		};
 
-		// @ts-ignore
-		document.querySelector('#hotkeys').onclick = function () {
-			chrome.tabs.create({ url: 'chrome://extensions/configureCommands' }, function () {});
+		// @ts-expect-error
+		document.querySelector('#hotkeys').onclick = () => {
+			chrome.tabs.create({ url: 'chrome://extensions/configureCommands' }, () => {});
 		};
 
-		// @ts-ignore
-		document.querySelector('#suspend').onclick = function () {
-			if (document.querySelector('#suspend').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+		// @ts-expect-error
+		document.querySelector('#suspend').onclick = () => {
+			if (document.querySelector('#suspend').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
 					if (debug) console.log(tabs[0]);
 
-					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:suspendTab]', tab: tabs[0] }, function () {
+					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:suspendTab]', tab: tabs[0] }, () => {
 						suspBtnSetSusp('#suspend');
-						setTimeout(function () {
+						setTimeout(() => {
 							window.close();
 						}, 300);
 					});
 				});
 		};
 
-		// @ts-ignore
-		document.querySelector('#suspendGroup').onclick = function () {
-			if (document.querySelector('#suspendGroup').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:suspendTabGroup]', tab: tabs[0] }, function () {
-						setTimeout(function () {
+		// @ts-expect-error
+		document.querySelector('#suspendGroup').onclick = () => {
+			if (document.querySelector('#suspendGroup').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:suspendTabGroup]', tab: tabs[0] }, () => {
+						setTimeout(() => {
 							window.close();
 						}, 300);
 					});
 				});
 		};
 
-		// @ts-ignore
-		document.querySelector('#suspendWindow').onclick = function () {
-			if (document.querySelector('#suspendWindow').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:suspendWindow]', tab: tabs[0] }, function () {
-						setTimeout(function () {
+		// @ts-expect-error
+		document.querySelector('#suspendWindow').onclick = () => {
+			if (document.querySelector('#suspendWindow').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:suspendWindow]', tab: tabs[0] }, () => {
+						setTimeout(() => {
 							window.close();
 						}, 300);
 					});
 				});
 		};
 
-		// @ts-ignore
-		document.querySelector('#suspendAllOther').onclick = function () {
-			if (document.querySelector('#suspendAllOther').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+		// @ts-expect-error
+		document.querySelector('#suspendAllOther').onclick = () => {
+			if (document.querySelector('#suspendAllOther').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
 					chrome.runtime.sendMessage(
 						{
 							method: '[AutomaticTabCleaner:suspendAllOtherTabs]',
 							tab: tabs[0]
 						},
-						function () {
-							setTimeout(function () {
+						() => {
+							setTimeout(() => {
 								window.close();
 							}, 300);
 						}
@@ -597,18 +594,17 @@
 				});
 		};
 
-		let suspendAllButton;
-		// @ts-ignore
-		(suspendAllButton = document.querySelector('#suspendAll')).onclick = function () {
-			if (suspendAllButton.className.indexOf('disabled') == -1)
+		const suspendAllButton = document.querySelector<HTMLButtonElement>('#suspendAll');
+		suspendAllButton.onclick = () => {
+			if (suspendAllButton.className.indexOf('disabled') === -1)
 				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+				chrome.tabs.query({ currentWindow: true, active: true }, (_tabs) => {
 					chrome.runtime.sendMessage(
 						{
 							method: '[AutomaticTabCleaner:suspendAllTabs]'
 						},
-						function () {
-							setTimeout(function () {
+						() => {
+							setTimeout(() => {
 								window.close();
 							}, 300);
 						}
@@ -616,46 +612,46 @@
 				});
 		};
 
-		// @ts-ignore
-		document.querySelector('#unsuspendAll').onclick = function () {
-			if (document.querySelector('#unsuspendAll').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:unsuspendAllTabs]', tab: tabs[0] }, function () {
-						setTimeout(function () {
+		// @ts-expect-error
+		document.querySelector('#unsuspendAll').onclick = () => {
+			if (document.querySelector('#unsuspendAll').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:unsuspendAllTabs]', tab: tabs[0] }, () => {
+						setTimeout(() => {
 							window.close();
 						}, 300);
 					});
 				});
 		};
 
-		// @ts-ignore
-		document.querySelector('#unsuspendGroup').onclick = function () {
-			if (document.querySelector('#unsuspendGroup').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:unsuspendTabGroup]', tab: tabs[0] }, function () {
-						setTimeout(function () {
+		// @ts-expect-error
+		document.querySelector('#unsuspendGroup').onclick = () => {
+			if (document.querySelector('#unsuspendGroup').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:unsuspendTabGroup]', tab: tabs[0] }, () => {
+						setTimeout(() => {
 							window.close();
 						}, 300);
 					});
 				});
 		};
 
-		// @ts-ignore
-		document.querySelector('#unsuspendWindow').onclick = function () {
-			if (document.querySelector('#unsuspendWindow').className.indexOf('disabled') == -1)
-				chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:unsuspendWindow]', tab: tabs[0] }, function () {
-						setTimeout(function () {
+		// @ts-expect-error
+		document.querySelector('#unsuspendWindow').onclick = () => {
+			if (document.querySelector('#unsuspendWindow').className.indexOf('disabled') === -1)
+				chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+					chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:unsuspendWindow]', tab: tabs[0] }, () => {
+						setTimeout(() => {
 							window.close();
 						}, 300);
 					});
 				});
 		};
 
-		document.getElementById('addToWhilelist').onclick = function () {
+		document.getElementById('addToWhilelist').onclick = () => {
 			if (tabInWhiteList) return;
 
-			chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+			chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
 				if (tabs[0].url.includes('//chrome.google.com')) {
 					chrome.tabs
 						.create({
@@ -676,61 +672,61 @@
 							method: '[AutomaticTabCleaner:DrawAddPageToWhiteListDialog]',
 							tab: tabs[0]
 						},
-						function () {}
+						() => {}
 					);
 			});
 
-			setTimeout(function () {
+			setTimeout(() => {
 				window.close();
 			}, 300);
 		};
 
-		document.getElementById('donate').onclick = function () {
+		document.getElementById('donate').onclick = () => {
 			chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:donate]' }).catch(console.error);
-			setTimeout(function () {
+			setTimeout(() => {
 				window.close();
 			}, 300);
 
 			return false;
 		};
 
-		// @ts-ignore
-		document.querySelector('#pause-first-btn').onclick = function () {
+		// @ts-expect-error
+		document.querySelector('#pause-first-btn').onclick = () => {
 			pause(600);
 		};
-		// @ts-ignore
-		document.querySelector('#pause-second-btn').onclick = function () {
+		// @ts-expect-error
+		document.querySelector('#pause-second-btn').onclick = () => {
 			pause(3599);
 		};
-		// @ts-ignore
-		document.querySelector('#pause-third-btn').onclick = function () {
+		// @ts-expect-error
+		document.querySelector('#pause-third-btn').onclick = () => {
 			pause(3600 * 5);
 		};
-		// @ts-ignore
-		document.querySelector('#pause-forth-btn').onclick = function () {
+		// @ts-expect-error
+		document.querySelector('#pause-forth-btn').onclick = () => {
 			pause(3600 * 24);
 		};
-		// @ts-ignore
-		document.querySelector('#resetPauseTimer').onclick = function () {
+		// @ts-expect-error
+		document.querySelector('#resetPauseTimer').onclick = () => {
 			pause(0);
 		};
 
-		document.getElementById('removePageFromWhitelist').onclick = function () {
+		document.getElementById('removePageFromWhitelist').onclick = () => {
 			chrome.runtime.sendMessage(
 				{
 					method: '[AutomaticTabCleaner:removeUrlFromWhitelist]',
 					url: currentTab.url
 				},
-				function () {}
+				() => {}
 			);
 
 			window.close();
 			return false;
 		};
 
-		// @ts-ignore
-		document.querySelector('#progress-bar').onclick = function () {
-			chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:pause]', pauseTics: 0 }, function (res) {
+		// @ts-expect-error
+		document.querySelector('#progress-bar').onclick = () => {
+			chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:pause]', pauseTics: 0 }, (res) => {
 				document.querySelector('#pause').className = 'menu menu-inline';
 
 				pauseTics = res.pauseTics;
@@ -739,8 +735,8 @@
 			});
 		};
 
-		// @ts-ignore
-		document.querySelector('#ignodeCurrentTab').onclick = function () {
+		// @ts-expect-error
+		document.querySelector('#ignodeCurrentTab').onclick = () => {
 			if (ignodeCurrentTabChecked)
 				chrome.runtime.sendMessage(
 					{
@@ -748,7 +744,7 @@
 						tabId: currentTab.id,
 						action: 'remove'
 					},
-					function () {
+					() => {
 						ignodeCurrentTabChecked = false;
 						document.querySelector('#ignodeCurrentTab').className = 'menu';
 					}
@@ -760,7 +756,7 @@
 						tabId: currentTab.id,
 						action: 'add'
 					},
-					function () {
+					() => {
 						ignodeCurrentTabChecked = true;
 						document.querySelector('#ignodeCurrentTab').className = 'menu checked';
 					}
@@ -768,9 +764,8 @@
 		};
 
 		/* Tab Suspender Active Checkbox */
-		let tabSuspenderActiveCheckbox;
-		// @ts-ignore
-		(tabSuspenderActiveCheckbox = document.querySelector('#tabSuspenderActive')).onchange = function () {
+		const tabSuspenderActiveCheckbox = document.querySelector<HTMLInputElement>('#tabSuspenderActive');
+		tabSuspenderActiveCheckbox.onchange = () => {
 			chrome.runtime
 				.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', isTabSuspenderActive: tabSuspenderActiveCheckbox.checked })
 				.catch(console.error);
@@ -778,9 +773,8 @@
 		};
 
 		/** RECICLE POPUP LOGIC */
-		let recicleTabCheckbox;
-		// @ts-ignore
-		(recicleTabCheckbox = document.querySelector('#recicleTab')).onchange = function () {
+		const recicleTabCheckbox = document.querySelector<HTMLInputElement>('#recicleTab');
+		recicleTabCheckbox.onchange = () => {
 			if (recicleTabCheckbox.checked) {
 				$('.tab-button').addClass('checked');
 				sliderRecycleAfter.update({ disable: false });
@@ -796,9 +790,8 @@
 			}
 		};
 
-		let showWindowSessionByDefaultCheckbox;
-		// @ts-ignore
-		(showWindowSessionByDefaultCheckbox = document.querySelector('#showWindowSessionByDefault')).onchange = function () {
+		const showWindowSessionByDefaultCheckbox = document.querySelector<HTMLInputElement>('#showWindowSessionByDefault');
+		showWindowSessionByDefaultCheckbox.onchange = () => {
 			if (showWindowSessionByDefaultCheckbox.checked) {
 				toggleShowWindowSessions(true);
 			}
@@ -811,84 +804,79 @@
 		};
 
 		let focus = false;
-		// @ts-ignore
-		document.querySelector('.tab-button').onclick = /*document.querySelector('.recicle-section').onmouseover =*/ function () {
+		// @ts-expect-error
+		document.querySelector('.tab-button').onclick = /*document.querySelector('.recicle-section').onmouseover =*/ () => {
 			$('.recicle-section').addClass('visible');
 			$('.tab-button').addClass('visible');
 		};
 
-		$('#recicleTab').click(function (event) {
+		$('#recicleTab').click((event) => {
 			focus = false;
 			event.stopPropagation();
 		});
-		let tabButtonLinkClick;
-		$('.tab-button-link').click(
-			(tabButtonLinkClick = function (event) {
-				if ($('.tab-button').hasClass('visible') && event != null) {
-					//console.log('2', event);
-					focus = false;
-					$('.recicle-section').removeClass('visible');
-					$('.tab-button').removeClass('visible');
-				} else {
-					$('.recicle-section').addClass('visible');
-					$('.tab-button').addClass('visible');
-				}
+		const tabButtonLinkClick = (event: { stopPropagation: () => void } | null) => {
+			if ($('.tab-button').hasClass('visible') && event != null) {
+				//console.log('2', event);
+				focus = false;
+				$('.recicle-section').removeClass('visible');
+				$('.tab-button').removeClass('visible');
+			} else {
+				$('.recicle-section').addClass('visible');
+				$('.tab-button').addClass('visible');
+			}
 
-				if (event != null) event.stopPropagation();
-			})
-		);
+			if (event != null) event.stopPropagation();
+		};
+		$('.tab-button-link').click(tabButtonLinkClick);
 
-		$('.tab-button, .recicle-section').focusin(function () {
+		$('.tab-button, .recicle-section').focusin(() => {
 			//console.log('3');
 			focus = true;
 			console.log('Focus!');
 		});
 
-		// @ts-ignore
-		const focusOutHandler =
-			(document.querySelector('.tab-button').onmouseout =
-			document.querySelector('.recicle-section').onmouseout =
-				function (event?) {
-					if (!event) return;
+		const focusOutHandler = (event?: MouseEvent) => {
+			if (!event) return;
 
-					if (focus) return;
+			if (focus) return;
 
-					if (
-						event &&
-						event.relatedTarget &&
-						($(event.relatedTarget).hasClass('tab-button') ||
-							$(event.relatedTarget).parents('.tab-button').length > 0 ||
-							$(event.relatedTarget).hasClass('recicle-section') ||
-							$(event.relatedTarget).parents('.recicle-section').length > 0)
-					)
-						return;
+			if (
+				event?.relatedTarget &&
+				($(event.relatedTarget).hasClass('tab-button') ||
+					$(event.relatedTarget).parents('.tab-button').length > 0 ||
+					$(event.relatedTarget).hasClass('recicle-section') ||
+					$(event.relatedTarget).parents('.recicle-section').length > 0)
+			)
+				return;
 
-					//console.log('4');
+			//console.log('4');
 
-					$('.recicle-section').removeClass('visible');
-					$('.tab-button').removeClass('visible');
-				});
+			$('.recicle-section').removeClass('visible');
+			$('.tab-button').removeClass('visible');
+		};
+		(document.querySelector('.tab-button') as HTMLElement).onmouseout = focusOutHandler;
+		(document.querySelector('.recicle-section') as HTMLElement).onmouseout = focusOutHandler;
 
-		$('.tab-button, .recicle-section').focusout(function () {
+		$('.tab-button, .recicle-section').focusout(() => {
 			console.log('FocusOut!');
-			setTimeout(function () {
+			setTimeout(() => {
 				focus = false;
 				focusOutHandler();
 			}, 100);
 		});
 
-		let timeoutId;
+		let timeoutId: number | null = null;
 		$('.tab-button').hover(
-			function () {
+			() => {
 				if (!$('.tab-button').hasClass('visible'))
 					if (!timeoutId) {
-						timeoutId = window.setTimeout(function () {
+						timeoutId = window.setTimeout(() => {
 							timeoutId = null; // EDIT: added this line
 							tabButtonLinkClick(null);
 						}, 300);
 					}
 			},
-			function () {
+			() => {
 				if (timeoutId) {
 					window.clearTimeout(timeoutId);
 					timeoutId = null;
@@ -901,15 +889,15 @@
 	 **************** UTILS **************
 	 *************************************/
 
-	const secondsFormater = function (seconds) {
+	const secondsFormater = (seconds) => {
 		const numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
 		const numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
 		const numseconds = (((seconds % 31536000) % 86400) % 3600) % 60;
 		return (
 			'   ' +
-			(numhours > 0 ? numhours + ' hours ' : '') +
-			(numminutes > 0 ? ' ' + numminutes + ' min' : '') +
-			(numseconds > 0 && numhours <= 0 ? ' ' + numseconds + ' sec' : '')
+			(numhours > 0 ? `${numhours} hours ` : '') +
+			(numminutes > 0 ? ` ${numminutes} min` : '') +
+			(numseconds > 0 && numhours <= 0 ? ` ${numseconds} sec` : '')
 		);
 	};
 
@@ -920,17 +908,17 @@
 
 	function recalculatePauseStatus() {
 		if (pauseTics > 0 && pauseTicsStartedFrom > 0) {
-			const width = parseInt(document.body.style.width);
+			const width = parseInt(document.body.style.width, 10);
 			const pxPerProc = width / 100;
 			const procent = pauseTics / (pauseTicsStartedFrom / 100);
-			// @ts-ignore
-			document.querySelector('.progress-bar').style.width = procent * pxPerProc + 'px';
-			// @ts-ignore
+			// @ts-expect-error
+			document.querySelector('.progress-bar').style.width = `${procent * pxPerProc}px`;
+			// @ts-expect-error
 			document.querySelector('.progress-bar').style.left = 0;
 
 			document.querySelector('.progress-bar span').innerHTML = secondsFormater(pauseTics);
 		} else {
-			// @ts-ignore
+			// @ts-expect-error
 			document.querySelector('.progress-bar').style.width = '0px';
 			document.querySelector('.progress-bar span').innerHTML = '';
 		}
@@ -965,7 +953,7 @@
 		const sliders = document.querySelectorAll('#slider');
 
 		for (const i in sliders)
-			if (sliders.hasOwnProperty(i))
+			if (Object.hasOwn(sliders, i))
 				if (paused) {
 					sliders[i].className = 'disabled';
 				} else {
@@ -976,7 +964,7 @@
 	let pauseInterval = null;
 
 	function pause(period) {
-		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:pause]', pauseTics: period }, function (res) {
+		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:pause]', pauseTics: period }, (res) => {
 			document.querySelector('#pause').className = 'menu menu-inline disabled';
 
 			pauseTics = res.pauseTics;
@@ -985,7 +973,7 @@
 		});
 
 		if (pauseInterval == null)
-			pauseInterval = setInterval(function () {
+			pauseInterval = setInterval(() => {
 				pauseTics--;
 				recalculatePauseStatus();
 			}, 1000);

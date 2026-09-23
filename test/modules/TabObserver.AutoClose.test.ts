@@ -342,7 +342,7 @@ describe('TabObserver — Auto-Close Rules', () => {
 			// Tab B: time=100, active_time=0, swch_cnt=0, parked=false
 			//   rank = 0 - 100×2  = -200
 			// Tab A (parked) has lower rank → closed first.
-			const tabA = makeTab({ id: 1, url: PARK_URL + '?url=https://a.com&tabId=1&sessionId=123456' });
+			const tabA = makeTab({ id: 1, url: `${PARK_URL}?url=https://a.com&tabId=1&sessionId=123456` });
 			const tabB = makeTab({ id: 2, url: 'https://b.com' });
 			const tabC = makeTab({ id: 3, url: 'https://c.com' });
 

@@ -17,9 +17,9 @@
  *   cd test/puppeteer && pnpm exec tsx pinned-tab-protection.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
 		const tabsA = await queryChromeTabs(browser);
 		const targetA = tabsA.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetA != null, 'example.com tab found for Phase A');
-		const tabIdA = targetA!.id;
+		const tabIdA = targetA?.id;
 
 		// Pin the tab so the protection logic applies
 		await evalInSW(browser, `chrome.tabs.update(${tabIdA}, { pinned: true })`);
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
 		const tabsB = await queryChromeTabs(browser);
 		const targetB = tabsB.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetB != null, 'example.com tab found for Phase B');
-		const tabIdB = targetB!.id;
+		const tabIdB = targetB?.id;
 
 		// Pin the tab — but setting pinned=false means no protection
 		await evalInSW(browser, `chrome.tabs.update(${tabIdB}, { pinned: true })`);

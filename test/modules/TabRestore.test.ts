@@ -114,7 +114,7 @@ function makeParkedTab(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Ta
 
 describe('TabManager — Tab Restore Behavior', () => {
 	let tabManager: any;
-	let TabManagerClass: any;
+	let _TabManagerClass: any;
 	let onUpdatedListener: (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => void;
 
 	beforeEach(() => {
@@ -128,7 +128,7 @@ describe('TabManager — Tab Restore Behavior', () => {
 		(global as any).TabInfo = TabInfo;
 
 		const { TabManager } = require('../../modules/TabManager');
-		TabManagerClass = TabManager;
+		_TabManagerClass = TabManager;
 		tabManager = new TabManager();
 
 		// Capture the onUpdated listener registered during construction
@@ -293,7 +293,7 @@ describe('TabManager — Tab Restore Behavior', () => {
 				// Second onUpdated (status complete)
 				onUpdatedListener(restoredTab.id, { status: 'complete' }, { ...restoredTab, status: 'complete' });
 				// Third: another URL change (e.g. redirect)
-				onUpdatedListener(restoredTab.id, { url: ORIGINAL_URL + '/path' }, { ...restoredTab, url: ORIGINAL_URL + '/path' });
+				onUpdatedListener(restoredTab.id, { url: `${ORIGINAL_URL}/path` }, { ...restoredTab, url: `${ORIGINAL_URL}/path` });
 			}).not.toThrow();
 
 			const tabInfo = tabManager.getTabInfoById(restoredTab.id);

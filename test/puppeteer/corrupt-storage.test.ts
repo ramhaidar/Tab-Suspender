@@ -44,9 +44,9 @@
  *     After the fix:  timeout >= MIN_SAFE_TIMEOUT_S (PASS).
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import { getExtensionId, evalInSW, queryChromeTabs } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
 		const settingsA = await getAllRelevantSettings(browserA);
 		log(`  Settings after local-only corruption: ${JSON.stringify(settingsA)}`);
 
-		const timeoutA = settingsA['timeout'] as number;
+		const timeoutA = settingsA.timeout as number;
 
 		runner.softAssert(timeoutA === USER_TIMEOUT_S, `Phase-A: timeout recovered from sync (${timeoutA}s === ${USER_TIMEOUT_S}s)`);
 		runner.assert(
@@ -280,8 +280,8 @@ async function main(): Promise<void> {
 		const settingsB = await getAllRelevantSettings(browserB);
 		log(`  Settings after full corruption: ${JSON.stringify(settingsB)}`);
 
-		const timeoutB = settingsB['timeout'] as number;
-		const activeB = settingsB['active'];
+		const timeoutB = settingsB.timeout as number;
+		const activeB = settingsB.active;
 
 		// Core regression: must not be 0 or dangerously small
 		runner.assert(
@@ -368,7 +368,7 @@ async function main(): Promise<void> {
 
 		const settingsC = await getAllRelevantSettings(browserC);
 		log(`  Settings after V2 re-migration: ${JSON.stringify(settingsC)}`);
-		const timeoutC = settingsC['timeout'] as number;
+		const timeoutC = settingsC.timeout as number;
 
 		log(
 			`  V2 re-migration result: timeout=${timeoutC}s ${timeoutC === 30 ? '✗ BUG: migration re-ran!' : '✓ migration skipped (fix in place)'}`

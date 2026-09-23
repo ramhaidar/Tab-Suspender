@@ -1,5 +1,3 @@
-'use strict';
-
 // eslint-disable-next-line no-redeclare
 const debug = false;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -18,69 +16,68 @@ const debugScreenCache = false;
  */
 
 if (typeof window !== 'undefined') {
-	// @ts-ignore
+	// @ts-expect-error
 	trackError = window.trackError = window.trackError || {};
 
-	// @ts-ignore
+	// @ts-expect-error
 	window.nativeConsole = window.console;
-	// @ts-ignore
 	window.console = {
-		// @ts-ignore
+		// @ts-expect-error
 		warn: window.nativeConsole.warn,
-		// @ts-ignore
+		// @ts-expect-error
 		assert: window.nativeConsole.assert,
-		// @ts-ignore
+		// @ts-expect-error
 		clear: window.nativeConsole.clear,
-		// @ts-ignore
+		// @ts-expect-error
 		count: window.nativeConsole.count,
-		// @ts-ignore
+		// @ts-expect-error
 		debug: window.nativeConsole.debug,
-		// @ts-ignore
+		// @ts-expect-error
 		dir: window.nativeConsole.dir,
-		// @ts-ignore
+		// @ts-expect-error
 		dirxml: window.nativeConsole.dirxml,
-		// @ts-ignore
+		// @ts-expect-error
 		error: window.nativeConsole.error,
-		// @ts-ignore
+		// @ts-expect-error
 		exception: window.nativeConsole.exception,
-		// @ts-ignore
+		// @ts-expect-error
 		group: window.nativeConsole.group,
-		// @ts-ignore
+		// @ts-expect-error
 		groupCollapsed: window.nativeConsole.groupCollapsed,
-		// @ts-ignore
+		// @ts-expect-error
 		groupEnd: window.nativeConsole.groupEnd,
-		// @ts-ignore
+		// @ts-expect-error
 		info: window.nativeConsole.info,
-		// @ts-ignore
+		// @ts-expect-error
 		msIsIndependentlyComposed: window.nativeConsole.msIsIndependentlyComposed,
-		// @ts-ignore
+		// @ts-expect-error
 		profile: window.nativeConsole.profile,
-		// @ts-ignore
+		// @ts-expect-error
 		profileEnd: window.nativeConsole.profileEnd,
-		// @ts-ignore
+		// @ts-expect-error
 		select: window.nativeConsole.select,
-		// @ts-ignore
+		// @ts-expect-error
 		table: window.nativeConsole.table,
-		// @ts-ignore
+		// @ts-expect-error
 		time: window.nativeConsole.time,
-		// @ts-ignore
+		// @ts-expect-error
 		timeEnd: window.nativeConsole.timeEnd,
-		// @ts-ignore
+		// @ts-expect-error
 		trace: window.nativeConsole.trace
 	};
 }
 
-// @ts-ignore
+// @ts-expect-error
 const consoleLog = typeof window !== 'undefined' ? window.nativeConsole.log : console.log;
 /*if(typeof window !== "undefined") {
 	window.consoleLog = window.nativeConsole;
 }*/
-console.log = function (...args) {
-	let trace;
+console.log = (...args) => {
+	let trace: string | undefined;
 	if (debug)
 		try {
-			let a = {};
-			// @ts-ignore
+			const a = {};
+			// @ts-expect-error
 			a.debug();
 		} catch (ex) {
 			trace = ex.stack;
@@ -88,7 +85,7 @@ console.log = function (...args) {
 
 	let nativeConsoleLog = consoleLog;
 	if (typeof window !== 'undefined') {
-		// @ts-ignore
+		// @ts-expect-error
 		nativeConsoleLog = window.nativeConsole.log;
 	}
 	nativeConsoleLog(...args, debug ? { trace: trace } : '');
@@ -98,44 +95,45 @@ console.log = function (...args) {
  *
  */
 const consoleError = console.error;
-console.error = function (message, exception) {
+console.error = function (...args) {
+	const [message, exception] = args;
 	if (debug)
 		chrome.notifications.create({
 			type: 'list',
 			requireInteraction: true,
 			iconUrl: 'img/icon16.png',
 			title: 'New Exception',
-			message: '' + message,
+			message: `${message}`,
 			items: [
-				{ title: '', message: '' + message },
+				{ title: '', message: `${message}` },
 				{
 					title: '',
 					message:
-						exception && exception instanceof Error && exception.stack != null ? exception.stack : '' + exception + '\n' + new Error().stack
+						exception && exception instanceof Error && exception.stack != null ? exception.stack : `${exception}\n${new Error().stack}`
 				}
 			]
 		});
 
-	//window.nativeConsole.error(arguments);
-	consoleError.apply(this, arguments);
+	//window.nativeConsole.error(...args);
+	consoleError.apply(this, args);
 
 	if (trackError)
 		try {
-			let error;
-			for (let i = 0; i < arguments.length; i++) {
-				if (arguments[i] != null && arguments[i] instanceof Error) {
-					if (error == null) error = arguments[i];
-					else error.message += ' ->NestedException-> ' + arguments[i].message;
+			let error: Error | undefined;
+			for (let i = 0; i < args.length; i++) {
+				if (args[i] != null && args[i] instanceof Error) {
+					if (error == null) error = args[i];
+					else error.message += ` ->NestedException-> ${args[i].message}`;
 				}
 			}
 
 			if (error == null) error = new Error('');
 
 			let commentAdded = false;
-			for (let j = 0; j < arguments.length; j++) {
-				if (arguments[j] != null && typeof arguments[j] === 'string' && commentAdded == false) {
-					if (j == 0) error.message = arguments[j] + ' | ' + error.message;
-					else error.message += ' | ' + arguments[j];
+			for (let j = 0; j < args.length; j++) {
+				if (args[j] != null && typeof args[j] === 'string' && commentAdded === false) {
+					if (j === 0) error.message = `${args[j]} | ${error.message}`;
+					else error.message += ` | ${args[j]}`;
 					commentAdded = true;
 				}
 			}
@@ -223,10 +221,8 @@ function hasLastError(expectedMessage?: string | string[], error?: Error, commen
  */
 // eslint-disable-next-line no-redeclare,no-unused-vars
 function versionCompare(v1, v2, options?) {
-	'use strict';
-
-	let lexicographical = options && options.lexicographical,
-		zeroExtend = options && options.zeroExtend,
+	let lexicographical = options?.lexicographical,
+		zeroExtend = options?.zeroExtend,
 		v1parts = v1.split('.'),
 		v2parts = v2.split('.');
 
@@ -249,12 +245,11 @@ function versionCompare(v1, v2, options?) {
 	}
 
 	for (let i = 0; i < v1parts.length; ++i) {
-		if (v2parts.length == i) {
+		if (v2parts.length === i) {
 			return 1;
 		}
 
-		if (v1parts[i] == v2parts[i]) {
-			continue;
+		if (v1parts[i] === v2parts[i]) {
 		} else if (v1parts[i] > v2parts[i]) {
 			return 1;
 		} else {
@@ -262,7 +257,7 @@ function versionCompare(v1, v2, options?) {
 		}
 	}
 
-	if (v1parts.length != v2parts.length) {
+	if (v1parts.length !== v2parts.length) {
 		return -1;
 	}
 
@@ -303,14 +298,12 @@ function parseUrlParam(url: string, parameterName: string): string {
  */
 // eslint-disable-next-line no-unused-vars,no-redeclare
 function sql_error(arg, arg2, arg3) {
-	'use strict';
-
-	console.error('SQL error: ' + arg + arg2 + arg3, arg2);
+	console.error(`SQL error: ${arg}${arg2}${arg3}`, arg2);
 }
 
 // eslint-disable-next-line no-redeclare,no-unused-vars,@typescript-eslint/no-unused-vars
 function extractHostname(url) {
-	let hostname;
+	let hostname: string;
 	//find & remove protocol (http, ftp, etc.) and get hostname
 
 	if (url.indexOf('://') > -1) {
@@ -339,7 +332,7 @@ function isDarkMode() {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		parseUrlParam,
 		sleep

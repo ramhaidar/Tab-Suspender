@@ -1,7 +1,6 @@
 const publicExtensionUrl = 'chrome-extension://fiabciakcmgepblmdkmemdbbkilneeeh/park.html';
 const debugTabsInfo = false;
 
-// @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class TabObserver {
 	public static readonly tickSize = 10;
@@ -17,9 +16,6 @@ class TabObserver {
 	}
 
 	async start() {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		if (TabObserver.ticker) {
 			clearInterval(TabObserver.ticker);
 			TabObserver.ticker = null;
@@ -27,7 +23,7 @@ class TabObserver {
 
 		if (await settings.get('active'))
 			TabObserver.ticker = setInterval(() => {
-				self.tick().catch(console.error);
+				this.tick().catch(console.error);
 			}, TabObserver.tickSize * 1000);
 	}
 
@@ -37,9 +33,6 @@ class TabObserver {
 	}
 
 	async tick(stateOnly?: boolean) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const self = this;
-
 		/* TODO-v3:
 		navigator.getBattery().then(function(battery) {
 			if (battery != null && battery.level != null && battery.level >= 0.0)
@@ -89,20 +82,20 @@ class TabObserver {
 
 			// CLOSE TAB LOGIC
 			if (!autoSuspendOnlyOnBatteryOnly || (autoSuspendOnlyOnBatteryOnly && !isCharging))
-				if (isCloseTabsOn && self.tickCount % TabObserver.tickSize == 0) {
+				if (isCloseTabsOn && this.tickCount % TabObserver.tickSize === 0) {
 					let oneTabClosed = false;
 					for (const wi in windows) {
 						const tabArray = [];
 
-						let tab;
-						let tabFromTabs;
-						if (windows.hasOwnProperty(wi))
+						let tab: chrome.tabs.Tab;
+						let tabFromTabs: TabInfo | null;
+						if (Object.hasOwn(windows, wi))
 							for (const j in windows[wi].tabs)
-								if (windows[wi].tabs.hasOwnProperty(j)) {
+								if (Object.hasOwn(windows[wi].tabs, j)) {
 									tab = windows[wi].tabs[j];
-									tabFromTabs = self.tabManager.getTabInfoById(tab.id);
+									tabFromTabs = this.tabManager.getTabInfoById(tab.id);
 									if (tabFromTabs) {
-										if (!(await self.tabManager.isExceptionTab(tab)) && TabManager.isPassGroupedTabsRules(tab, ignoreCloseGroupedTabs))
+										if (!(await this.tabManager.isExceptionTab(tab)) && TabManager.isPassGroupedTabsRules(tab, ignoreCloseGroupedTabs))
 											tabArray.push(tabFromTabs);
 									}
 								}
@@ -113,15 +106,16 @@ class TabObserver {
 							const tabRanks: { rank: number; tab: TabInfo }[] = [];
 
 							for (let i = 0; i < tabArray.length; i++) {
-								tab = tabArray[i];
-								if (tab.time >= closeTimeout) {
-									const currentRank = tab.active_time * tab.active_time * (tab.swch_cnt + 1) - tab.time * (tab.parked ? tab.time : 2);
+								const tabInfo = tabArray[i];
+								if (tabInfo.time >= closeTimeout) {
+									const currentRank =
+										tabInfo.active_time * tabInfo.active_time * (tabInfo.swch_cnt + 1) - tabInfo.time * (tabInfo.parked ? tabInfo.time : 2);
 									if (minRank > currentRank) {
 										minRank = currentRank;
-										minRankTab = tab;
+										minRankTab = tabInfo;
 									}
 									if (debug) {
-										tabRanks.push({ rank: currentRank, tab: tab });
+										tabRanks.push({ rank: currentRank, tab: tabInfo });
 									}
 								}
 							}
@@ -136,8 +130,8 @@ class TabObserver {
 						}
 
 						if (minRankTab != null) {
-							let tabToClose = null;
-							if ((tabToClose = TabManager.tabExist(windows, minRankTab.id)) != null) {
+							const tabToClose = TabManager.tabExist(windows, minRankTab.id);
+							if (tabToClose != null) {
 								/*TODO: check for tab is last on whole window!!!*/
 
 								if (!stateOnly) closeTab(minRankTab.id, tabToClose);
@@ -158,25 +152,25 @@ class TabObserver {
 			// SUSPEND TAB LOGIC
 			// eslint-disable-next-line no-redeclare
 			for (const i in windows) {
-				if (windows.hasOwnProperty(i)) {
+				if (Object.hasOwn(windows, i)) {
 					// eslint-disable-next-line no-redeclare
 					for (const j in windows[i].tabs) {
-						if (windows[i].tabs.hasOwnProperty(j)) {
+						if (Object.hasOwn(windows[i].tabs, j)) {
 							const tab = windows[i].tabs[j];
 							const tabId = tab.id;
-							const tabInfo: TabInfo = self.tabManager.getTabInfoOrCreate(tab);
+							const tabInfo: TabInfo = this.tabManager.getTabInfoOrCreate(tab);
 
 							try {
 								if (debugTabsInfo) console.log(i, j, tab);
 								// eslint-disable-next-line no-empty,@typescript-eslint/no-unused-vars
-							} catch (e) {}
+							} catch (_e) {}
 
-							self.tabManager.checkAndTurnOffAutoDiscardable(tab);
+							this.tabManager.checkAndTurnOffAutoDiscardable(tab);
 
 							cleanedTabsArray[tabId] = tabInfo;
 
 							{
-								const isTabParked = tab.url != null && tab.url.indexOf(parkUrl) == 0;
+								const isTabParked = tab.url != null && tab.url.indexOf(parkUrl) === 0;
 
 								/* Restore session logic When uninstall */
 
@@ -211,7 +205,7 @@ class TabObserver {
 									if (debug && parkUrl !== publicExtensionUrl)
 										chrome.action
 											.setBadgeText({
-												text: '' + Math.round((calculatedTabTimeFrame - tabInfo.time) / 60) + '|' + tabInfo.swch_cnt,
+												text: `${Math.round((calculatedTabTimeFrame - tabInfo.time) / 60)}|${tabInfo.swch_cnt}`,
 												tabId: tabId
 											})
 											.catch((e) => console.error(tabInfo, e));
@@ -221,11 +215,11 @@ class TabObserver {
 										(adaptiveSuspendTimeout && tabInfo.time >= calculatedTabTimeFrame)
 									) {
 										if (!tab.active && tab.status === 'complete' && TabManager.isTabURLAllowedForPark(tab) && tabInfo.parkTrys <= 2) {
-											if (!(await self.tabManager.isExceptionTab(tab))) {
+											if (!(await this.tabManager.isExceptionTab(tab))) {
 												if (!autoSuspendOnlyOnBatteryOnly || (autoSuspendOnlyOnBatteryOnly && !isCharging)) {
 													if (
-														enableSuspendOnlyIfBattLvlLessValue == false ||
-														(enableSuspendOnlyIfBattLvlLessValue == true && batteryLevel < battLvlLessValue / 100 && !isCharging)
+														enableSuspendOnlyIfBattLvlLessValue === false ||
+														(enableSuspendOnlyIfBattLvlLessValue === true && batteryLevel < battLvlLessValue / 100 && !isCharging)
 													) {
 														if (!stateOnly) {
 															try {
@@ -249,15 +243,15 @@ class TabObserver {
 												animateTabIconSuspendTimeout &&
 												!tab.active &&
 												tabInfo.time > 0 &&
-												!(await self.tabManager.isExceptionTab(tab)) &&
+												!(await this.tabManager.isExceptionTab(tab)) &&
 												TabManager.isTabURLAllowedForPark(tab) &&
 												(!autoSuspendOnlyOnBatteryOnly || (autoSuspendOnlyOnBatteryOnly && !isCharging)) &&
-												(enableSuspendOnlyIfBattLvlLessValue == false ||
-													(enableSuspendOnlyIfBattLvlLessValue == true && batteryLevel < battLvlLessValue / 100 && !isCharging))
+												(enableSuspendOnlyIfBattLvlLessValue === false ||
+													(enableSuspendOnlyIfBattLvlLessValue === true && batteryLevel < battLvlLessValue / 100 && !isCharging))
 											) {
 												const step = Math.round(tabInfo.time / ((timeoutSettings + timeoutSettings * (2 / steps)) / steps));
 												const suspendPercent = step * 10;
-												if (tabInfo.suspendPercent != suspendPercent) {
+												if (tabInfo.suspendPercent !== suspendPercent) {
 													tabInfo.suspendPercent = suspendPercent;
 													chrome.tabs
 														.sendMessage(tabId, {
@@ -277,12 +271,12 @@ class TabObserver {
 									/* Refresh susp. tab empty icons */
 									if ((tab.favIconUrl == null || tab.favIconUrl === '') && tabInfo.refreshIconRetries < 2) {
 										tabInfo.refreshIconRetries = tabInfo.refreshIconRetries + 1;
-										const tmpFunction = function (id, discard, index) {
-											setTimeout(function () {
-												console.log('Refresh susp. tab icon: ' + id);
-												chrome.tabs.reload(id, function () {
+										const tmpFunction = (id, discard, index) => {
+											setTimeout(() => {
+												console.log(`Refresh susp. tab icon: ${id}`);
+												chrome.tabs.reload(id, () => {
 													if (discard)
-														setTimeout(function () {
+														setTimeout(() => {
 															discardTab(id);
 														}, 2000);
 												});
@@ -309,8 +303,8 @@ class TabObserver {
 								}
 
 								/* DEBUG INFO */
-								if (false /*debug*/) {
-									if (TabManager.isTabURLAllowedForPark(tab) && tab.discarded == false) {
+								if (debug && debugTabsInfo) {
+									if (TabManager.isTabURLAllowedForPark(tab) && tab.discarded === false) {
 										try {
 											if (TabManager.canTabBeScripted(tab)) {
 												chrome.scripting
@@ -321,7 +315,7 @@ class TabObserver {
 
 															function appendTitleDebug(title, iTabInfo: ITabInfo) {
 																const indexOfDebugInfoStart = title.indexOf('^');
-																if (indexOfDebugInfoStart == -1) return debugInfoString(iTabInfo) + ' ^ ' + title;
+																if (indexOfDebugInfoStart === -1) return `${debugInfoString(iTabInfo)} ^ ${title}`;
 																else return debugInfoString(iTabInfo) + title.substring(indexOfDebugInfoStart);
 															}
 
@@ -374,10 +368,10 @@ class TabObserver {
 				}
 			}
 
-			self.tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
+			this.tabManager.calculateAndMarkClosedTabs(openedChromeTabs);
 		});
 	}
 }
 
-// @ts-ignore
+// @ts-expect-error
 if (typeof global !== 'undefined') global.TabObserver = TabObserver;

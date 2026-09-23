@@ -27,9 +27,9 @@
  *   cd test/puppeteer && pnpm exec tsx start-discarded.test.ts
  */
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { launchBrowser, sleep, log } from './base/BrowserHelper.js';
 import {
 	getExtensionId,
@@ -40,7 +40,6 @@ import {
 	getParkPages,
 	getSetting,
 	setSetting,
-	parkUrlPrefix,
 	waitForExtensionInit
 } from './base/ExtensionHelper.js';
 import { createTestRunner } from './base/AssertHelper.js';
@@ -84,14 +83,15 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabsA = await queryChromeTabs(browser);
-		const targetA = tabsA.find((t) => t.url && t.url.includes('example.com'));
+		const targetA = tabsA.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetA != null, 'example.com tab found for Phase A');
+		if (targetA == null) throw new Error('Phase A example.com tab was not found');
 
 		const blankA = await browser.newPage();
 		await blankA.goto('about:blank');
 		await sleep(300);
 
-		await suspendTabById(browser, targetA!.id);
+		await suspendTabById(browser, targetA.id);
 		await waitForParkPages(browser, extensionId, 1, 15000);
 		await sleep(500);
 
@@ -132,14 +132,15 @@ async function main(): Promise<void> {
 		await sleep(1000);
 
 		const tabsB = await queryChromeTabs(browser);
-		const targetB = tabsB.find((t) => t.url && t.url.includes('example.com'));
+		const targetB = tabsB.find((t) => t.url?.includes('example.com'));
 		runner.assert(targetB != null, 'example.com tab found for Phase B');
+		if (targetB == null) throw new Error('Phase B example.com tab was not found');
 
 		const blankB = await browser.newPage();
 		await blankB.goto('about:blank');
 		await sleep(300);
 
-		await suspendTabById(browser, targetB!.id);
+		await suspendTabById(browser, targetB.id);
 		await waitForParkPages(browser, extensionId, 1, 15000);
 		await sleep(500);
 
@@ -176,7 +177,7 @@ async function main(): Promise<void> {
 		// ══════════════════════════════════════════════════════════════════════════
 		runner.section('Phase C — [AutomaticTabCleaner:DiscardTab] message discards the park tab');
 
-		const parkTabId = targetB!.id;
+		const parkTabId = targetB.id;
 		log(`  Sending [AutomaticTabCleaner:DiscardTab] from park.html (tabId=${parkTabId})`);
 
 		await parkPageB.evaluate(() => {

@@ -20,7 +20,7 @@ function cleanupDB() {
 		// schedule next cleanup in next days
 		setTimeout(cleanupDB, 1000 * 60 * 60 * 24);
 
-		chrome.tabs.query({}, async function (tabs) {
+		chrome.tabs.query({}, async (tabs) => {
 			try {
 				/* cleanupScreens... */
 				await cleanupScreens(tabs);
@@ -56,7 +56,7 @@ function dbCleanup_filterScreenResults(
 		[key: number]: number;
 	}
 ) {
-	return function (result: IDBAddedOnIndexType[]): IDBPKKeyArrayType[] {
+	return (result: IDBAddedOnIndexType[]): IDBPKKeyArrayType[] => {
 		const filteredResult = [];
 		console.log(`Cleanup Screens: usedSessionIds: `, usedSessionIds);
 		console.log(`Cleanup Screens: usedTabIds: `, usedTabIds);
@@ -66,7 +66,7 @@ function dbCleanup_filterScreenResults(
 		for (let i = 0; i < result.length; i++) {
 			isScreenActual = false;
 
-			if (result[i][0] == undefined || result[i][1] == null || result[i][2] == undefined) {
+			if (result[i][0] === undefined || result[i][1] == null || result[i][2] === undefined) {
 				console.error(`Cleanup Screens: Some of metadata is null: `, result[i]);
 			}
 
@@ -80,8 +80,7 @@ function dbCleanup_filterScreenResults(
 					console.log(`Skip Cleanup because TabId[${result[i]} in usedTabIds`, result[i]);
 				}
 				isScreenActual = true;
-				// @ts-ignore
-			} else if (Math.abs(new Date() - result[i][2]) <= TWO_WEEKS_MS) {
+			} else if (Math.abs(Date.now() - Number(result[i][2])) <= TWO_WEEKS_MS) {
 				if (debugDBCleanup) {
 					console.log(`Skip Cleanup because screen date[${result[i][2]}] not earler 2 weeks`, result[i]);
 				}
@@ -96,7 +95,7 @@ function dbCleanup_filterScreenResults(
 }
 
 function dbCleanup_filterFdsResults(openedTabIds: { [key: number]: number }) {
-	return function (results: IDBFdsValueType[]): IDBFdsKeyArrayType[] {
+	return (results: IDBFdsValueType[]): IDBFdsKeyArrayType[] => {
 		const filteredResult = [];
 		console.log(`Cleanup Fds: openedTabIds: `, openedTabIds);
 
@@ -105,7 +104,7 @@ function dbCleanup_filterFdsResults(openedTabIds: { [key: number]: number }) {
 			const result = results[i];
 			isScreenActual = false;
 
-			if (result.tabId == undefined || result.data == null || result.data.timestamp == null) {
+			if (result.tabId === undefined || result.data == null || result.data.timestamp == null) {
 				console.error(`Cleanup Screens: Some of metadata is null: `, result);
 			}
 
@@ -114,8 +113,7 @@ function dbCleanup_filterFdsResults(openedTabIds: { [key: number]: number }) {
 					console.log(`Skip Cleanup because FD TabId[${result} in usedTabIds`, result);
 				}
 				isScreenActual = true;
-				// @ts-ignore
-			} else if (Math.abs(new Date() - result.data?.timestamp) <= TWO_WEEKS_MS) {
+			} else if (Math.abs(Date.now() - Number(result.data?.timestamp)) <= TWO_WEEKS_MS) {
 				if (debugDBCleanup) {
 					console.log(`Skip Cleanup because FD date[${result}] not earler 2 weeks`, result);
 				}
@@ -133,7 +131,7 @@ function removeDBItemsInBackground(
 	resolve: (value: PromiseLike<void> | void) => void,
 	executeDeleteArgumentsConstructor: (itemKeyArray: unknown[]) => { IDB: { table: string; params: unknown[] } }
 ) {
-	return async function (resultsKeyArrays: unknown[][]) {
+	return async (resultsKeyArrays: unknown[][]) => {
 		if (resultsKeyArrays != null) {
 			if (debugDBCleanup) {
 				console.log(`DB Item To Cleanup: ${resultsKeyArrays.length}`);
@@ -167,7 +165,6 @@ async function cleanupFds(tabs: chrome.tabs.Tab[]): Promise<void> {
 		database.getAll(
 			{
 				IDB: {
-					// @ts-ignore
 					table: FD_DB_NAME,
 					predicateResultLogic: dbCleanup_filterFdsResults(openedTabIdsMap)
 				}
@@ -175,7 +172,6 @@ async function cleanupFds(tabs: chrome.tabs.Tab[]): Promise<void> {
 			removeDBItemsInBackground(resolve, (itemKeyArray) => {
 				return {
 					IDB: {
-						// @ts-ignore
 						table: FD_DB_NAME,
 						params: itemKeyArray
 					}
@@ -190,17 +186,17 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 	const usedTabIds: { [key: number]: number } = {};
 
 	for (const i in tabs)
-		if (tabs.hasOwnProperty(i))
-			if (tabs[i].url.indexOf(parkUrl) == 0) {
+		if (Object.hasOwn(tabs, i))
+			if (tabs[i].url.indexOf(parkUrl) === 0) {
 				let sessionId: number;
 				try {
-					sessionId = parseInt(parseUrlParam(tabs[i].url, 'sessionId'));
+					sessionId = parseInt(parseUrlParam(tabs[i].url, 'sessionId'), 10);
 					if (sessionId != null) usedSessionIds[sessionId] = true;
 				} catch (e) {
 					console.error(e);
 				}
 				try {
-					const tabId = parseInt(parseUrlParam(tabs[i].url, 'tabId'));
+					const tabId = parseInt(parseUrlParam(tabs[i].url, 'tabId'), 10);
 					if (tabId != null) usedTabIds[tabId] = sessionId;
 				} catch (e) {
 					console.error(e);
@@ -208,15 +204,13 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 			}
 
 	usedSessionIds[TSSessionId] = true;
-	usedSessionIds[parseInt(previousTSSessionId)] = true;
+	usedSessionIds[previousTSSessionId] = true;
 
 	return new Promise<void>((resolve) => {
 		database.getAll(
 			{
 				IDB: {
-					// @ts-ignore
 					table: SCREENS_DB_NAME,
-					// @ts-ignore
 					index: ADDED_ON_INDEX_NAME,
 					predicate: 'getAllKeys',
 					predicateResultLogic: dbCleanup_filterScreenResults(usedSessionIds, usedTabIds)
@@ -225,9 +219,7 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 			removeDBItemsInBackground(resolve, (itemKeyArray) => {
 				return {
 					IDB: {
-						// @ts-ignore
 						table: SCREENS_DB_NAME,
-						// @ts-ignore
 						index: ADDED_ON_INDEX_NAME,
 						params: itemKeyArray
 					}
@@ -237,7 +229,7 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 	});
 }
 
-if (typeof module != 'undefined')
+if (typeof module !== 'undefined')
 	module.exports = {
 		TWO_WEEKS_MS,
 		dbCleanup_filterScreenResults,

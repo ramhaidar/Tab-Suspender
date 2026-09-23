@@ -98,7 +98,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		// Try to mock Date.now if not using fake timers
 		try {
 			((global as any).Date.now as jest.Mock).mockReturnValue(1640995200000);
-		} catch (e) {
+		} catch (_e) {
 			// Ignore if Date.now mock is not available (e.g., when using fake timers)
 		}
 
@@ -243,7 +243,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		await onCreatedListener(tab);
 
 		// Verify tab is marked for suspension
-		let tabInfo = tabManager.getTabInfoById(tab.id);
+		const tabInfo = tabManager.getTabInfoById(tab.id);
 		expect(tabInfo.markedForLoadSuspended).toBe(true);
 
 		// Mock chrome.tabs.get to return tab with favicon
@@ -410,7 +410,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 
 		// NEW BEHAVIOR: Tab IS marked for suspension even with undefined URL
 		// We wait for the URL to become valid in onUpdated
-		let tabInfo = tabManager.getTabInfoById(tab.id);
+		const tabInfo = tabManager.getTabInfoById(tab.id);
 		expect(tabInfo.markedForLoadSuspended).toBe(true);
 		// originalUrlBeforeSuspend is null because URL was undefined
 		// We'll use updatedTab.url in pollForFavicon
