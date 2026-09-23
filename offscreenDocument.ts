@@ -40,9 +40,9 @@ function startServiceWorkerHeartbeat() {
 
 function startBatteryStatusNotifier() {
 	try {
-		// @ts-ignore
-		(navigator as Navigator).getBattery().then(function (battery) {
-			battery.onchargingchange = function (event) {
+		// @ts-expect-error
+		(navigator as Navigator).getBattery().then((battery) => {
+			battery.onchargingchange = (event) => {
 				if (batteryDebug) console.log(`Charging event: ${event.target.charging}`);
 				void chrome.runtime.sendMessage({
 					method: '[TS:offscreenDocument:batteryStatusChanged]',
@@ -75,7 +75,6 @@ function startBatteryStatusNotifier() {
 	}
 }
 
-// @ts-ignore
 // Sentry.init({
 // 	dsn: "https://d03bb30d517ec1594272cf217fc44f39@o4509192171945984.ingest.de.sentry.io/4509192186495056",
 // 	allowUrls: [/.*/],
@@ -94,18 +93,16 @@ function sendError(errorData) {
 	const targetError = new Error(errorData.message);
 	targetError.stack = errorData.stack;
 
-	// @ts-ignore
 	//Sentry
 	//	.captureException(targetError);
 }
 
-function sendEvent(event) {
-	// @ts-ignore
+function sendEvent(_event) {
 	//Sentry
 	//	.captureEvent(event);
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 	if (message.method === '[TS:offscreenDocument:heartbeatAck]') {
 		// Heartbeat acknowledgment received from service worker
 		// No action needed, this is just to confirm the connection
