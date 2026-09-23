@@ -17,9 +17,9 @@ const debugScreenCache = false;
  *
  */
 
-if(typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
 	// @ts-ignore
-	trackError = window.trackError = window.trackError || {}
+	trackError = window.trackError = window.trackError || {};
 
 	// @ts-ignore
 	window.nativeConsole = window.console;
@@ -70,12 +70,12 @@ if(typeof window !== "undefined") {
 	};
 }
 
-	// @ts-ignore
-const consoleLog = typeof window !== "undefined" ? window.nativeConsole.log : console.log;
+// @ts-ignore
+const consoleLog = typeof window !== 'undefined' ? window.nativeConsole.log : console.log;
 /*if(typeof window !== "undefined") {
 	window.consoleLog = window.nativeConsole;
 }*/
-console.log = function(...args) {
+console.log = function (...args) {
 	let trace;
 	if (debug)
 		try {
@@ -87,35 +87,34 @@ console.log = function(...args) {
 		}
 
 	let nativeConsoleLog = consoleLog;
-	if(typeof window !== "undefined") {
+	if (typeof window !== 'undefined') {
 		// @ts-ignore
 		nativeConsoleLog = window.nativeConsole.log;
 	}
-	nativeConsoleLog(...args, (debug ? { trace: trace } : ''));
+	nativeConsoleLog(...args, debug ? { trace: trace } : '');
 };
 
 /**
  *
  */
-const consoleError = console.error
-console.error = function(message, exception) {
+const consoleError = console.error;
+console.error = function (message, exception) {
 	if (debug)
-		chrome.notifications.create(
-			{
-				type: 'list',
-				requireInteraction: true,
-				iconUrl: 'img/icon16.png',
-				title: 'New Exception',
-				message: '' + message,
-				items: [
-					{ title: '', message: '' + message },
-					{
-						title: '',
-						message: (exception && exception instanceof Error && exception.stack != null ? exception.stack : '' + exception + '\n' + new Error().stack)
-					}
-				]
-			}
-		);
+		chrome.notifications.create({
+			type: 'list',
+			requireInteraction: true,
+			iconUrl: 'img/icon16.png',
+			title: 'New Exception',
+			message: '' + message,
+			items: [
+				{ title: '', message: '' + message },
+				{
+					title: '',
+					message:
+						exception && exception instanceof Error && exception.stack != null ? exception.stack : '' + exception + '\n' + new Error().stack
+				}
+			]
+		});
 
 	//window.nativeConsole.error(arguments);
 	consoleError.apply(this, arguments);
@@ -125,29 +124,23 @@ console.error = function(message, exception) {
 			let error;
 			for (let i = 0; i < arguments.length; i++) {
 				if (arguments[i] != null && arguments[i] instanceof Error) {
-					if (error == null)
-						error = arguments[i];
-					else
-						error.message += ' ->NestedException-> ' + arguments[i].message;
+					if (error == null) error = arguments[i];
+					else error.message += ' ->NestedException-> ' + arguments[i].message;
 				}
 			}
 
-			if (error == null)
-				error = new Error('');
+			if (error == null) error = new Error('');
 
 			let commentAdded = false;
 			for (let j = 0; j < arguments.length; j++) {
 				if (arguments[j] != null && typeof arguments[j] === 'string' && commentAdded == false) {
-					if (j == 0)
-						error.message = arguments[j] + ' | ' + error.message;
-					else
-						error.message += ' | ' + arguments[j];
+					if (j == 0) error.message = arguments[j] + ' | ' + error.message;
+					else error.message += ' | ' + arguments[j];
 					commentAdded = true;
 				}
 			}
 
-			if (error.message === '')
-				error.message = 'Really no arguments provided!';
+			if (error.message === '') error.message = 'Really no arguments provided!';
 
 			void trackError(error);
 		} catch (e) {
@@ -155,29 +148,30 @@ console.error = function(message, exception) {
 		}
 };
 
-addEventListener("error", (errorEvent) => {console.error(errorEvent.error);});
+addEventListener('error', (errorEvent) => {
+	console.error(errorEvent.error);
+});
 
-const expectedErrorsRegexpCache: {[key: string]: RegExp} = {};
+const expectedErrorsRegexpCache: { [key: string]: RegExp } = {};
 
 const globalIgnoredErrors = [
 	'The browser is shutting down.',
 	'RegExp:No tab with id: \\d*\\.',
-	'RegExp:Cannot discard tab with id: \\d{1,5}\\.',
+	'RegExp:Cannot discard tab with id: \\d{1,5}\\.'
 ];
 
 function checkOccurrenceOfExpectedErrors(errorMessage: string, expectedList: any[]) {
 	let expectedMessage = false;
 	for (let j = 0; j < expectedList.length; j++) {
-		if (expectedList[j].indexOf('RegExp:') === 0) { // REGEXP
+		if (expectedList[j].indexOf('RegExp:') === 0) {
+			// REGEXP
 			const regExpString = expectedList[j].substr(7);
 			let cachedRegExp = expectedErrorsRegexpCache[regExpString];
 			if (cachedRegExp == null) {
 				cachedRegExp = expectedErrorsRegexpCache[regExpString] = RegExp(regExpString);
 			}
-			if (cachedRegExp.test(errorMessage))
-				expectedMessage = true;
-		} else if (errorMessage === expectedList[j])
-			expectedMessage = true;
+			if (cachedRegExp.test(errorMessage)) expectedMessage = true;
+		} else if (errorMessage === expectedList[j]) expectedMessage = true;
 	}
 	return expectedMessage;
 }
@@ -187,10 +181,8 @@ function hasLastError(expectedMessage?: string | string[], error?: Error, commen
 	let expectedList = [];
 
 	if (expectedMessage != null) {
-		if (Array.isArray(expectedMessage))
-			expectedList = expectedList.concat(expectedMessage);
-		else
-			expectedList.push(expectedMessage);
+		if (Array.isArray(expectedMessage)) expectedList = expectedList.concat(expectedMessage);
+		else expectedList.push(expectedMessage);
 	}
 
 	expectedList = expectedList.concat(globalIgnoredErrors);
@@ -201,17 +193,12 @@ function hasLastError(expectedMessage?: string | string[], error?: Error, commen
 		expected = checkOccurrenceOfExpectedErrors(error.message, expectedList);
 
 		if (expected) {
-			if (comment)
-				console.warn(comment, error);
-			else
-				console.warn(error);
+			if (comment) console.warn(comment, error);
+			else console.warn(error);
 			//return true;
-		}
-		else {
-			if (comment)
-				console.error(comment, error);
-			else
-				console.error(error);
+		} else {
+			if (comment) console.error(comment, error);
+			else console.error(error);
 		}
 	}
 
@@ -219,17 +206,12 @@ function hasLastError(expectedMessage?: string | string[], error?: Error, commen
 		expected = checkOccurrenceOfExpectedErrors(chrome.runtime.lastError.message, expectedList);
 
 		if (expected) {
-			if (comment)
-				console.warn(`${comment}: ${chrome.runtime.lastError}`);
-			else
-				console.warn(chrome.runtime.lastError);
+			if (comment) console.warn(`${comment}: ${chrome.runtime.lastError}`);
+			else console.warn(chrome.runtime.lastError);
 			//return true;
-		}
-		else {
-			if (comment)
-				console.error(`${comment}: ${chrome.runtime.lastError}`);
-			else
-				console.error(chrome.runtime.lastError);
+		} else {
+			if (comment) console.error(`${comment}: ${chrome.runtime.lastError}`);
+			else console.error(chrome.runtime.lastError);
 		}
 	}
 
@@ -308,8 +290,7 @@ function versionCompare(v1, v2, options?) {
 }*/
 function parseUrlParam(url: string, parameterName: string): string {
 	try {
-		if (url == null || url === '')
-			return null;
+		if (url == null || url === '') return null;
 		return new URL(url).searchParams.get(parameterName);
 	} catch (e) {
 		console.error(`Error while parsing URL[${url}] parameterName[${parameterName}]`, e);
@@ -350,19 +331,16 @@ function extractHostname(url) {
 function isDarkMode() {
 	const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-	if(isDarkMode)
-		console.log('Currently in dark mode');
-	else
-		console.log('Currently not in dark mode');
+	if (isDarkMode) console.log('Currently in dark mode');
+	else console.log('Currently not in dark mode');
 
 	return isDarkMode;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-
 if (typeof module != 'undefined')
 	module.exports = {
 		parseUrlParam,
-		sleep,
+		sleep
 	};

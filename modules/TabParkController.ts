@@ -2,7 +2,7 @@ interface RequestMessageBase {
 	method: string;
 }
 
-interface RequestParkPageFromInject extends RequestMessageBase{
+interface RequestParkPageFromInject extends RequestMessageBase {
 	tabId: number;
 	url: string;
 	sessionId: number;
@@ -15,26 +15,22 @@ const HISTORY_KEEP_LAST_N_ITEMS = 300;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function parkTabs(requestTab?, windowId?) {
-	const callbackSingle = async function(window: chrome.windows.Window) {
+	const callbackSingle = async function (window: chrome.windows.Window) {
 		let number = 0;
 		for (const j in window.tabs)
 			if (window.tabs.hasOwnProperty(j))
 				if (requestTab == null || (requestTab != null && windowId != null) || window.tabs[j].id != requestTab.id)
 					if (TabManager.isTabURLAllowedForPark(window.tabs[j]))
-						if (!await tabManager.isExceptionTab(window.tabs[j]))
-							await parkTab(window.tabs[j], window.tabs[j].id, { bulkNumber: (window.tabs[j].discarded ? number++ : null) });
+						if (!(await tabManager.isExceptionTab(window.tabs[j])))
+							await parkTab(window.tabs[j], window.tabs[j].id, { bulkNumber: window.tabs[j].discarded ? number++ : null });
 	};
 
-	const callbackAll = async function(windows: chrome.windows.Window[]) {
-		for (const wi in windows)
-			if (windows.hasOwnProperty(wi))
-				await callbackSingle(windows[wi]);
+	const callbackAll = async function (windows: chrome.windows.Window[]) {
+		for (const wi in windows) if (windows.hasOwnProperty(wi)) await callbackSingle(windows[wi]);
 	};
 
-	if (windowId != null)
-		chrome.windows.get(windowId, { 'populate': true }, callbackSingle);
-	else
-		chrome.windows.getAll({ 'populate': true }, callbackAll);
+	if (windowId != null) chrome.windows.get(windowId, { populate: true }, callbackSingle);
+	else chrome.windows.getAll({ populate: true }, callbackAll);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -46,7 +42,7 @@ function parkTabGroup(tab: chrome.tabs.Tab) {
 
 	const groupId = tab.groupId;
 
-	chrome.windows.get(tab.windowId, { 'populate': true }, async function(window: chrome.windows.Window) {
+	chrome.windows.get(tab.windowId, { populate: true }, async function (window: chrome.windows.Window) {
 		let number = 0;
 		for (const j in window.tabs) {
 			if (window.tabs.hasOwnProperty(j)) {
@@ -54,8 +50,8 @@ function parkTabGroup(tab: chrome.tabs.Tab) {
 				// Only suspend tabs in the same group
 				if (currentTab.groupId === groupId) {
 					if (TabManager.isTabURLAllowedForPark(currentTab)) {
-						if (!await tabManager.isExceptionTab(currentTab)) {
-							await parkTab(currentTab, currentTab.id, { bulkNumber: (currentTab.discarded ? number++ : null) });
+						if (!(await tabManager.isExceptionTab(currentTab))) {
+							await parkTab(currentTab, currentTab.id, { bulkNumber: currentTab.discarded ? number++ : null });
 						}
 					}
 				}
@@ -72,35 +68,36 @@ function genYoutubeUrlWithTimeMark(url, videoTime) {
 
 // park idle tab if it is not parked yet
 async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
-	if (!TabManager.isTabURLAllowedForPark(tab))
-		return;
+	if (!TabManager.isTabURLAllowedForPark(tab)) return;
 
 	if (tab.discarded && (options == null || options.reloaded == false)) {
-		void chrome.tabs.reload(tabId).then(function() {
-			setTimeout(function() {
-				void parkTab(tab, tabId, { reloaded: true });
-			}, (options != null && options.bulkNumber > 0 ? options.bulkNumber * 1000 : 1000));
+		void chrome.tabs.reload(tabId).then(function () {
+			setTimeout(
+				function () {
+					void parkTab(tab, tabId, { reloaded: true });
+				},
+				options != null && options.bulkNumber > 0 ? options.bulkNumber * 1000 : 1000
+			);
 		});
 		return;
 	}
 
 	/* Save history
-	* TODO: Move to HistoryController */
+	 * TODO: Move to HistoryController */
 	let pageState;
 	try {
 		pageState = await formRestoreController.collectPageState(tabId);
 
-		if(pageState.videoTime != null) {
+		if (pageState.videoTime != null) {
 			tab.url = genYoutubeUrlWithTimeMark(tab.url, pageState.videoTime);
 		}
 
 		let duplicate = false;
 		if (parkHistory.length > 0 && parkHistory[0].tabId != null && parkHistory[0].sessionId != null)
-			if (parkHistory[0].tabId == tabId && parkHistory[0].sessionId == TSSessionId)
-				duplicate = true;
+			if (parkHistory[0].tabId == tabId && parkHistory[0].sessionId == TSSessionId) duplicate = true;
 		if (!duplicate) {
 			parkHistory.splice(0, 0, {
-				timestamp: (new Date()).getTime(),
+				timestamp: new Date().getTime(),
 				url: tab.url,
 				title: tab.title,
 				tabId: tabId,
@@ -109,25 +106,22 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 			parkHistory.splice(HISTORY_KEEP_LAST_N_ITEMS);
 			void LocalStore.set(LocalStoreKeys.PARK_HISTORY, parkHistory);
 		}
-
 	} catch (e) {
 		console.error(e);
 	}
 
 	/* Detached from thread for collectPageState have chance to process */
 	//setTimeout(function() {
-	ScreenshotController.isScreenExist(tabId, null, async function(screenExist) {
+	ScreenshotController.isScreenExist(tabId, null, async function (screenExist) {
 		if (screenExist == null || parseInt(screenExist) <= 0) {
-			if (debug)
-				console.log('Screen Not Exist');
-
+			if (debug) console.log('Screen Not Exist');
 
 			// Try to Capture Tab before Park
-			if (options==null || options.retry < 1)
+			if (options == null || options.retry < 1)
 				try {
 					console.warn(`Try to Capture Tab before Park...`);
-					await tabCapture.captureTab(tab, {tryEvenIncomplete: true});
-					await parkTab(tab, tabId, {...options, retry: 1});
+					await tabCapture.captureTab(tab, { tryEvenIncomplete: true });
+					await parkTab(tab, tabId, { ...options, retry: 1 });
 					return;
 				} catch (e) {
 					// Capture failed - continue with suspend WITHOUT screenshot
@@ -144,34 +138,35 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 			let checkTabIsParked;
 			let checkTabIsParkedTimeout;
 
-			const parkByMessage = function(closureTab, closureTabId) {
-				chrome.windows.get(closureTab.windowId, async function(win) {
+			const parkByMessage = function (closureTab, closureTabId) {
+				chrome.windows.get(closureTab.windowId, async function (win) {
 					let width = null;
-					if (closureTab.width == null || closureTab.width == 0)
-						width = win.width - 20;
+					if (closureTab.width == null || closureTab.width == 0) width = win.width - 20;
 					const height = win.height;
 
-					chrome.tabs.sendMessage(closureTabId, <RequestParkPageFromInject>{
+					chrome.tabs.sendMessage(
+						closureTabId,
+						<RequestParkPageFromInject>{
 							method: '[AutomaticTabCleaner:ParkPageFromInject]',
 							tabId: closureTab.id,
 							url: closureTab.url,
 							sessionId: TSSessionId,
 							width: width,
 							height: height,
-							screenshotQuality: parseInt(await settings.get('screenshotQuality')),
+							screenshotQuality: parseInt(await settings.get('screenshotQuality'))
 						},
-						function(response) {
+						function (response) {
 							if (response != null) {
 								if (response.result == 'successful') {
 									tabParked = true;
 									tabManager.markTabParked(closureTab);
-								} else if (checkTabIsParked != null)
-									checkTabIsParked();
+								} else if (checkTabIsParked != null) checkTabIsParked();
 							}
-							if(debug) {
+							if (debug) {
 								console.log('ParkPageFromInject response: ', response);
 							}
-						});
+						}
+					);
 				});
 			};
 
@@ -181,28 +176,28 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 			/*  DOMException: Failed to execute 'toDataURL' on 'HTMLCanvasElement': Tainted canvases may not be exported. */
 			/*  Try to reinject JS if parked failed */
 			/*								*/
-			checkTabIsParkedTimeout = setTimeout(checkTabIsParked = function() {
-				if (checkTabIsParkedTimeout != null) {
-					clearTimeout(checkTabIsParkedTimeout);
-					checkTabIsParkedTimeout = null;
-				}
+			checkTabIsParkedTimeout = setTimeout(
+				(checkTabIsParked = function () {
+					if (checkTabIsParkedTimeout != null) {
+						clearTimeout(checkTabIsParkedTimeout);
+						checkTabIsParkedTimeout = null;
+					}
 
-				if (tabParked == false/* && isPageHasNonCompleteInput == false*/) {
-					tabCapture.injectJS(closureTabId, closureTab);
-					parkByMessage(closureTab, closureTabId);
-				}
-			}, 10000);
+					if (tabParked == false /* && isPageHasNonCompleteInput == false*/) {
+						tabCapture.injectJS(closureTabId, closureTab);
+						parkByMessage(closureTab, closureTabId);
+					}
+				}),
+				10000
+			);
 		} else
 			try {
-				if (debug)
-					console.log('Screen Exist');
+				if (debug) console.log('Screen Exist');
 
 				//check if parked
 				if (tab != null) {
-					chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:getOriginalFaviconUrl]' }, function(originalFaviconUrl) {
-
-						if (debug)
-							console.log('originalFaviconUrl: ', originalFaviconUrl);
+					chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:getOriginalFaviconUrl]' }, function (originalFaviconUrl) {
+						if (debug) console.log('originalFaviconUrl: ', originalFaviconUrl);
 
 						let url = parkUrl;
 						url += '?tabId=' + encodeURIComponent(tabId);
@@ -210,12 +205,10 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 						url += '&url=' + encodeURIComponent(tab.url);
 						url += '&sessionId=' + encodeURIComponent(TSSessionId);
 
-						if (originalFaviconUrl != null && originalFaviconUrl != '')
-							url += '&icon=' + encodeURIComponent(originalFaviconUrl);
-						else if (tab.favIconUrl)
-							url += '&icon=' + encodeURIComponent(tab.favIconUrl);
+						if (originalFaviconUrl != null && originalFaviconUrl != '') url += '&icon=' + encodeURIComponent(originalFaviconUrl);
+						else if (tab.favIconUrl) url += '&icon=' + encodeURIComponent(tab.favIconUrl);
 
-						chrome.tabs.update(tab.id, { 'url': url }).catch(console.error);
+						chrome.tabs.update(tab.id, { url: url }).catch(console.error);
 					});
 				}
 
@@ -231,14 +224,14 @@ async function parkTab(tab: chrome.tabs.Tab, tabId: number, options?) {
 function unsuspendTabs(windowId?: number) {
 	let openedIndex = 1;
 
-	const callbackSingle = function(window) {
+	const callbackSingle = function (window) {
 		for (const j in window.tabs)
 			if (window.tabs.hasOwnProperty(j))
 				if (TabManager.isTabParked(window.tabs[j])) {
-					const tmpFunction = function(j) {
+					const tmpFunction = function (j) {
 						const tab = window.tabs[j];
 						const clzOpenedIndex = openedIndex++;
-						setTimeout(function() {
+						setTimeout(function () {
 							tabManager.unsuspendTab(tab);
 						}, 1000 * clzOpenedIndex);
 					};
@@ -247,17 +240,12 @@ function unsuspendTabs(windowId?: number) {
 				}
 	};
 
-	const callbackAll = function(windows) {
-		for (const wi in windows)
-			if (windows.hasOwnProperty(wi))
-				callbackSingle(windows[wi]);
+	const callbackAll = function (windows) {
+		for (const wi in windows) if (windows.hasOwnProperty(wi)) callbackSingle(windows[wi]);
 	};
 
-
-	if (windowId != null)
-		chrome.windows.get(windowId, { 'populate': true }, callbackSingle);
-	else
-		chrome.windows.getAll({ 'populate': true }, callbackAll);
+	if (windowId != null) chrome.windows.get(windowId, { populate: true }, callbackSingle);
+	else chrome.windows.getAll({ populate: true }, callbackAll);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -270,15 +258,15 @@ function unsuspendTabGroup(tab: chrome.tabs.Tab) {
 	const groupId = tab.groupId;
 	let openedIndex = 1;
 
-	chrome.windows.get(tab.windowId, { 'populate': true }, function(window: chrome.windows.Window) {
+	chrome.windows.get(tab.windowId, { populate: true }, function (window: chrome.windows.Window) {
 		for (const j in window.tabs) {
 			if (window.tabs.hasOwnProperty(j)) {
 				const currentTab = window.tabs[j];
 				// Only unsuspend tabs in the same group
 				if (currentTab.groupId === groupId && TabManager.isTabParked(currentTab)) {
-					const tmpFunction = function(currentTab: chrome.tabs.Tab) {
+					const tmpFunction = function (currentTab: chrome.tabs.Tab) {
 						const clzOpenedIndex = openedIndex++;
-						setTimeout(function() {
+						setTimeout(function () {
 							tabManager.unsuspendTab(currentTab);
 						}, 1000 * clzOpenedIndex);
 					};
@@ -314,7 +302,7 @@ function closeTab(tabId, tab) {
 	/* Save history */
 	try {
 		closeHistory.splice(0, 0, {
-			timestamp: (new Date()).getTime(),
+			timestamp: new Date().getTime(),
 			url: tab.url,
 			title: tab.title,
 			tabId: parseUrlParam(tab.url, 'tabId'),
@@ -322,7 +310,9 @@ function closeTab(tabId, tab) {
 		});
 		closeHistory.splice(HISTORY_KEEP_LAST_N_ITEMS);
 		LocalStore.set(LocalStoreKeys.CLOSE_HISTORY, closeHistory)
-			.then(()=>{ tabManager.historyOpenerController.reloadHistoryPage(); })
+			.then(() => {
+				tabManager.historyOpenerController.reloadHistoryPage();
+			})
 			.catch(console.error);
 	} catch (e) {
 		console.error(e);
@@ -333,14 +323,17 @@ function closeTab(tabId, tab) {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isTabMarkedForUnsuspend(tabIdStr, sessionIdStr, options?) {
-	if (tabsMarkedForUnsuspend.length <= 0)
-		return false;
+	if (tabsMarkedForUnsuspend.length <= 0) return false;
 
 	const now = Date.now();
 	const tabId = parseInt(tabIdStr);
 	const sessionId = parseInt(sessionIdStr);
 	for (let i = 0; i < tabsMarkedForUnsuspend.length; i++)
-		if (now - tabsMarkedForUnsuspend[i].at <= TABS_MARKED_FOR_UNSUSPEND_TTL && tabsMarkedForUnsuspend[i].tabId == tabId && tabsMarkedForUnsuspend[i].sessionId == sessionId) {
+		if (
+			now - tabsMarkedForUnsuspend[i].at <= TABS_MARKED_FOR_UNSUSPEND_TTL &&
+			tabsMarkedForUnsuspend[i].tabId == tabId &&
+			tabsMarkedForUnsuspend[i].sessionId == sessionId
+		) {
 			if (options && options.remove) {
 				tabsMarkedForUnsuspend.splice(i, 1);
 			}
@@ -376,7 +369,7 @@ async function discardTab(tabId) {
 				} as any);
 
 				// Check if at least one tab in this Split View is active
-				const hasActiveTab = tabsInSplitView.some(t => t.active === true);
+				const hasActiveTab = tabsInSplitView.some((t) => t.active === true);
 
 				// Only protect if Split View is currently active
 				if (hasActiveTab) {
@@ -395,13 +388,13 @@ async function discardTab(tabId) {
 	}
 
 	// Safe to discard - not in active Split View
-	chrome.tabs.discard(tabId, function() {
+	chrome.tabs.discard(tabId, function () {
 		hasLastError();
 	});
 }
 
 // Export to global scope
 // @ts-ignore
-if (typeof global !== "undefined") {
+if (typeof global !== 'undefined') {
 	(global as any).discardTab = discardTab;
 }

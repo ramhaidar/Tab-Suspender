@@ -13,13 +13,11 @@ import Reason = chrome.offscreen.Reason;
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class OffscreenDocumentProvider {
-
 	private readonly documentCreatedPromise: Promise<void>;
 
 	constructor() {
 		this.documentCreatedPromise = new Promise<void>(async (resolve, reject) => {
-
-			await new Promise(r => setTimeout(r, 1500));
+			await new Promise((r) => setTimeout(r, 1500));
 
 			try {
 				// Check if an offscreen document already exists
@@ -47,7 +45,6 @@ class OffscreenDocumentProvider {
 	}
 
 	async extractOldSettings(settingsKeys: string[]) {
-
 		console.log('ExtractOldSettings started...');
 
 		await this.documentCreatedPromise;
@@ -68,8 +65,7 @@ class OffscreenDocumentProvider {
 	}
 
 	async cleanupFormDatas() {
-		return new Promise<void>(async resolve => {
-
+		return new Promise<void>(async (resolve) => {
 			console.log('CleanupFormDatas started...');
 
 			await this.documentCreatedPromise;

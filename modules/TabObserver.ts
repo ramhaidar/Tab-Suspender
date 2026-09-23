@@ -26,10 +26,9 @@ class TabObserver {
 		}
 
 		if (await settings.get('active'))
-			TabObserver.ticker = setInterval(
-				()=> {self.tick().catch(console.error)},
-				TabObserver.tickSize * 1000
-			);
+			TabObserver.ticker = setInterval(() => {
+				self.tick().catch(console.error);
+			}, TabObserver.tickSize * 1000);
 	}
 
 	settingsChanged() {
@@ -38,7 +37,6 @@ class TabObserver {
 	}
 
 	async tick(stateOnly?: boolean) {
-
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
 
@@ -50,8 +48,7 @@ class TabObserver {
 
 		if (!stateOnly) {
 			// Guard: never suspend when auto-suspension is disabled, even if ticker is running
-			if (!await settings.get('active'))
-				return;
+			if (!(await settings.get('active'))) return;
 
 			this.tickCount += TabObserver.tickSize;
 
@@ -80,26 +77,19 @@ class TabObserver {
 		const adaptiveSuspendTimeout = await settings.get('adaptiveSuspendTimeout');
 		const ignoreCloseGroupedTabs = await settings.get('ignoreCloseGroupedTabs');
 
-		if (batteryLevel < 0.0)
-			enableSuspendOnlyIfBattLvlLessValue = false;
-
+		if (batteryLevel < 0.0) enableSuspendOnlyIfBattLvlLessValue = false;
 
 		const cleanedTabsArray = {};
 
-		chrome.windows.getAll({ 'populate': true }, async (windows) => {
-
+		chrome.windows.getAll({ populate: true }, async (windows) => {
 			const openedChromeTabs = {};
 
 			/* Collect opened tabs */
-			for (const window of windows)
-				for (const tab of window.tabs)
-						openedChromeTabs[tab.id] = tab;
-
+			for (const window of windows) for (const tab of window.tabs) openedChromeTabs[tab.id] = tab;
 
 			// CLOSE TAB LOGIC
-			if (!autoSuspendOnlyOnBatteryOnly || autoSuspendOnlyOnBatteryOnly && !isCharging)
+			if (!autoSuspendOnlyOnBatteryOnly || (autoSuspendOnlyOnBatteryOnly && !isCharging))
 				if (isCloseTabsOn && self.tickCount % TabObserver.tickSize == 0) {
-
 					let oneTabClosed = false;
 					for (const wi in windows) {
 						const tabArray = [];
@@ -112,15 +102,15 @@ class TabObserver {
 									tab = windows[wi].tabs[j];
 									tabFromTabs = self.tabManager.getTabInfoById(tab.id);
 									if (tabFromTabs) {
-										if (!await self.tabManager.isExceptionTab(tab) && TabManager.isPassGroupedTabsRules(tab, ignoreCloseGroupedTabs))
+										if (!(await self.tabManager.isExceptionTab(tab)) && TabManager.isPassGroupedTabsRules(tab, ignoreCloseGroupedTabs))
 											tabArray.push(tabFromTabs);
 									}
 								}
 
 						let minRank = 19999999999;
 						let minRankTab = null;
-						if (tabArray.length > await settings.get('limitOfOpenedTabs')) {
-							const tabRanks: { rank: number, tab: TabInfo }[] = [];
+						if (tabArray.length > (await settings.get('limitOfOpenedTabs'))) {
+							const tabRanks: { rank: number; tab: TabInfo }[] = [];
 
 							for (let i = 0; i < tabArray.length; i++) {
 								tab = tabArray[i];
@@ -131,14 +121,17 @@ class TabObserver {
 										minRankTab = tab;
 									}
 									if (debug) {
-										tabRanks.push({rank: currentRank, tab: tab });
+										tabRanks.push({ rank: currentRank, tab: tab });
 									}
 								}
 							}
 
 							if (debug) {
-								tabRanks.sort((a, b) => a.rank - b.rank)
-									.forEach((rankInfo) => { console.log(`TabId[${rankInfo.tab.id}] closeRank: ${rankInfo.rank} -> ${rankInfo.tab.lstCapUrl}`, rankInfo.tab); })
+								tabRanks
+									.sort((a, b) => a.rank - b.rank)
+									.forEach((rankInfo) => {
+										console.log(`TabId[${rankInfo.tab.id}] closeRank: ${rankInfo.rank} -> ${rankInfo.tab.lstCapUrl}`, rankInfo.tab);
+									});
 							}
 						}
 
@@ -147,18 +140,15 @@ class TabObserver {
 							if ((tabToClose = TabManager.tabExist(windows, minRankTab.id)) != null) {
 								/*TODO: check for tab is last on whole window!!!*/
 
-								if (!stateOnly)
-									closeTab(minRankTab.id, tabToClose);
+								if (!stateOnly) closeTab(minRankTab.id, tabToClose);
 
 								oneTabClosed = true;
 								break;
 							}
 						}
 
-						if (oneTabClosed)
-							break;
+						if (oneTabClosed) break;
 					}
-
 				}
 
 			const steps = 10;
@@ -172,17 +162,14 @@ class TabObserver {
 					// eslint-disable-next-line no-redeclare
 					for (const j in windows[i].tabs) {
 						if (windows[i].tabs.hasOwnProperty(j)) {
-
 							const tab = windows[i].tabs[j];
 							const tabId = tab.id;
 							const tabInfo: TabInfo = self.tabManager.getTabInfoOrCreate(tab);
 
 							try {
-								if (debugTabsInfo)
-									console.log(i, j, tab);
+								if (debugTabsInfo) console.log(i, j, tab);
 								// eslint-disable-next-line no-empty,@typescript-eslint/no-unused-vars
-							} catch (e) {
-							}
+							} catch (e) {}
 
 							self.tabManager.checkAndTurnOffAutoDiscardable(tab);
 
@@ -209,36 +196,42 @@ class TabObserver {
 										tabInfo.time += TabObserver.tickSize;
 									}
 
-									if (isTabParked)
-										tabInfo.suspended_time += TabObserver.tickSize;
+									if (isTabParked) tabInfo.suspended_time += TabObserver.tickSize;
 								}
 
 								if (!oneTabParked /*&& tickCount % 5 == 0*/) {
-									if (tabInfo.parkedCount == null)
-										tabInfo.parkedCount = 0;
+									if (tabInfo.parkedCount == null) tabInfo.parkedCount = 0;
 
-									const calculatedTabTimeFrame = timeoutSettings + timeoutSettings * tabInfo.parkedCount + (tabInfo.active_time + 1) * Math.log2(tabInfo.swch_cnt + 1) + (timeoutSettings / 4) * Math.log2(tabInfo.swch_cnt + 1);
+									const calculatedTabTimeFrame =
+										timeoutSettings +
+										timeoutSettings * tabInfo.parkedCount +
+										(tabInfo.active_time + 1) * Math.log2(tabInfo.swch_cnt + 1) +
+										(timeoutSettings / 4) * Math.log2(tabInfo.swch_cnt + 1);
 
 									if (debug && parkUrl !== publicExtensionUrl)
-										chrome.action.setBadgeText({
-											text: '' + Math.round((calculatedTabTimeFrame - tabInfo.time) / 60) + '|' + tabInfo.swch_cnt,
-											tabId: tabId
-										}).catch((e) => console.error(tabInfo, e));
+										chrome.action
+											.setBadgeText({
+												text: '' + Math.round((calculatedTabTimeFrame - tabInfo.time) / 60) + '|' + tabInfo.swch_cnt,
+												tabId: tabId
+											})
+											.catch((e) => console.error(tabInfo, e));
 
-									if (!adaptiveSuspendTimeout && tabInfo.time >= timeoutSettings
-										|| adaptiveSuspendTimeout && tabInfo.time >= calculatedTabTimeFrame) {
-										if (!tab.active &&
-											tab.status === 'complete' &&
-											TabManager.isTabURLAllowedForPark(tab) &&
-											tabInfo.parkTrys <= 2) {
-											if (!await self.tabManager.isExceptionTab(tab)) {
-												if (!autoSuspendOnlyOnBatteryOnly || autoSuspendOnlyOnBatteryOnly && !isCharging) {
-													if (enableSuspendOnlyIfBattLvlLessValue == false || enableSuspendOnlyIfBattLvlLessValue == true && batteryLevel < battLvlLessValue / 100 && !isCharging) {
+									if (
+										(!adaptiveSuspendTimeout && tabInfo.time >= timeoutSettings) ||
+										(adaptiveSuspendTimeout && tabInfo.time >= calculatedTabTimeFrame)
+									) {
+										if (!tab.active && tab.status === 'complete' && TabManager.isTabURLAllowedForPark(tab) && tabInfo.parkTrys <= 2) {
+											if (!(await self.tabManager.isExceptionTab(tab))) {
+												if (!autoSuspendOnlyOnBatteryOnly || (autoSuspendOnlyOnBatteryOnly && !isCharging)) {
+													if (
+														enableSuspendOnlyIfBattLvlLessValue == false ||
+														(enableSuspendOnlyIfBattLvlLessValue == true && batteryLevel < battLvlLessValue / 100 && !isCharging)
+													) {
 														if (!stateOnly) {
 															try {
 																await parkTab(tab, tabId);
 															} catch (e) {
-																console.error("[TabObserver] parkTab failed (tab may have been closed):", tabId, e);
+																console.error('[TabObserver] parkTab failed (tab may have been closed):', tabId, e);
 															}
 															tabInfo.parkTrys++;
 														}
@@ -252,21 +245,26 @@ class TabObserver {
 										}
 									} else {
 										if (!stateOnly)
-											if (animateTabIconSuspendTimeout &&
+											if (
+												animateTabIconSuspendTimeout &&
 												!tab.active &&
 												tabInfo.time > 0 &&
-												!await self.tabManager.isExceptionTab(tab) &&
+												!(await self.tabManager.isExceptionTab(tab)) &&
 												TabManager.isTabURLAllowedForPark(tab) &&
-												(!autoSuspendOnlyOnBatteryOnly || autoSuspendOnlyOnBatteryOnly && !isCharging) &&
-												(enableSuspendOnlyIfBattLvlLessValue == false || enableSuspendOnlyIfBattLvlLessValue == true && batteryLevel < battLvlLessValue / 100 && !isCharging)) {
+												(!autoSuspendOnlyOnBatteryOnly || (autoSuspendOnlyOnBatteryOnly && !isCharging)) &&
+												(enableSuspendOnlyIfBattLvlLessValue == false ||
+													(enableSuspendOnlyIfBattLvlLessValue == true && batteryLevel < battLvlLessValue / 100 && !isCharging))
+											) {
 												const step = Math.round(tabInfo.time / ((timeoutSettings + timeoutSettings * (2 / steps)) / steps));
 												const suspendPercent = step * 10;
 												if (tabInfo.suspendPercent != suspendPercent) {
 													tabInfo.suspendPercent = suspendPercent;
-													chrome.tabs.sendMessage(tabId, {
-														method: '[AutomaticTabCleaner:highliteFavicon]',
-														highliteInfo: { suspendPercent: suspendPercent }
-													}).catch((e) => console.error(e));
+													chrome.tabs
+														.sendMessage(tabId, {
+															method: '[AutomaticTabCleaner:highliteFavicon]',
+															highliteInfo: { suspendPercent: suspendPercent }
+														})
+														.catch((e) => console.error(e));
 												}
 											}
 									}
@@ -279,12 +277,12 @@ class TabObserver {
 									/* Refresh susp. tab empty icons */
 									if ((tab.favIconUrl == null || tab.favIconUrl === '') && tabInfo.refreshIconRetries < 2) {
 										tabInfo.refreshIconRetries = tabInfo.refreshIconRetries + 1;
-										const tmpFunction = function(id, discard, index) {
-											setTimeout(function() {
+										const tmpFunction = function (id, discard, index) {
+											setTimeout(function () {
 												console.log('Refresh susp. tab icon: ' + id);
-												chrome.tabs.reload(id, function() {
+												chrome.tabs.reload(id, function () {
 													if (discard)
-														setTimeout(function() {
+														setTimeout(function () {
 															discardTab(id);
 														}, 2000);
 												});
@@ -311,34 +309,43 @@ class TabObserver {
 								}
 
 								/* DEBUG INFO */
-								if (false/*debug*/) {
+								if (false /*debug*/) {
 									if (TabManager.isTabURLAllowedForPark(tab) && tab.discarded == false) {
 										try {
 											if (TabManager.canTabBeScripted(tab)) {
-												chrome.scripting.executeScript({
-													target: { tabId: tabId },
-													func: (title, tabInfo) => {
+												chrome.scripting
+													.executeScript({
+														target: { tabId: tabId },
+														func: (title, tabInfo) => {
+															const iTabInfo: ITabInfo = tabInfo as ITabInfo;
 
-														const iTabInfo: ITabInfo = tabInfo as ITabInfo;
+															function appendTitleDebug(title, iTabInfo: ITabInfo) {
+																const indexOfDebugInfoStart = title.indexOf('^');
+																if (indexOfDebugInfoStart == -1) return debugInfoString(iTabInfo) + ' ^ ' + title;
+																else return debugInfoString(iTabInfo) + title.substring(indexOfDebugInfoStart);
+															}
 
-														function appendTitleDebug(title, iTabInfo: ITabInfo) {
-															const indexOfDebugInfoStart = title.indexOf('^');
-															if (indexOfDebugInfoStart == -1)
-																return debugInfoString(iTabInfo) + ' ^ ' + title;
-															else
-																return debugInfoString(iTabInfo) + title.substring(indexOfDebugInfoStart);
-														}
+															function debugInfoString(iTabInfo: ITabInfo) {
+																return (
+																	'[' +
+																	iTabInfo.id +
+																	'][' +
+																	iTabInfo.time +
+																	'][' +
+																	iTabInfo.active_time +
+																	'][' +
+																	iTabInfo.suspended_time +
+																	']'
+																);
+															}
 
-														function debugInfoString(iTabInfo: ITabInfo) {
-															return '[' + iTabInfo.id + '][' + iTabInfo.time + '][' + iTabInfo.active_time + '][' + iTabInfo.suspended_time + ']';
-														}
-
-														document.title = appendTitleDebug(title, iTabInfo);
-													},
-													args: [tab.title, tabInfo.toObject()]
-												}).catch(e => {
-													hasLastError(TabCapture.expectedInjectExceptions, e, `Debug title modification tabId: ${tab.id} [${tab.url}]`);
-												});
+															document.title = appendTitleDebug(title, iTabInfo);
+														},
+														args: [tab.title, tabInfo.toObject()]
+													})
+													.catch((e) => {
+														hasLastError(TabCapture.expectedInjectExceptions, e, `Debug title modification tabId: ${tab.id} [${tab.url}]`);
+													});
 											}
 										} catch (e) {
 											// normal behavior
@@ -360,8 +367,7 @@ class TabObserver {
 										tabInfo.parkTrys = 0;
 									}
 								}
-								if (pinnedSettings && tab.pinned)
-									tabInfo.time = 0;
+								if (pinnedSettings && tab.pinned) tabInfo.time = 0;
 							}
 						}
 					}
@@ -374,4 +380,4 @@ class TabObserver {
 }
 
 // @ts-ignore
-if (typeof global !== "undefined") global.TabObserver = TabObserver;
+if (typeof global !== 'undefined') global.TabObserver = TabObserver;

@@ -16,77 +16,74 @@ function DBProvider(dbImplementation, options) {
 	if (dbImplementation == 'IndexedDB')
 		// eslint-disable-next-line no-undef
 		this.concreteDBProvider = new IndexedDBProvider(options);
-	else
-		// eslint-disable-next-line no-undef
-		this.concreteDBProvider = new IndexedDBProvider(options);
+	// eslint-disable-next-line no-undef
+	else this.concreteDBProvider = new IndexedDBProvider(options);
 }
 
 /**
  *
  */
-DBProvider.prototype.isInitialized = function() {
+DBProvider.prototype.isInitialized = function () {
 	return this.concreteDBProvider.initialized;
 };
-
 
 /**
  *
  */
-DBProvider.prototype.getInitializedPromise = function() {
+DBProvider.prototype.getInitializedPromise = function () {
 	return this.concreteDBProvider.initializedPromise;
 };
 
 /**
  *
  */
-DBProvider.prototype.getAll = function(tableName, callback, errorCallback) {
+DBProvider.prototype.getAll = function (tableName, callback, errorCallback) {
 	return this.concreteDBProvider.getAll(tableName, callback, errorCallback);
 };
 
 /**
  *
  */
-DBProvider.prototype.queryIndex = function(query, callback) {
+DBProvider.prototype.queryIndex = function (query, callback) {
 	return this.concreteDBProvider.queryIndex(query, callback);
 };
 
 /**
  *
  */
-DBProvider.prototype.queryIndexCount = function(query, callback) {
+DBProvider.prototype.queryIndexCount = function (query, callback) {
 	return this.concreteDBProvider.queryIndexCount(query, callback);
 };
 
 /**
  *
  */
-DBProvider.prototype.put = function(query) {
+DBProvider.prototype.put = function (query) {
 	return this.concreteDBProvider.put(query);
 };
 
 /**
  *
  */
-DBProvider.prototype.putV2 = function(queries) {
+DBProvider.prototype.putV2 = function (queries) {
 	return this.concreteDBProvider.putV2(queries);
 };
 
 /**
  *
  */
-DBProvider.prototype.executeDelete = function(query) {
+DBProvider.prototype.executeDelete = function (query) {
 	return this.concreteDBProvider.executeDelete(query);
 };
 
 /**
  *
  */
-DBProvider.prototype.open = function(options) {
+DBProvider.prototype.open = function (options) {
 	return this.concreteDBProvider.open(options);
 };
 
-
 if (typeof module != 'undefined')
 	module.exports = {
-		DBProvider,
+		DBProvider
 	};

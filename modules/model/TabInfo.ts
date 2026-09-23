@@ -36,7 +36,6 @@ interface TabInfoClosedInfo {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class TabInfo implements ITabInfo {
-
 	private _id: number;
 	private _oldRefId: number;
 	private _originRefId: number;
@@ -106,26 +105,21 @@ class TabInfo implements ITabInfo {
 		// Execution-time only fields that should NOT be serialized
 		const excludedFields = ['_markedForLoadSuspended', '_originalUrlBeforeSuspend'];
 
-		Object.getOwnPropertyNames(this).forEach(
-			function(propName: string) {
-				if (propName.startsWith('_') && !excludedFields.includes(propName)) {
-					object[propName.substring(1)] = self[propName];
-				}
+		Object.getOwnPropertyNames(this).forEach(function (propName: string) {
+			if (propName.startsWith('_') && !excludedFields.includes(propName)) {
+				object[propName.substring(1)] = self[propName];
 			}
-		);
+		});
 
 		return <ITabInfo>object;
 	}
 
 	static fromObject(iTabInfo: ITabInfo): TabInfo {
-
 		const tabInfo = new TabInfo(<chrome.tabs.Tab>{});
 
-		Object.getOwnPropertyNames(iTabInfo).forEach(
-			function(propName: string) {
-				tabInfo[propName] = iTabInfo[propName];
-			}
-		);
+		Object.getOwnPropertyNames(iTabInfo).forEach(function (propName: string) {
+			tabInfo[propName] = iTabInfo[propName];
+		});
 
 		return tabInfo;
 	}
@@ -357,5 +351,5 @@ class TabInfo implements ITabInfo {
 
 if (typeof module != 'undefined')
 	module.exports = {
-		TabInfo,
-	}
+		TabInfo
+	};

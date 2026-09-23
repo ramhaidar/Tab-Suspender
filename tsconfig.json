@@ -1,25 +1,21 @@
 {
-  "compilerOptions": {
-    "outDir": "./build_dir",
-    "allowJs": true,
-    "target": "ES2022",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "sourceMap": true,
-    "typeRoots": ["./node_modules/@types", "./test/typing"],
-  },
-  "include": [
-    "./global.d.ts",
-    "./*",
-    "./modules/*",
-    "./modules/model/*",
-    "./fancy-settings/source/lib/store.ts",
-    "./test/*",
-    "./test/modules/*",
-  ],
-  "exclude":[
-    "./node_modules",
-    "./jest.config.js",
-    "./test"
-  ]
+	"compilerOptions": {
+		"outDir": "./build_dir",
+		"allowJs": true,
+		"target": "ES2022",
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"sourceMap": true,
+		"typeRoots": ["./node_modules/@types", "./test/typing"]
+	},
+	"include": [
+		"./global.d.ts",
+		"./*",
+		"./modules/*",
+		"./modules/model/*",
+		"./fancy-settings/source/lib/store.ts",
+		"./test/*",
+		"./test/modules/*"
+	],
+	"exclude": ["./node_modules", "./jest.config.js", "./test"]
 }

@@ -1,34 +1,33 @@
-
-function changeFancySettingsHandler(){
-	console.log('settingsChaged');	
+function changeFancySettingsHandler() {
+	console.log('settingsChaged');
 	//TODO:!!!!!!!!!
-	chrome.runtime.sendMessage({method: "[AutomaticTabCleaner:ReloadSettings]"});
-	//FIREFOX support 
-    //chrome.extension.getBackgroundPage().reloadSettingsEvent();
+	chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:ReloadSettings]' });
+	//FIREFOX support
+	//chrome.extension.getBackgroundPage().reloadSettingsEvent();
 	console.log('ReloadMessageSended!');
 }
 
-window.addEvent("domready", function () {
-    // Option 1: Use the manifest:
-    new FancySettings.initWithManifest(function (settings) {
+window.addEvent('domready', function () {
+	// Option 1: Use the manifest:
+	new FancySettings.initWithManifest(function (settings) {
 		console.log(settings);
 		//settings.search.events = new Array();
-		settings.caller= function(arg){
+		settings.caller = function (arg) {
 			console.log('applied');
 		};
-    });
+	});
 
-    document.getElementById('donateButton').onclick = function () {
-        "use strict";
+	document.getElementById('donateButton').onclick = function () {
+		'use strict';
 
-        void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:donate]'});
-        //setTimeout(function(){window.close();}, 300);
+		void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:donate]' });
+		//setTimeout(function(){window.close();}, 300);
 
-        return false;
-    };
-    
-    // Option 2: Do everything manually:
-    /*
+		return false;
+	};
+
+	// Option 2: Do everything manually:
+	/*
     var settings = new FancySettings("My Extension", "icon.png");
     
     var username = settings.create({

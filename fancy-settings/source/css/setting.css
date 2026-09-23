@@ -5,81 +5,83 @@
 */
 .tab-content h2 {
 	display: none;
-    margin: 0;
-    padding-bottom: 5px;
-    font-size: 26px;
-    color: #707070;
-    line-height: 1;
+	margin: 0;
+	padding-bottom: 5px;
+	font-size: 26px;
+	color: #707070;
+	line-height: 1;
 }
 
 .setting.group {
-    border-top: 1px solid #EEEEEE;
-    margin-top: 10px;
-    padding-top: 5px;
-    padding-left: 2px;
+	border-top: 1px solid #eeeeee;
+	margin-top: 10px;
+	padding-top: 5px;
+	padding-left: 2px;
 }
 
 .setting.group-name {
-    width: 140px;
-    padding: 0;
-    font-size: 14px;
-    font-weight: bold;
-    vertical-align: top;
+	width: 140px;
+	padding: 0;
+	font-size: 14px;
+	font-weight: bold;
+	vertical-align: top;
 }
 
 .setting.bundle {
-    max-width: 600px;
-    margin-bottom: 5px;
+	max-width: 600px;
+	margin-bottom: 5px;
 }
 
 .setting.bundle.list-box {
-    margin-bottom: 10px;
+	margin-bottom: 10px;
 }
 
 .setting.label.radio-buttons + .setting.container.radio-buttons {
-    margin-top: 3px;
+	margin-top: 3px;
 }
 
-.setting.label, .setting.element-label {
-    margin-right: 15px;
-    font-size: 13px;
-    font-weight: normal;
+.setting.label,
+.setting.element-label {
+	margin-right: 15px;
+	font-size: 13px;
+	font-weight: normal;
 }
 
-.setting.label.checkbox, .setting.element-label {
-    margin-left: 5px;
-    margin-right: 0;
+.setting.label.checkbox,
+.setting.element-label {
+	margin-left: 5px;
+	margin-right: 0;
 }
 
 .setting.label.checkbox {
-    position: relative;
-    top: 1px;
+	position: relative;
+	top: 1px;
 }
 
 .setting.element.slider {
-    position: relative;
-    width: 250px;
-    top: 4px;
-    cursor: pointer;
+	position: relative;
+	width: 250px;
+	top: 4px;
+	cursor: pointer;
 }
 
 .setting.element.list-box {
-    display: block;
-    height: 100px;
-    width: 100%;
+	display: block;
+	height: 100px;
+	width: 100%;
 }
 
 .setting.display.slider {
-    margin-left: 5px;
-    color: #666666;
+	margin-left: 5px;
+	color: #666666;
 }
 
 #nothing-found {
-    display: none;
-    margin-top: 10px;
-    font-size: 18px;
-    font-weight: lighter;
-    color: #999999;
+	display: none;
+	margin-top: 10px;
+	font-size: 18px;
+	font-weight: lighter;
+	color: #999999;
 }
 
 .setting.container.text {
@@ -90,24 +92,24 @@
 	color: #999999;
 }
 
-.settings-link{
-  font-size: 13px;
+.settings-link {
+	font-size: 13px;
 }
 
 /* Modif */
 #exceptionCheckFilter {
 	margin-right: 10px;
-    width: 232px;
-    /*border-left: 0px;*/
-	outline:none;
+	width: 232px;
+	/*border-left: 0px;*/
+	outline: none;
 }
 
 #exceptionCheckHttp {
 	display: none;
 	width: 34px;
-    border-right: 0px;
-    /*pointer-events: none;*/
-	outline:none;
+	border-right: 0px;
+	/*pointer-events: none;*/
+	outline: none;
 }
 
 .green-label {
@@ -121,26 +123,26 @@
 }
 
 .settings-donation {
-    position: fixed;
-    bottom: 10px;
-    left: 0px;
-    font-size: 11px !important;
-    width: 245px;
-    text-shadow: none !important
+	position: fixed;
+	bottom: 10px;
+	left: 0px;
+	font-size: 11px !important;
+	width: 245px;
+	text-shadow: none !important;
 }
 
-.settings-donation:hover img{
-    filter: contrast(200%);
+.settings-donation:hover img {
+	filter: contrast(200%);
 }
 
-.settings-donation img{
-    filter: contrast(180%);
+.settings-donation img {
+	filter: contrast(180%);
 }
 
 .settings-donation:hover {
-
 }
 
-::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
-    opacity: 0.3; /* Firefox */
+::placeholder {
+	/* Chrome, Firefox, Opera, Safari 10.1+ */
+	opacity: 0.3; /* Firefox */
 }

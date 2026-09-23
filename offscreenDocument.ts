@@ -10,7 +10,7 @@ type SuspendedTabInfo = {
 };
 
 const batteryDebug = false;
-const oldSettingsKeyPrefix = "store.tabSuspenderSettings.";
+const oldSettingsKeyPrefix = 'store.tabSuspenderSettings.';
 const BACKUP_SYNC_ORIGIN = 'https://uninstall.tab-suspender.com';
 
 setTimeout(startBatteryStatusNotifier, 3500);
@@ -23,14 +23,16 @@ function startServiceWorkerHeartbeat() {
 	// Send a heartbeat ping every 20 seconds to keep the service worker alive
 	// This works because handling messages resets the service worker's idle timer
 	setInterval(() => {
-		chrome.runtime.sendMessage({
-			method: '[TS:offscreenDocument:heartbeat]'
-		}).catch((error) => {
-			// Service worker might not be running yet, that's ok
-			if (error.message !== 'Could not establish connection. Receiving end does not exist.') {
-				console.error('Heartbeat error:', error);
-			}
-		});
+		chrome.runtime
+			.sendMessage({
+				method: '[TS:offscreenDocument:heartbeat]'
+			})
+			.catch((error) => {
+				// Service worker might not be running yet, that's ok
+				if (error.message !== 'Could not establish connection. Receiving end does not exist.') {
+					console.error('Heartbeat error:', error);
+				}
+			});
 	}, 20000); // Every 20 seconds
 
 	console.log('Service worker heartbeat started');
@@ -39,35 +41,33 @@ function startServiceWorkerHeartbeat() {
 function startBatteryStatusNotifier() {
 	try {
 		// @ts-ignore
-		(navigator as (Navigator)).getBattery().then(function(battery) {
-			battery.onchargingchange = function(event) {
-				if (batteryDebug)
-					console.log(`Charging event: ${event.target.charging}`);
+		(navigator as Navigator).getBattery().then(function (battery) {
+			battery.onchargingchange = function (event) {
+				if (batteryDebug) console.log(`Charging event: ${event.target.charging}`);
 				void chrome.runtime.sendMessage({
 					method: '[TS:offscreenDocument:batteryStatusChanged]',
 					battery: {
-						isCharging: event.target.charging,
-					} as BatteryStatusMessage,
+						isCharging: event.target.charging
+					} as BatteryStatusMessage
 				});
 			};
 			battery.onlevelchange = () => {
-				if (batteryDebug)
-					console.log(`Battery level event: ${battery.level}`);
+				if (batteryDebug) console.log(`Battery level event: ${battery.level}`);
 
 				void chrome.runtime.sendMessage({
 					method: '[TS:offscreenDocument:batteryStatusChanged]',
 					battery: {
-						level: battery.level,
-					} as BatteryStatusMessage,
+						level: battery.level
+					} as BatteryStatusMessage
 				});
-			}
+			};
 
 			console.log(`Startup Charging status: ${battery.charging}`);
 			void chrome.runtime.sendMessage({
 				method: '[TS:offscreenDocument:batteryStatusChanged]',
 				battery: {
 					isCharging: battery.charging
-				} as BatteryStatusMessage,
+				} as BatteryStatusMessage
 			});
 		});
 	} catch (e) {
@@ -106,42 +106,32 @@ function sendEvent(event) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+	if (message.method === '[TS:offscreenDocument:heartbeatAck]') {
+		// Heartbeat acknowledgment received from service worker
+		// No action needed, this is just to confirm the connection
+		return true;
+	} else if (message.method === '[TS:offscreenDocument:sendError]') {
+		console.log(`[TS:offscreenDocument:sendError]: ${message.type}`);
 
-		if (message.method === '[TS:offscreenDocument:heartbeatAck]') {
-			// Heartbeat acknowledgment received from service worker
-			// No action needed, this is just to confirm the connection
-			return true;
+		if (message.type === 'error') sendError(message.error);
+		else sendEvent(message.event);
+	} else if (message.method === '[TS:offscreenDocument:getLocalStorageData]') {
+		console.log(`[TS:offscreenDocument:getLocalStorageData]: ${message.settingsKeys}`);
 
-		} else if (message.method === '[TS:offscreenDocument:sendError]') {
-
-			console.log(`[TS:offscreenDocument:sendError]: ${message.type}`);
-
-			if (message.type === 'error')
-				sendError(message.error);
-			else
-				sendEvent(message.event);
-
-		} else if (message.method === '[TS:offscreenDocument:getLocalStorageData]') {
-
-			console.log(`[TS:offscreenDocument:getLocalStorageData]: ${message.settingsKeys}`);
-
-			const oldSettings = {};
-			for (const i in message.settingsKeys) {
-				// Get old settings...
-				console.log(`Key: ${message.settingsKeys[i]}`);
-				//debugger;
-				oldSettings[message.settingsKeys[i]] = localStorage.getItem(oldSettingsKeyPrefix + message.settingsKeys[i]);
-			}
-			sendResponse(oldSettings);
-
-		} else if (message.method === '[TS:offscreenDocument:startFormDatasCleanup]') {
-
-			console.log(`[TS:offscreenDocument:startFormDatasCleanup]`);
-
-			void cleanup();
+		const oldSettings = {};
+		for (const i in message.settingsKeys) {
+			// Get old settings...
+			console.log(`Key: ${message.settingsKeys[i]}`);
+			//debugger;
+			oldSettings[message.settingsKeys[i]] = localStorage.getItem(oldSettingsKeyPrefix + message.settingsKeys[i]);
 		}
+		sendResponse(oldSettings);
+	} else if (message.method === '[TS:offscreenDocument:startFormDatasCleanup]') {
+		console.log(`[TS:offscreenDocument:startFormDatasCleanup]`);
+
+		void cleanup();
 	}
-);
+});
 
 async function cleanup() {
 	console.log(`Starting f_t cleanup...`);
@@ -153,7 +143,7 @@ async function cleanup() {
 			localStorage.removeItem(key);
 			if (i % 100 === 0) {
 				console.log(`Cleaned ${i} f_t items`);
-				await new Promise(r => setTimeout(r, 500));
+				await new Promise((r) => setTimeout(r, 500));
 			}
 		}
 	}
@@ -255,11 +245,14 @@ async function syncSuspendedTabs() {
 
 		if (response?.tabs && Array.isArray(response.tabs)) {
 			// Send to iframe
-			backupSyncFrame.contentWindow?.postMessage({
-				type: 'SYNC_TABS',
-				tabs: response.tabs,
-				timestamp: Date.now()
-			}, BACKUP_SYNC_ORIGIN);
+			backupSyncFrame.contentWindow?.postMessage(
+				{
+					type: 'SYNC_TABS',
+					tabs: response.tabs,
+					timestamp: Date.now()
+				},
+				BACKUP_SYNC_ORIGIN
+			);
 
 			console.log(`Synced ${response.tabs.length} suspended tabs to backup`);
 		}

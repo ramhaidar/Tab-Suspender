@@ -32,7 +32,7 @@ class SessionRestoreDetector {
 	static waitForGroupRestore(options: SessionRestoreOptions = {}): Promise<void> {
 		const opts = { ...SessionRestoreDetector.DEFAULT_OPTIONS, ...options };
 
-		return new Promise(resolve => {
+		return new Promise((resolve) => {
 			let checkCount = 0;
 			let previousTabCount = -1;
 			let stableChecks = 0; // Count of checks where tab count was stable
@@ -59,22 +59,11 @@ class SessionRestoreDetector {
 					const indicators = SessionRestoreDetector.analyzeTabState(tabs, opts.parkUrl);
 
 					// Check if we should proceed with tab processing
-					const shouldProceed = SessionRestoreDetector.shouldProceedWithProcessing(
-						indicators,
-						checkCount,
-						stableChecks,
-						opts
-					);
+					const shouldProceed = SessionRestoreDetector.shouldProceedWithProcessing(indicators, checkCount, stableChecks, opts);
 
 					if (shouldProceed) {
 						const timing = checkCount * opts.checkInterval;
-						SessionRestoreDetector.logCompletionReason(
-							indicators,
-							checkCount,
-							stableChecks,
-							timing,
-							opts
-						);
+						SessionRestoreDetector.logCompletionReason(indicators, checkCount, stableChecks, timing, opts);
 						resolve();
 					} else {
 						setTimeout(checkGroupRestoreStatus, opts.checkInterval);
@@ -191,4 +180,4 @@ class SessionRestoreDetector {
 if (typeof module != 'undefined')
 	module.exports = {
 		SessionRestoreDetector
-	}
+	};

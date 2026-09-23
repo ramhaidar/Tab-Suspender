@@ -10,7 +10,6 @@ interface CaptureTabOptions {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class TabManager {
-
 	private tabInfos: { [key: string]: TabInfo } = {};
 	private TAB_INFO_CLEANUP_TTL_MS = 60 * 60 * 24 * 1000; /* 24 Hours */
 	private COMMON_LOOP_PERIOD_MS = 10000; /* 10 Sec */
@@ -41,16 +40,16 @@ class TabManager {
 	}
 
 	async decompress(byteArray: ArrayBuffer, encoding = 'gzip' as CompressionFormat): Promise<string> {
-		const cs = new DecompressionStream(encoding)
-		const writer = cs.writable.getWriter()
-		void writer.write(byteArray)
-		void writer.close()
-		const arrayBuffer = await new Response(cs.readable).arrayBuffer()
-		return new TextDecoder().decode(arrayBuffer)
+		const cs = new DecompressionStream(encoding);
+		const writer = cs.writable.getWriter();
+		void writer.write(byteArray);
+		void writer.close();
+		const arrayBuffer = await new Response(cs.readable).arrayBuffer();
+		return new TextDecoder().decode(arrayBuffer);
 	}
 
-	arrayBufferToBase64( buffer: ArrayBuffer ): string {
-		const bytes = new Uint8Array( buffer );
+	arrayBufferToBase64(buffer: ArrayBuffer): string {
+		const bytes = new Uint8Array(buffer);
 		const len = bytes.byteLength;
 
 		// For small buffers, use the simple approach
@@ -108,30 +107,33 @@ class TabManager {
 	private loadTabInfos() {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
-		chrome.storage.local.get(this.TAB_INFOS_KEY).then(async (result) => {
-			const loadedITabInfosCompressedBase64: string  = result[self.TAB_INFOS_KEY];
+		chrome.storage.local
+			.get(this.TAB_INFOS_KEY)
+			.then(async (result) => {
+				const loadedITabInfosCompressedBase64: string = result[self.TAB_INFOS_KEY];
 
-			if (loadedITabInfosCompressedBase64 != null && loadedITabInfosCompressedBase64.trim().length > 0) {
-				const iTabInfosCompressedArrayBuffer = this.base64ToArrayBuffer(loadedITabInfosCompressedBase64);
-				const iTabInfosJson = await this.decompress(iTabInfosCompressedArrayBuffer);
-				const loadedITabInfos: { [key: number]: ITabInfo } = JSON.parse(iTabInfosJson);
-				//const loadedITabInfos: { [key: number]: ITabInfo } = result[self.TAB_INFOS_KEY];
+				if (loadedITabInfosCompressedBase64 != null && loadedITabInfosCompressedBase64.trim().length > 0) {
+					const iTabInfosCompressedArrayBuffer = this.base64ToArrayBuffer(loadedITabInfosCompressedBase64);
+					const iTabInfosJson = await this.decompress(iTabInfosCompressedArrayBuffer);
+					const loadedITabInfos: { [key: number]: ITabInfo } = JSON.parse(iTabInfosJson);
+					//const loadedITabInfos: { [key: number]: ITabInfo } = result[self.TAB_INFOS_KEY];
 
-				for (const propertyName in loadedITabInfos) {
-					if (loadedITabInfos.hasOwnProperty(propertyName)) {
-						const tabInfo = TabInfo.fromObject(loadedITabInfos[propertyName]);
-						// Reset inactivity timer on service-worker restart so tabs that were
-						// near the suspension threshold don't get suspended immediately after
-						// the browser is reopened (fixes "suspending after just a few minutes").
-						if (!tabInfo.parked) {
-							tabInfo.time = 0;
+					for (const propertyName in loadedITabInfos) {
+						if (loadedITabInfos.hasOwnProperty(propertyName)) {
+							const tabInfo = TabInfo.fromObject(loadedITabInfos[propertyName]);
+							// Reset inactivity timer on service-worker restart so tabs that were
+							// near the suspension threshold don't get suspended immediately after
+							// the browser is reopened (fixes "suspending after just a few minutes").
+							if (!tabInfo.parked) {
+								tabInfo.time = 0;
+							}
+							self.tabInfos[propertyName] = tabInfo;
 						}
-						self.tabInfos[propertyName] = tabInfo;
 					}
+					console.log(`tabInfos loaded`);
 				}
-				console.log(`tabInfos loaded`);
-			}
-		}).catch(console.error);
+			})
+			.catch(console.error);
 	}
 
 	private readonly TAB_INFOS_KEY = 'tabInfos';
@@ -146,18 +148,17 @@ class TabManager {
 
 		/** Event ******************************************************************************
 		 tabs.onCreated - add to list */
-		chrome.tabs.onCreated.addListener(async function(tab: chrome.tabs.Tab) {
+		chrome.tabs.onCreated.addListener(async function (tab: chrome.tabs.Tab) {
 			const tabInfo = self.createNewTabInfo(tab);
 
-			if (trace)
-				console.trace(`Tab[${tab.id}] Created`, tab);
+			if (trace) console.trace(`Tab[${tab.id}] Created`, tab);
 
 			self.checkAndTurnOffAutoDiscardable(tab);
 
 			self.historyOpenerController.onNewTab(tab);
 
 			// Check if tab should be suspended (Ctrl+Click or Cmd+Click)
-			if (nextTabShouldBeSuspended && tab.active === false && await settings.get('suspendOnCtrlClick')) {
+			if (nextTabShouldBeSuspended && tab.active === false && (await settings.get('suspendOnCtrlClick'))) {
 				nextTabShouldBeSuspended = false; // Reset flag
 
 				// Get URL for suspension
@@ -165,12 +166,14 @@ class TabManager {
 
 				// Verify URL is valid before marking for suspension
 				// NOTE: Don't save URL here if it's about:blank - we'll get the real URL in onUpdated
-				if (urlForSuspend &&
+				if (
+					urlForSuspend &&
 					urlForSuspend !== 'null' &&
 					urlForSuspend !== 'undefined' &&
 					urlForSuspend !== 'about:blank' &&
 					!urlForSuspend.startsWith('chrome-extension://') &&
-					!urlForSuspend.startsWith('chrome://')) {
+					!urlForSuspend.startsWith('chrome://')
+				) {
 					// Mark tab to suspend when favicon loads
 					tabInfo.markedForLoadSuspended = true;
 					tabInfo.originalUrlBeforeSuspend = urlForSuspend;
@@ -181,13 +184,13 @@ class TabManager {
 					// Don't set originalUrlBeforeSuspend - we'll get it from updatedTab.url in onUpdated
 				}
 			}
-			if (nextTabShouldBeSuspended && !await settings.get('suspendOnCtrlClick')) {
+			if (nextTabShouldBeSuspended && !(await settings.get('suspendOnCtrlClick'))) {
 				// Reset flag if setting is disabled
 				nextTabShouldBeSuspended = false;
 			}
 
 			if (tab.active === false)
-				if (await settings.get('openUnfocusedTabDiscarded') == true) {
+				if ((await settings.get('openUnfocusedTabDiscarded')) == true) {
 					tabInfo.markedForDiscard = true;
 				}
 		});
@@ -205,8 +208,7 @@ class TabManager {
 
 			this.historyOpenerController.onTabUpdate(_tabId, changeInfo);
 
-			if (trace)
-				console.trace(`Tab[${tab.id}] updated: `, changeInfo, tab);
+			if (trace) console.trace(`Tab[${tab.id}] updated: `, changeInfo, tab);
 
 			if (changeInfo.discarded == false && tab.active == true && TabManager.isTabParked(tab) && getScreenCache == null)
 				try {
@@ -222,11 +224,9 @@ class TabManager {
 									if (getScreenCache != null) {
 										getScreenCache.screen = screen;
 										getScreenCache.pixRat = pixRat;
-										if (debugScreenCache)
-											console.log('Screen cached.');
+										if (debugScreenCache) console.log('Screen cached.');
 									} else {
-										if (debugScreenCache)
-											console.log('Screen cache outdated!');
+										if (debugScreenCache) console.log('Screen cache outdated!');
 									}
 									resolve(); // Always resolve, even if cache was cleared
 								});
@@ -262,55 +262,61 @@ class TabManager {
 
 					const pollForFavicon = () => {
 						attempts++;
-						chrome.tabs.get(tab.id).then((updatedTab) => {
-							// Get the URL - prefer saved URL, but use current tab URL if not saved or if saved was about:blank
-							let originalUrl = tabInfo.originalUrlBeforeSuspend;
-							if (!originalUrl || originalUrl === 'about:blank') {
-								originalUrl = updatedTab.url;
-							}
+						chrome.tabs
+							.get(tab.id)
+							.then((updatedTab) => {
+								// Get the URL - prefer saved URL, but use current tab URL if not saved or if saved was about:blank
+								let originalUrl = tabInfo.originalUrlBeforeSuspend;
+								if (!originalUrl || originalUrl === 'about:blank') {
+									originalUrl = updatedTab.url;
+								}
 
-							// Verify URL is valid and not still about:blank
-							if (!originalUrl ||
-								originalUrl === 'null' ||
-								originalUrl === 'undefined' ||
-								originalUrl === 'about:blank' ||
-								originalUrl.startsWith('chrome-extension://') ||
-								originalUrl.startsWith('chrome://')) {
+								// Verify URL is valid and not still about:blank
+								if (
+									!originalUrl ||
+									originalUrl === 'null' ||
+									originalUrl === 'undefined' ||
+									originalUrl === 'about:blank' ||
+									originalUrl.startsWith('chrome-extension://') ||
+									originalUrl.startsWith('chrome://')
+								) {
+									// If we haven't reached max attempts and URL is still about:blank, keep trying
+									if (originalUrl === 'about:blank' && attempts < MAX_ATTEMPTS) {
+										setTimeout(pollForFavicon, POLL_INTERVAL_MS);
+										return;
+									}
 
-								// If we haven't reached max attempts and URL is still about:blank, keep trying
-								if (originalUrl === 'about:blank' && attempts < MAX_ATTEMPTS) {
-									setTimeout(pollForFavicon, POLL_INTERVAL_MS);
+									// Clear flags and do NOT park
+									tabInfo.markedForLoadSuspended = false;
+									tabInfo.originalUrlBeforeSuspend = null;
 									return;
 								}
 
-								// Clear flags and do NOT park
-								tabInfo.markedForLoadSuspended = false;
-								tabInfo.originalUrlBeforeSuspend = null;
-								return;
-							}
+								// Check if we have favicon or reached max attempts
+								if (updatedTab.favIconUrl || attempts >= MAX_ATTEMPTS) {
+									let url = parkUrl;
+									url += '?tabId=' + encodeURIComponent(updatedTab.id);
+									url += '&title=' + encodeURIComponent(updatedTab.title || 'New Tab');
+									url += '&url=' + encodeURIComponent(originalUrl);
+									url += '&sessionId=' + encodeURIComponent(TSSessionId);
+									if (updatedTab.favIconUrl) url += '&icon=' + encodeURIComponent(updatedTab.favIconUrl);
 
-							// Check if we have favicon or reached max attempts
-							if (updatedTab.favIconUrl || attempts >= MAX_ATTEMPTS) {
-								let url = parkUrl;
-								url += '?tabId=' + encodeURIComponent(updatedTab.id);
-								url += '&title=' + encodeURIComponent(updatedTab.title || 'New Tab');
-								url += '&url=' + encodeURIComponent(originalUrl);
-								url += '&sessionId=' + encodeURIComponent(TSSessionId);
-								if (updatedTab.favIconUrl)
-									url += '&icon=' + encodeURIComponent(updatedTab.favIconUrl);
+									// Clear flags
+									tabInfo.markedForLoadSuspended = false;
+									tabInfo.originalUrlBeforeSuspend = null;
 
-								// Clear flags
-								tabInfo.markedForLoadSuspended = false;
-								tabInfo.originalUrlBeforeSuspend = null;
-
-								chrome.tabs.update(updatedTab.id, { url: url }).then(() => {
-									self.markTabParked(updatedTab);
-								}).catch(console.error);
-							} else {
-								// Favicon not ready yet, try again
-								setTimeout(pollForFavicon, POLL_INTERVAL_MS);
-							}
-						}).catch(console.error);
+									chrome.tabs
+										.update(updatedTab.id, { url: url })
+										.then(() => {
+											self.markTabParked(updatedTab);
+										})
+										.catch(console.error);
+								} else {
+									// Favicon not ready yet, try again
+									setTimeout(pollForFavicon, POLL_INTERVAL_MS);
+								}
+							})
+							.catch(console.error);
 					};
 
 					// Start polling after initial delay
@@ -320,23 +326,20 @@ class TabManager {
 				}
 			}
 
-			if (debug && Object.keys(changeInfo).length == 1 && Object.keys(changeInfo)[0] == 'title')
-				return;
+			if (debug && Object.keys(changeInfo).length == 1 && Object.keys(changeInfo)[0] == 'title') return;
 
-			if (Object.keys(changeInfo).length == 1 && Object.keys(changeInfo)[0] == 'favIconUrl')
-				return;
+			if (Object.keys(changeInfo).length == 1 && Object.keys(changeInfo)[0] == 'favIconUrl') return;
 
 			let captured = false;
 
 			if (changeInfo.status === 'complete') {
-				if (debug)
-					console.log('Tab Updated', tab);
+				if (debug) console.log('Tab Updated', tab);
 
 				tabInfo.nonCmpltInput = false;
 
 				if (tab.active === true) {
 					if (TabManager.isTabURLAllowedForPark(tab)) {
-						setTimeout(function() {
+						setTimeout(function () {
 							void tabCapture.captureTab(tab);
 						}, 150);
 						captured = true;
@@ -347,16 +350,13 @@ class TabManager {
 				}
 
 				if (TabManager.isTabParked(tab))
-					chrome.tabs.getZoom(tab.id, function(zoomFactor) {
-						if (zoomFactor != 1.0)
-							chrome.tabs.setZoom(tab.id, 1.0)
-								.catch(console.error);
+					chrome.tabs.getZoom(tab.id, function (zoomFactor) {
+						if (zoomFactor != 1.0) chrome.tabs.setZoom(tab.id, 1.0).catch(console.error);
 					});
 			}
 
 			if (changeInfo.url != null) {
-				if (tabInfo.parkedUrl != null &&
-					tabInfo.parkedUrl != changeInfo.url) {
+				if (tabInfo.parkedUrl != null && tabInfo.parkedUrl != changeInfo.url) {
 					// Clear parkedUrl only when navigating to a new regular URL (not parkUrl)
 					if (changeInfo.url.indexOf(parkUrl) !== 0) {
 						tabInfo.parkedUrl = null;
@@ -366,14 +366,13 @@ class TabManager {
 
 			if (TabManager.isTabParked(tab)) {
 				tabInfo.parked = true;
-				if (changeInfo.discarded != null && changeInfo.discarded == false)
-					tabInfo.discarded = false;
+				if (changeInfo.discarded != null && changeInfo.discarded == false) tabInfo.discarded = false;
 			} else {
 				tabInfo.parked = false;
 
 				if (tab.active == true)
 					if (!captured && changeInfo.status != 'loading')
-						setTimeout(function() {
+						setTimeout(function () {
 							void tabCapture.captureTab(tab);
 						}, 150);
 			}
@@ -383,28 +382,25 @@ class TabManager {
 		  tabs.onRemoved - load if unloaded, remove from list
 		 ***************************************************************************************/
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		chrome.tabs.onRemoved.addListener(function(tabId, removeInfo: chrome.tabs.TabRemoveInfo) {
-			if (trace)
-				console.trace(`Tab[${tabId}] removed`);
+		chrome.tabs.onRemoved.addListener(function (tabId, removeInfo: chrome.tabs.TabRemoveInfo) {
+			if (trace) console.trace(`Tab[${tabId}] removed`);
 
 			self.markTabClosed(tabId);
 
 			self.historyOpenerController.onRemoveTab(tabId);
 		});
 
-	  /** Event ******************************************************************************
+		/** Event ******************************************************************************
 		 tabs.onSelectionChanged - load if unloaded, reset inactivity */
-		chrome.tabs.onActivated.addListener(function(activeInfo) {
-
+		chrome.tabs.onActivated.addListener(function (activeInfo) {
 			//console.log(`Fired: OnTab Activated: ${activeInfo.tabId}`, activeInfo);
 
 			const processedPromise = new Promise<chrome.tabs.Tab>((resolve, reject) => {
-
 				let retries = 0;
 
 				const attemptGetTab = async () => {
 					if (retries > 5) {
-						console.error('Can\'t request Tab object on TabActivated (5 retries left)', activeInfo);
+						console.error("Can't request Tab object on TabActivated (5 retries left)", activeInfo);
 						reject();
 						return;
 					}
@@ -430,61 +426,61 @@ class TabManager {
 
 				// Start first attempt
 				void attemptGetTab();
-
 			});
 
-			processedPromise.then(async (tab: chrome.tabs.Tab) => {
-
-				//if (debug) {
+			processedPromise
+				.then(async (tab: chrome.tabs.Tab) => {
+					//if (debug) {
 					console.log(`OnTab Activated: ${activeInfo.tabId}`, tab);
-				//}
+					//}
 
-				self.markTabActivated(tab);
+					self.markTabActivated(tab);
 
-				try {
-					if (TabManager.isTabParked(tab)) {
-						if (await settings.get('autoRestoreTab'))
-							self.unsuspendTab(tab);
-					} else if (!tab.discarded && await settings.get('animateTabIconSuspendTimeout'))
-						chrome.tabs.sendMessage(activeInfo.tabId, {
-							method: '[AutomaticTabCleaner:highliteFavicon]',
-							highliteInfo: { suspendPercent: 0 }
-						}).catch(console.error);
-				} catch (e) {
-					console.error(e);
-				}
-
-				try {
-					if (/*isTabURLAllowedForPark(tab) &&*/ !TabManager.isTabParked(tab) && tab.url.indexOf(sessionsPageUrl) == -1) {
-						if (!tab.discarded)
-							(function(closureTab) {
-								setTimeout(function() {
-									void tabCapture.captureTab(closureTab, <CaptureTabOptions>{ checkActiveTabNotChanged: true });
-								}, 400);
-							})(tab);
+					try {
+						if (TabManager.isTabParked(tab)) {
+							if (await settings.get('autoRestoreTab')) self.unsuspendTab(tab);
+						} else if (!tab.discarded && (await settings.get('animateTabIconSuspendTimeout')))
+							chrome.tabs
+								.sendMessage(activeInfo.tabId, {
+									method: '[AutomaticTabCleaner:highliteFavicon]',
+									highliteInfo: { suspendPercent: 0 }
+								})
+								.catch(console.error);
+					} catch (e) {
+						console.error(e);
 					}
-				} catch (e) {
-					console.error(e);
-				}
 
-				try {
-					if (tab.url.indexOf(sessionsPageUrl) == 0)
-						chrome.tabs.sendMessage(tab.id, { 'method': '[AutomaticTabCleaner:updateSessions]' }).catch(console.error);
-					if (tab.url.indexOf(historyPageUrl) == 0)
-						chrome.tabs.sendMessage(tab.id, { 'method': '[AutomaticTabCleaner:updateHistoryPage]' }).catch(console.error);
-				} catch (e) {
-					console.error(e);
-				}
+					try {
+						if (/*isTabURLAllowedForPark(tab) &&*/ !TabManager.isTabParked(tab) && tab.url.indexOf(sessionsPageUrl) == -1) {
+							if (!tab.discarded)
+								(function (closureTab) {
+									setTimeout(function () {
+										void tabCapture.captureTab(closureTab, <CaptureTabOptions>{ checkActiveTabNotChanged: true });
+									}, 400);
+								})(tab);
+						}
+					} catch (e) {
+						console.error(e);
+					}
 
-				/* Change Icon to green */
-				void new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).updateStatus(tab);
-			}).catch(console.error);
+					try {
+						if (tab.url.indexOf(sessionsPageUrl) == 0)
+							chrome.tabs.sendMessage(tab.id, { method: '[AutomaticTabCleaner:updateSessions]' }).catch(console.error);
+						if (tab.url.indexOf(historyPageUrl) == 0)
+							chrome.tabs.sendMessage(tab.id, { method: '[AutomaticTabCleaner:updateHistoryPage]' }).catch(console.error);
+					} catch (e) {
+						console.error(e);
+					}
+
+					/* Change Icon to green */
+					void new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).updateStatus(tab);
+				})
+				.catch(console.error);
 		});
 	}
 
 	private onTabReplaceDetected(addedTabId: number, removedTabId: number): TabInfo {
-		if (trace)
-			console.trace(`Tab Replaced: ${removedTabId} -> ${addedTabId}`, this.tabInfos);
+		if (trace) console.trace(`Tab Replaced: ${removedTabId} -> ${addedTabId}`, this.tabInfos);
 
 		this.tabInfos[addedTabId] = this.tabInfos[removedTabId];
 		this.tabInfos[addedTabId].id = addedTabId;
@@ -492,8 +488,7 @@ class TabManager {
 		this.tabInfos[removedTabId].newRefId = addedTabId;
 
 		chrome.tabs.get(addedTabId, (tab) => {
-			if (tab == null)
-				return;
+			if (tab == null) return;
 			if (tab.url.indexOf(parkUrl) == 0) {
 				const originTabId = parseUrlParam(tab.url, 'tabId');
 
@@ -502,7 +497,9 @@ class TabManager {
 				} else {
 					this.tabInfos[removedTabId] = structuredClone(this.tabInfos[removedTabId]);
 					this.markTabClosed(removedTabId);
-					console.warn(`Tab Replaced: ${removedTabId} -> ${addedTabId} - Intermediate replace -> mark tab info can be removed for ${removedTabId}`);
+					console.warn(
+						`Tab Replaced: ${removedTabId} -> ${addedTabId} - Intermediate replace -> mark tab info can be removed for ${removedTabId}`
+					);
 				}
 				//params.set('tabId', addedTabId.toString());
 				///// ******** Looks like it does not working!!!!!!!
@@ -511,9 +508,7 @@ class TabManager {
 			}
 		});
 
-
-		if (trace)
-			console.trace(`Tab Replaced: ${removedTabId} -> ${addedTabId} complete`, this.tabInfos);
+		if (trace) console.trace(`Tab Replaced: ${removedTabId} -> ${addedTabId} complete`, this.tabInfos);
 
 		return this.tabInfos[addedTabId];
 	}
@@ -545,14 +540,13 @@ class TabManager {
 		const self = this;
 
 		// get all windows with tabs
-		chrome.windows.getAll({ 'populate': true }, async function(wins) {
+		chrome.windows.getAll({ populate: true }, async function (wins) {
 			try {
 				let i, j, id, firstWindow;
 				// get all tabs, init array with 0 inactive time
 				for (i in wins) {
 					if (wins.hasOwnProperty(i)) {
-						if (firstWindow == null)
-							firstWindow = wins[i].id;
+						if (firstWindow == null) firstWindow = wins[i].id;
 
 						for (j in wins[i].tabs) {
 							if (wins[i].tabs.hasOwnProperty(j)) {
@@ -583,7 +577,7 @@ class TabManager {
 	async unsuspendTab(tab: chrome.tabs.Tab) {
 		if (tab.discarded == true) {
 			markForUnsuspend(tab);
-			chrome.tabs.reload(tab.id, ).catch(console.error)
+			chrome.tabs.reload(tab.id).catch(console.error);
 		} else {
 			if (tab.status == 'loading') {
 				// park.html is still loading — honour reloadTabOnRestore:
@@ -592,7 +586,7 @@ class TabManager {
 				//         and calls historyFallback() (window.history.go(-1)), preserving bfcache
 				const reloadTabOnRestore = await settings.get('reloadTabOnRestore');
 				if (reloadTabOnRestore === true) {
-					chrome.tabs.update(tab.id, { 'url': parseUrlParam(tab.url, 'url') }).catch(console.error);
+					chrome.tabs.update(tab.id, { url: parseUrlParam(tab.url, 'url') }).catch(console.error);
 				} else {
 					markForUnsuspend(tab);
 				}
@@ -601,11 +595,13 @@ class TabManager {
 				const tabInfo = this.getTabInfoById(tab.id);
 				const originRefId = tabInfo?.originRefId;
 
-				chrome.runtime.sendMessage({
-					'method': '[AutomaticTabCleaner:RestoreMessage]',
-					'tab': tab,
-					'originRefId': originRefId  // Include old tab ID for matching in park.html
-				}).catch(console.error);
+				chrome.runtime
+					.sendMessage({
+						method: '[AutomaticTabCleaner:RestoreMessage]',
+						tab: tab,
+						originRefId: originRefId // Include old tab ID for matching in park.html
+					})
+					.catch(console.error);
 			}
 		}
 	}
@@ -616,7 +612,7 @@ class TabManager {
 		if (tabInfo != null)
 			this.tabInfos[tabId].closed = <TabInfoClosedInfo>{
 				at: Date.now(),
-				tsSessionId: TSSessionId,
+				tsSessionId: TSSessionId
 			};
 		else {
 			console.error(`TabManager.markTabDeleted() tabInfo not found for tabId: `, tabId);
@@ -624,20 +620,19 @@ class TabManager {
 	}
 
 	private deleteTab(tabId: string) {
-		if (this.tabInfos.hasOwnProperty(tabId))
-			delete this.tabInfos[tabId];
+		if (this.tabInfos.hasOwnProperty(tabId)) delete this.tabInfos[tabId];
 	}
 
 	public createNewTabInfo(tab: chrome.tabs.Tab): TabInfo {
 		const tabInfo = new TabInfo(tab);
-		return this.tabInfos[tab.id] = tabInfo;
+		return (this.tabInfos[tab.id] = tabInfo);
 	}
 
 	getTabInfoOrCreate(tab: chrome.tabs.Tab): TabInfo {
 		let tabInfo = this.getTabInfoById(tab.id);
 
 		/* If Parked Tab (Usually after browser restart) */
-		if(tabInfo == null && tab.url.startsWith(parkUrl)) {
+		if (tabInfo == null && tab.url.startsWith(parkUrl)) {
 			const removedTabId = parseInt(parseUrlParam(tab.url, 'tabId'));
 			const originalUrl = parseUrlParam(tab.url, 'url');
 			console.log(`Found parked[${removedTabId}] Tab[${tab.id}] without TabInfo, starting id replace..`);
@@ -651,11 +646,10 @@ class TabManager {
 			tabInfo = this.onTabReplaceDetected(tab.id, removedTabId);
 		}
 
-		if (tabInfo == null)
-			tabInfo = this.createNewTabInfo(tab);
+		if (tabInfo == null) tabInfo = this.createNewTabInfo(tab);
 
 		return tabInfo;
-	};
+	}
 
 	getTabInfoById(tabId: string | number): TabInfo {
 		try {
@@ -674,8 +668,7 @@ class TabManager {
 
 	findReplacedTabId(tabId: number): number {
 		const tabInfo = this.getTabInfoById(tabId);
-		if (tabInfo && tabInfo.newRefId != null)
-			tabId = tabInfo.newRefId;
+		if (tabInfo && tabInfo.newRefId != null) tabId = tabInfo.newRefId;
 		return tabId;
 	}
 
@@ -697,25 +690,20 @@ class TabManager {
 	markTabParked(tab: chrome.tabs.Tab) {
 		const tabInfo = this.getTabInfoOrCreate(tab);
 		if (tabInfo.parkedUrl != null) {
-			if (extractHostname(tabInfo.parkedUrl) == extractHostname(tabInfo.lstCapUrl))
-				tabInfo.parkedCount += 1;
-			else
-				tabInfo.parkedCount = 0;
-		} else
-			tabInfo.parkedCount += 1;
+			if (extractHostname(tabInfo.parkedUrl) == extractHostname(tabInfo.lstCapUrl)) tabInfo.parkedCount += 1;
+			else tabInfo.parkedCount = 0;
+		} else tabInfo.parkedCount += 1;
 
 		if (tab.url.indexOf(parkUrl) == 0)
 			tabInfo.parkedUrl = TabManager.getParameterByName('url', tab.url); //getTabInfo(tab).lstCapUrl;
-		else
-			tabInfo.parkedUrl = tab.url;
+		else tabInfo.parkedUrl = tab.url;
 
 		tabInfo.parked = true;
 	}
 
 	markTabParkedFromInject(tabId: number) {
 		const tabInfo = this.getTabInfoById(tabId);
-		if (tabInfo != null)
-			tabInfo.parked = true;
+		if (tabInfo != null) tabInfo.parked = true;
 	}
 
 	setTabUnsuspended(tab: chrome.tabs.Tab) {
@@ -725,7 +713,6 @@ class TabManager {
 		tabInfo.parkTrys = 0;
 	}
 
-
 	setLastCaptureUrl(tab: chrome.tabs.Tab) {
 		const tabInfo = this.getTabInfoOrCreate(tab);
 		tabInfo.lstCapUrl = tab.url;
@@ -733,7 +720,6 @@ class TabManager {
 	}
 
 	public calculateAndMarkClosedTabs(openedChromeTabs: { [key: number]: chrome.tabs.Tab }) {
-
 		const suspendedChromeTabs = {};
 		Object.values(openedChromeTabs).forEach((tab) => {
 			if (tab.url.indexOf(parkUrl) == 0) {
@@ -758,7 +744,7 @@ class TabManager {
 							console.log(`Tab ${tabId} marked as closed after grace period`);
 							tabInfo.closed = <TabInfoClosedInfo>{
 								at: Date.now(),
-								tsSessionId: TSSessionId,
+								tsSessionId: TSSessionId
 							};
 							tabInfo.missingCheckTime = null;
 						}
@@ -780,8 +766,7 @@ class TabManager {
 				if (tabInfo == null) {
 					console.warn(`TabInfo[${tabId}] exist, but undefined!`);
 					this.deleteTab(tabId);
-				}
-				else if (tabInfo.closed != null) {
+				} else if (tabInfo.closed != null) {
 					if (Date.now() > tabInfo.closed.at + this.TAB_INFO_CLEANUP_TTL_MS) {
 						console.log(`Clear closed tab[${tabId}]`, tabInfo);
 						this.deleteTab(tabId);
@@ -793,16 +778,13 @@ class TabManager {
 
 	private async isTabException(tab: chrome.tabs.Tab) {
 		// Audible
-		if (TabManager.isAudible(tab) && await settings.get('ignoreAudible'))
-			return true;
+		if (TabManager.isAudible(tab) && (await settings.get('ignoreAudible'))) return true;
 
 		// Pinned Tab
-		if (tab.pinned == true && await settings.get('pinned'))
-			return true;
+		if (tab.pinned == true && (await settings.get('pinned'))) return true;
 
 		// Grouped Tab
-		if (tab.groupId !== -1 && await settings.get('ignoreSuspendGroupedTabs'))
-			return true;
+		if (tab.groupId !== -1 && (await settings.get('ignoreSuspendGroupedTabs'))) return true;
 
 		// Split View Tab (Chrome 145+)
 		// Prevent discard of tabs in ACTIVE Split View - they become black screen and unrecoverable
@@ -826,7 +808,7 @@ class TabManager {
 					} as any);
 
 					// Check if at least one tab in this Split View is active
-					const hasActiveTab = tabsInSplitView.some(t => t.active === true);
+					const hasActiveTab = tabsInSplitView.some((t) => t.active === true);
 
 					// Only protect if Split View is currently active
 					if (hasActiveTab) {
@@ -841,20 +823,18 @@ class TabManager {
 
 		//Tab Ignore List
 		// eslint-disable-next-line no-undef
-		if (ignoreList.isTabInIgnoreTabList(tab.id))
-			return true;
+		if (ignoreList.isTabInIgnoreTabList(tab.id)) return true;
 
 		// Not complete input
 		// eslint-disable-next-line no-undef
-		if (this.getTabInfoOrCreate(tab).nonCmpltInput)
-			return true;
+		if (this.getTabInfoOrCreate(tab).nonCmpltInput) return true;
 
 		return false;
 	}
 
 	async isExceptionTab(tab: chrome.tabs.Tab) {
 		try {
-			return await this.isTabException(tab) || whiteList.isURIException(tab.url);
+			return (await this.isTabException(tab)) || whiteList.isURIException(tab.url);
 		} catch (ex) {
 			console.error(ex);
 			return await this.isTabException(tab);
@@ -872,34 +852,37 @@ class TabManager {
 					throw error;
 				}
 			}
-	};
+	}
 
 	private static readonly CHROME_STORE_URL_1 = 'https://chrome.google.com/webstore';
 	private static readonly CHROME_STORE_URL_2 = 'https://chromewebstore.google.com';
 
 	/*** Static ***/
 	static isTabURLAllowedForPark(tab: chrome.tabs.Tab) {
-		return (tab.url.substring(0, tab.url.indexOf(':')) == 'http' ||
-			( tab.url.substring(0, tab.url.indexOf(':')) == 'https' && (
-				tab.url.indexOf(TabManager.CHROME_STORE_URL_1) < 0
-				&& tab.url.indexOf(TabManager.CHROME_STORE_URL_2) < 0
-			) ) ||
-			tab.url === wizardPageUrl);
+		return (
+			tab.url.substring(0, tab.url.indexOf(':')) == 'http' ||
+			(tab.url.substring(0, tab.url.indexOf(':')) == 'https' &&
+				tab.url.indexOf(TabManager.CHROME_STORE_URL_1) < 0 &&
+				tab.url.indexOf(TabManager.CHROME_STORE_URL_2) < 0) ||
+			tab.url === wizardPageUrl
+		);
 	}
 
 	static canTabBeScripted(tab: chrome.tabs.Tab): boolean {
-		return tab.url.indexOf('chrome://extensions/') < 0
-			&& tab.url.indexOf('chrome://settings/') < 0
-			&& tab.url.indexOf(TabManager.CHROME_STORE_URL_1) < 0
-			&& tab.url.indexOf(TabManager.CHROME_STORE_URL_2) < 0;
+		return (
+			tab.url.indexOf('chrome://extensions/') < 0 &&
+			tab.url.indexOf('chrome://settings/') < 0 &&
+			tab.url.indexOf(TabManager.CHROME_STORE_URL_1) < 0 &&
+			tab.url.indexOf(TabManager.CHROME_STORE_URL_2) < 0
+		);
 	}
 
 	static isTabParked(tab: chrome.tabs.Tab) {
 		return tab.url.substring(0, tab.url.indexOf('?')) === parkUrl;
-	};
+	}
 
 	static isAudible(tab: chrome.tabs.Tab) {
-		return (typeof tab.audible == 'boolean' && tab.audible == true);
+		return typeof tab.audible == 'boolean' && tab.audible == true;
 	}
 
 	static isPassGroupedTabsRules(tab: chrome.tabs.Tab, ignoreCloseGroupedTabs: boolean) {
@@ -922,14 +905,12 @@ class TabManager {
 		for (const i in windows)
 			if (windows.hasOwnProperty(i))
 				for (const j in windows[i].tabs)
-					if (windows[i].tabs.hasOwnProperty(j))
-						if (windows[i].tabs[j].id == tabId)
-							return windows[i].tabs[j];
+					if (windows[i].tabs.hasOwnProperty(j)) if (windows[i].tabs[j].id == tabId) return windows[i].tabs[j];
 		return null;
 	}
 }
 
 if (typeof module != 'undefined')
 	module.exports = {
-		TabManager,
-	}
+		TabManager
+	};

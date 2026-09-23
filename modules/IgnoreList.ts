@@ -1,6 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class IgnoreList {
-
 	private readonly ignoreTabList = {};
 
 	addToIgnoreTabList(tabId) {
@@ -12,7 +11,7 @@ class IgnoreList {
 
 	isTabInIgnoreTabList(tabId) {
 		return this.ignoreTabList[tabId] != null;
-	};
+	}
 
 	removeFromIgnoreTabList(tabId) {
 		delete this.ignoreTabList[tabId];

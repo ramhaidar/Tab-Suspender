@@ -4,11 +4,11 @@
  * Zadorozhniy.Sergey@gmail.com
  */
 
-(function() {
+(function () {
 	let pageSize = 30;
 	const isDarkModeEnabled = isDarkMode();
 
-	if(isDarkModeEnabled) {
+	if (isDarkModeEnabled) {
 		const style = `<style>
 				body { background-color: #222; }
 				#historyP { color: #fff; }
@@ -24,8 +24,7 @@
 
 	const drawContent = () => {
 		//chrome.runtime.getBackgroundPage(function(bgpage) {
-		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getParkHistory]' }, function(res) {
-
+		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getParkHistory]' }, function (res) {
 			let parkHistory = res.parkHistory;
 			let closeHistory = res.closeHistory;
 
@@ -37,12 +36,12 @@
 
 			if (window.location.hash === '#suspended') {
 				setTimeout(() => {
-					document.getElementById("suspended").scrollIntoView();
+					document.getElementById('suspended').scrollIntoView();
 				}, 150);
 			}
 			if (window.location.hash === '#closed') {
 				setTimeout(() => {
-					document.getElementById("closed").scrollIntoView();
+					document.getElementById('closed').scrollIntoView();
 				}, 150);
 			}
 		});
@@ -51,8 +50,8 @@
 
 	drawContent();
 
-	setTimeout(function() {
-		chrome.runtime.onMessage.addListener(function(request) {
+	setTimeout(function () {
+		chrome.runtime.onMessage.addListener(function (request) {
 			if (request.method === '[AutomaticTabCleaner:updateHistoryPage]') {
 				console.log('updateHistoryPage..');
 				drawContent();
@@ -66,7 +65,7 @@
 		this.drawNextPage(closeHistory, targetDiv, from, to);
 	}
 
-	DrawHistory.prototype.drawNextPage = function(closeHistory, targetDiv, from, to) {
+	DrawHistory.prototype.drawNextPage = function (closeHistory, targetDiv, from, to) {
 		this.to = to;
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		let self = this;
@@ -84,7 +83,7 @@
 				next.id = targetDiv + '_next_btn';
 				next.href = '#';
 				next.innerText = 'More History...';
-				next.onclick = function() {
+				next.onclick = function () {
 					self.drawNextPage(closeHistory, targetDiv, self.to, self.to + pageSize);
 					return false;
 				};

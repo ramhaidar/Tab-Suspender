@@ -1,125 +1,111 @@
 {
-    "manifest_version": 3,
+	"manifest_version": 3,
 	"name": "__MSG_extName__",
 	"short_name": "Tab Suspender",
-    "version": "2.0.12",
-    "minimum_chrome_version": "109",
+	"version": "2.0.12",
+	"minimum_chrome_version": "109",
 
-    "description": "__MSG_extDescription__",
-    "default_locale": "en",
+	"description": "__MSG_extDescription__",
+	"default_locale": "en",
 
-
-    "icons": {
-        "16": "img/icon16.png",
-        "32": "img/icon32.png",
-        "64": "img/icon64.png",
+	"icons": {
+		"16": "img/icon16.png",
+		"32": "img/icon32.png",
+		"64": "img/icon64.png",
 		"128": "img/icon128.png"
-    },
+	},
 
-	 "action": {
-        "default_icon": "img/icon16.png",
-        "default_title": "Tab Suspender",
+	"action": {
+		"default_icon": "img/icon16.png",
+		"default_title": "Tab Suspender",
 		"default_popup": "popup.html"
-    },
-    "options_page": "fancy-settings/source/index.html",
+	},
+	"options_page": "fancy-settings/source/index.html",
 
-    "background": {
-      "service_worker": "worker.js"
-    },
+	"background": {
+		"service_worker": "worker.js"
+	},
 
-    "incognito": "split",
+	"incognito": "split",
 	"offline_enabled": true,
-    "permissions": [
-		"tabs",
-		"notifications",
-		"unlimitedStorage",
-        "contextMenus",
-        "storage",
-        "scripting",
-        "favicon",
-        "offscreen"
-		],
-    "optional_permissions": [
-    ],
-    "host_permissions": [
-      "*://*/*",
-      "<all_urls>"
-    ],
+	"permissions": ["tabs", "notifications", "unlimitedStorage", "contextMenus", "storage", "scripting", "favicon", "offscreen"],
+	"optional_permissions": [],
+	"host_permissions": ["*://*/*", "<all_urls>"],
 	"content_scripts": [
-    {
-		"matches": ["<all_urls>"],
-		"js": ["lib/h2c.js","inject.js"],
-		"run_at": "document_end",
-		"all_frames" : false
-    }
+		{
+			"matches": ["<all_urls>"],
+			"js": ["lib/h2c.js", "inject.js"],
+			"run_at": "document_end",
+			"all_frames": false
+		}
 	],
-    "web_accessible_resources": [
-      {
-        "resources": [
-          "_favicon/*",
-          "fancy-settings/source/index.html",
-          "*.html",
-          "*.js",
-          "*.js.map",
-          "*.css",
-          "/img/*.png",
-          "img/*.ico",
-          "video/*.mp4"
-        ],
-        "matches": ["<all_urls>"],
-        "extension_ids": ["*"]
-      }
-    ],
+	"web_accessible_resources": [
+		{
+			"resources": [
+				"_favicon/*",
+				"fancy-settings/source/index.html",
+				"*.html",
+				"*.js",
+				"*.js.map",
+				"*.css",
+				"/img/*.png",
+				"img/*.ico",
+				"video/*.mp4"
+			],
+			"matches": ["<all_urls>"],
+			"extension_ids": ["*"]
+		}
+	],
 	"content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self';"
-    },
-    "commands": {
-        "suspend-current": {
-            "suggested_key": {
-              "default": "Alt+S",
-              "mac": "Command+Shift+S",
-              "windows": "Alt+S",
-              "chromeos": "Alt+S",
-              "linux": "Alt+S"
-            },
-            "description": "Suspend Current Tab"
-        },
-        "suspend-all-other": {
-            "suggested_key": {
-              "default": "Alt+O",
-              "mac": "Command+Shift+O",
-              "windows": "Alt+O",
-              "chromeos": "Alt+O",
-              "linux": "Alt+O"
-            },
-            "description": "Suspend All Other Tabs"
-        },
-        "suspend-all-window": {
-            "suggested_key": {
-              "default": "Alt+W",
-              "mac": "Command+Shift+W",
-              "windows": "Alt+W",
-              "chromeos": "Alt+W",
-              "linux": "Alt+W"
-            },
-            "description": "Suspend All Window"
-        },
-        "suspend-tab-group": {
-            "description": "Suspend Tab Group"
-        },
-        "unsuspend-current-window": {
-            "suggested_key": {
-              "default": "Alt+U",
-              "mac": "Command+Shift+U",
-              "windows": "Alt+U",
-              "chromeos": "Alt+U",
-              "linux": "Alt+U"
-            },
-            "description": "Unsuspend Current Window"
-        },
-        "unsuspend-current-tab": {
-            "description": "Unsuspend Current Tab"
-        },
+		"extension_pages": "script-src 'self'; object-src 'self';"
+	},
+	"commands": {
+		"suspend-current": {
+			"suggested_key": {
+				"default": "Alt+S",
+				"mac": "Command+Shift+S",
+				"windows": "Alt+S",
+				"chromeos": "Alt+S",
+				"linux": "Alt+S"
+			},
+			"description": "Suspend Current Tab"
+		},
+		"suspend-all-other": {
+			"suggested_key": {
+				"default": "Alt+O",
+				"mac": "Command+Shift+O",
+				"windows": "Alt+O",
+				"chromeos": "Alt+O",
+				"linux": "Alt+O"
+			},
+			"description": "Suspend All Other Tabs"
+		},
+		"suspend-all-window": {
+			"suggested_key": {
+				"default": "Alt+W",
+				"mac": "Command+Shift+W",
+				"windows": "Alt+W",
+				"chromeos": "Alt+W",
+				"linux": "Alt+W"
+			},
+			"description": "Suspend All Window"
+		},
+		"suspend-tab-group": {
+			"description": "Suspend Tab Group"
+		},
+		"unsuspend-current-window": {
+			"suggested_key": {
+				"default": "Alt+U",
+				"mac": "Command+Shift+U",
+				"windows": "Alt+U",
+				"chromeos": "Alt+U",
+				"linux": "Alt+U"
+			},
+			"description": "Unsuspend Current Window"
+		},
+		"unsuspend-current-tab": {
+			"description": "Unsuspend Current Tab"
+		},
 		"unsuspend-all-tabs": {
 			"description": "Unsuspend All Tabs"
 		},
@@ -129,14 +115,14 @@
 		"remove-from-white-list": {
 			"description": "Remove from Whitelist"
 		},
-        "ignore-current-tab": {
-            "description": "Ignore Current Tab"
-        },
-        "remove-current-tab-from-ignore": {
-            "description": "Remove Current Tab From Ignore"
-        },
-        "suspend-or-unsuspend-current-tab": {
-          "description": "Suspend or Unsuspend Current Tab (in one HotKey)"
-        }
-    }
+		"ignore-current-tab": {
+			"description": "Ignore Current Tab"
+		},
+		"remove-current-tab-from-ignore": {
+			"description": "Remove Current Tab From Ignore"
+		},
+		"suspend-or-unsuspend-current-tab": {
+			"description": "Suspend or Unsuspend Current Tab (in one HotKey)"
+		}
+	}
 }

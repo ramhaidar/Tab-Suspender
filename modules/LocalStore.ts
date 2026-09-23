@@ -6,8 +6,7 @@ enum LocalStoreKeys {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class LocalStore {
-
-	private static keys = Object.fromEntries(Object.values(LocalStoreKeys).map(name => [name, true]));
+	private static keys = Object.fromEntries(Object.values(LocalStoreKeys).map((name) => [name, true]));
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	static async get(key: string): Promise<any> {

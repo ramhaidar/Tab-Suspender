@@ -21,8 +21,7 @@ interface PopupQueryBGResponse {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function popupQuery(tab) {
-	if (debug)
-		console.log('popupQuery Requested.');
+	if (debug) console.log('popupQuery Requested.');
 
 	const tabURLAllowedForPark = TabManager.isTabURLAllowedForPark(tab);
 	let parked;
@@ -34,8 +33,7 @@ async function popupQuery(tab) {
 		console.trace(e);
 	}
 
-	if (debug)
-		console.log('Park alowed: ' + tabURLAllowedForPark, 'parked: ', parked == true, tab);
+	if (debug) console.log('Park alowed: ' + tabURLAllowedForPark, 'parked: ', parked == true, tab);
 
 	return <PopupQueryBGResponse>{
 		successful: true,
@@ -46,18 +44,17 @@ async function popupQuery(tab) {
 		timeout: await settings.get('timeout'),
 		parked: parked == true,
 		pauseTics: pauseTics,
-		pauseTicsStartedFrom:
-		pauseTicsStartedFrom,
+		pauseTicsStartedFrom: pauseTicsStartedFrom,
 		// eslint-disable-next-line no-undef
 		isTabInIgnoreTabList: ignoreList.isTabInIgnoreTabList(tab.id),
 		// eslint-disable-next-line no-undef
-		isTabInWhiteList: (parked ? whiteList.isURIException(parseUrlParam(tab.url, 'url')) : whiteList.isURIException(tab.url)),
+		isTabInWhiteList: parked ? whiteList.isURIException(parseUrlParam(tab.url, 'url')) : whiteList.isURIException(tab.url),
 		isCloseTabsOn: await settings.get('isCloseTabsOn'),
 		closeTimeout: await settings.get('closeTimeout'),
 		limitOfOpenedTabs: await settings.get('limitOfOpenedTabs'),
 		TSVersion: chrome.runtime.getManifest().version,
 		sendErrors: await settings.get('sendErrors'),
 		popup_showWindowSessionByDefault: await settings.get('popup_showWindowSessionByDefault'),
-		isTabInGroup: tab.groupId != null && tab.groupId !== -1,
+		isTabInGroup: tab.groupId != null && tab.groupId !== -1
 	};
 }

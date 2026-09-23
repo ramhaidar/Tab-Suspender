@@ -9,22 +9,19 @@ if (debugDBCleanup) {
 type IDBAddedOnIndexType = [number, number, Date | string];
 type IDBPKKeyArrayType = [number, number];
 
-type IDBFdsValueType = { tabId: number, data: { timestamp: number | Date } };
+type IDBFdsValueType = { tabId: number; data: { timestamp: number | Date } };
 type IDBFdsKeyArrayType = [number];
-
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function cleanupDB() {
-
 	return new Promise<void>((resolve, reject) => {
 		console.log('DB Cleanup started...');
 
 		// schedule next cleanup in next days
 		setTimeout(cleanupDB, 1000 * 60 * 60 * 24);
 
-		chrome.tabs.query({}, async function(tabs) {
+		chrome.tabs.query({}, async function (tabs) {
 			try {
-
 				/* cleanupScreens... */
 				await cleanupScreens(tabs);
 				/* cleanupFds... */
@@ -53,10 +50,13 @@ function cleanupDB() {
 	}, 1740 * 1000);*/
 }
 
-function dbCleanup_filterScreenResults(usedSessionIds: { [key: number]: boolean }, usedTabIds: {
-	[key: number]: number
-}) {
-	return function(result: IDBAddedOnIndexType[]): IDBPKKeyArrayType[] {
+function dbCleanup_filterScreenResults(
+	usedSessionIds: { [key: number]: boolean },
+	usedTabIds: {
+		[key: number]: number;
+	}
+) {
+	return function (result: IDBAddedOnIndexType[]): IDBPKKeyArrayType[] {
 		const filteredResult = [];
 		console.log(`Cleanup Screens: usedSessionIds: `, usedSessionIds);
 		console.log(`Cleanup Screens: usedTabIds: `, usedTabIds);
@@ -71,7 +71,7 @@ function dbCleanup_filterScreenResults(usedSessionIds: { [key: number]: boolean 
 			}
 
 			const date = result[i][2];
-			if(typeof date === 'string') {
+			if (typeof date === 'string') {
 				result[i][2] = new Date(Date.parse(date));
 			}
 
@@ -88,8 +88,7 @@ function dbCleanup_filterScreenResults(usedSessionIds: { [key: number]: boolean 
 				isScreenActual = true;
 			}
 
-			if (!isScreenActual)
-				filteredResult.push(result[i]);
+			if (!isScreenActual) filteredResult.push(result[i]);
 		}
 
 		return filteredResult;
@@ -97,8 +96,7 @@ function dbCleanup_filterScreenResults(usedSessionIds: { [key: number]: boolean 
 }
 
 function dbCleanup_filterFdsResults(openedTabIds: { [key: number]: number }) {
-
-	return function(results: IDBFdsValueType[]): IDBFdsKeyArrayType[] {
+	return function (results: IDBFdsValueType[]): IDBFdsKeyArrayType[] {
 		const filteredResult = [];
 		console.log(`Cleanup Fds: openedTabIds: `, openedTabIds);
 
@@ -124,8 +122,7 @@ function dbCleanup_filterFdsResults(openedTabIds: { [key: number]: number }) {
 				isScreenActual = true;
 			}
 
-			if (!isScreenActual)
-				filteredResult.push([result.tabId]);
+			if (!isScreenActual) filteredResult.push([result.tabId]);
 		}
 
 		return filteredResult;
@@ -133,10 +130,10 @@ function dbCleanup_filterFdsResults(openedTabIds: { [key: number]: number }) {
 }
 
 function removeDBItemsInBackground(
-	resolve: (value: (PromiseLike<void> | void)) => void,
-	executeDeleteArgumentsConstructor: (itemKeyArray: unknown[]) => { IDB: { table: string, params: unknown[], } }
+	resolve: (value: PromiseLike<void> | void) => void,
+	executeDeleteArgumentsConstructor: (itemKeyArray: unknown[]) => { IDB: { table: string; params: unknown[] } }
 ) {
-	return async function(resultsKeyArrays: unknown[][]) {
+	return async function (resultsKeyArrays: unknown[][]) {
 		if (resultsKeyArrays != null) {
 			if (debugDBCleanup) {
 				console.log(`DB Item To Cleanup: ${resultsKeyArrays.length}`);
@@ -160,32 +157,28 @@ function removeDBItemsInBackground(
 }
 
 async function cleanupFds(tabs: chrome.tabs.Tab[]): Promise<void> {
-
 	return new Promise<void>((resolve) => {
-
 		const openedTabIdsMap: { [key: number]: number } = {};
 		tabs.reduce((map, tab) => {
-			if (tab.id)
-				map[tab.id] = tab.id;
+			if (tab.id) map[tab.id] = tab.id;
 			return map;
 		}, openedTabIdsMap);
 
-		database.getAll({
-				IDB:
-					{
-						// @ts-ignore
-						table: FD_DB_NAME,
-						predicateResultLogic: dbCleanup_filterFdsResults(openedTabIdsMap)
-					}
+		database.getAll(
+			{
+				IDB: {
+					// @ts-ignore
+					table: FD_DB_NAME,
+					predicateResultLogic: dbCleanup_filterFdsResults(openedTabIdsMap)
+				}
 			},
 			removeDBItemsInBackground(resolve, (itemKeyArray) => {
 				return {
-					IDB:
-						{
-							// @ts-ignore
-							table: FD_DB_NAME,
-							params: itemKeyArray
-						}
+					IDB: {
+						// @ts-ignore
+						table: FD_DB_NAME,
+						params: itemKeyArray
+					}
 				};
 			})
 		);
@@ -202,15 +195,13 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 				let sessionId: number;
 				try {
 					sessionId = parseInt(parseUrlParam(tabs[i].url, 'sessionId'));
-					if (sessionId != null)
-						usedSessionIds[sessionId] = true;
+					if (sessionId != null) usedSessionIds[sessionId] = true;
 				} catch (e) {
 					console.error(e);
 				}
 				try {
 					const tabId = parseInt(parseUrlParam(tabs[i].url, 'tabId'));
-					if (tabId != null)
-						usedTabIds[tabId] = sessionId;
+					if (tabId != null) usedTabIds[tabId] = sessionId;
 				} catch (e) {
 					console.error(e);
 				}
@@ -220,29 +211,29 @@ async function cleanupScreens(tabs: chrome.tabs.Tab[]): Promise<void> {
 	usedSessionIds[parseInt(previousTSSessionId)] = true;
 
 	return new Promise<void>((resolve) => {
-		database.getAll({
-				IDB:
-					{
+		database.getAll(
+			{
+				IDB: {
+					// @ts-ignore
+					table: SCREENS_DB_NAME,
+					// @ts-ignore
+					index: ADDED_ON_INDEX_NAME,
+					predicate: 'getAllKeys',
+					predicateResultLogic: dbCleanup_filterScreenResults(usedSessionIds, usedTabIds)
+				}
+			},
+			removeDBItemsInBackground(resolve, (itemKeyArray) => {
+				return {
+					IDB: {
 						// @ts-ignore
 						table: SCREENS_DB_NAME,
 						// @ts-ignore
 						index: ADDED_ON_INDEX_NAME,
-						predicate: 'getAllKeys',
-						predicateResultLogic: dbCleanup_filterScreenResults(usedSessionIds, usedTabIds)
+						params: itemKeyArray
 					}
-			},
-			removeDBItemsInBackground(resolve, (itemKeyArray) => {
-				return {
-					IDB:
-						{
-							// @ts-ignore
-							table: SCREENS_DB_NAME,
-							// @ts-ignore
-							index: ADDED_ON_INDEX_NAME,
-							params: itemKeyArray
-						},
 				};
-			}))
+			})
+		);
 	});
 }
 

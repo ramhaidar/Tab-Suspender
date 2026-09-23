@@ -8,8 +8,8 @@
 /*chrome.tabs.query({ currentWindow: true, active: true }, async function (tabs) {
 	arguments[arguments.length - 1](x);\n" +*/
 
-document.addEventListener('DOMContentLoaded', function() {
-	(function() {
+document.addEventListener('DOMContentLoaded', function () {
+	(function () {
 		'use strict';
 
 		window.focus();
@@ -52,15 +52,18 @@ document.addEventListener('DOMContentLoaded', function() {
 			method: '[AutomaticTabCleaner:installed]'
 		});
 
-		overlay.addEventListener('click', closeDialog = function() {
-			void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:hideDialog]' });
-		});
+		overlay.addEventListener(
+			'click',
+			(closeDialog = function () {
+				void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:hideDialog]' });
+			})
+		);
 
 		let WIZARD_TITLE = chrome.i18n.getMessage('wizardTitle') || 'Tab Suspender Wizard';
 
 		document.querySelector('#defaultsButton').addEventListener('click', closeDialog);
 
-		document.onkeydown = function(evt) {
+		document.onkeydown = function (evt) {
 			// @ts-ignore
 			evt = evt || window.event;
 			if (evt.keyCode == 27) {
@@ -70,11 +73,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 		let tooltipSpan = document.getElementById('tooltip-span');
 
-		window.onmousemove = function(e) {
+		window.onmousemove = function (e) {
 			let x = e.clientX,
 				y = e.clientY;
-			tooltipSpan.style.top = (y + 5) + 'px';
-			tooltipSpan.style.left = (x - 240) + 'px';
+			tooltipSpan.style.top = y + 5 + 'px';
+			tooltipSpan.style.left = x - 240 + 'px';
 		};
 
 		function getCurrentStepNumber() {
@@ -83,8 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 		let stepElements = document.querySelectorAll('.dialog-content');
 
-
-		let stepListener = function(delta) {
+		let stepListener = function (delta) {
 			restartVideo();
 
 			let currentElementStep = getCurrentStepNumber();
@@ -98,11 +100,12 @@ document.addEventListener('DOMContentLoaded', function() {
 			console.log('Step: ', currentElementStep);
 
 			document.getElementById('wizardTitle').innerText = WIZARD_TITLE;
-			const stepText = chrome.i18n.getMessage('wizardStep', [currentElementStep.toString(), stepElements.length.toString()]) || '( step ' + currentElementStep + ' of ' + stepElements.length + ' )';
+			const stepText =
+				chrome.i18n.getMessage('wizardStep', [currentElementStep.toString(), stepElements.length.toString()]) ||
+				'( step ' + currentElementStep + ' of ' + stepElements.length + ' )';
 			document.getElementById('wizardStepIndicator').innerText = stepText;
 
-			if (currentElementStep == 3)
-				$('input[type="radio"].closeRadio').change();
+			if (currentElementStep == 3) $('input[type="radio"].closeRadio').change();
 
 			refreshNextButton(currentElementStep);
 			refreshPreviousButton(currentElementStep);
@@ -113,31 +116,29 @@ document.addEventListener('DOMContentLoaded', function() {
 			updatePage4();
 		};
 
-		document.getElementById('nextButton').addEventListener('click', function() {
+		document.getElementById('nextButton').addEventListener('click', function () {
 			stepListener(+1);
 		});
-		document.getElementById('finishButton').addEventListener('click', function() {
+		document.getElementById('finishButton').addEventListener('click', function () {
 			stepListener(+1);
 		});
-		document.getElementById('previousButton').addEventListener('click', function() {
+		document.getElementById('previousButton').addEventListener('click', function () {
 			stepListener(-1);
 		});
-		document.getElementById('defaultsButton').addEventListener('click', function() {
+		document.getElementById('defaultsButton').addEventListener('click', function () {
 			stepListener(stepElements.length - getCurrentStepNumber());
 		});
-		document.getElementById('closeButton').addEventListener('click', function() {
+		document.getElementById('closeButton').addEventListener('click', function () {
 			try {
-				chrome.tabs.query({ currentWindow: true/*, active: true*/ }, function(tabs) {
+				chrome.tabs.query({ currentWindow: true /*, active: true*/ }, function (tabs) {
 					try {
 						let indexes = [];
 						let activeIndex;
 						for (let i = 0; i < tabs.length; i++) {
 							indexes[tabs[i].index] = tabs[i];
-							if (tabs[i].active == true)
-								activeIndex = tabs[i].index;
+							if (tabs[i].active == true) activeIndex = tabs[i].index;
 						}
-						if (activeIndex != null)
-							void chrome.tabs.update(indexes[activeIndex - 1].id, { 'active': true });
+						if (activeIndex != null) void chrome.tabs.update(indexes[activeIndex - 1].id, { active: true });
 						// eslint-disable-next-line no-empty
 					} catch (e) {
 						console.warn(e);
@@ -154,39 +155,30 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 
 		function refreshNextButton(step) {
-			if (step < stepElements.length - 1)
-				addClass(document.getElementById('nextButton'), 'active');
-			else
-				removeClass(document.getElementById('nextButton'), 'active');
+			if (step < stepElements.length - 1) addClass(document.getElementById('nextButton'), 'active');
+			else removeClass(document.getElementById('nextButton'), 'active');
 		}
 
 		function refreshPreviousButton(step) {
-			if (step > 1 && step <= stepElements.length)
-				addClass(document.getElementById('previousButton'), 'active');
+			if (step > 1 && step <= stepElements.length) addClass(document.getElementById('previousButton'), 'active');
 			else {
 				removeClass(document.getElementById('previousButton'), 'active');
 			}
 		}
 
 		function refreshSkipButton(step) {
-			if (step == 1)
-				addClass(document.getElementById('defaultsButton'), 'active');
-			else
-				removeClass(document.getElementById('defaultsButton'), 'active');
+			if (step == 1) addClass(document.getElementById('defaultsButton'), 'active');
+			else removeClass(document.getElementById('defaultsButton'), 'active');
 		}
 
 		function refreshFinishButton(step) {
-			if (step == stepElements.length - 1)
-				addClass(document.getElementById('finishButton'), 'active');
-			else
-				removeClass(document.getElementById('finishButton'), 'active');
+			if (step == stepElements.length - 1) addClass(document.getElementById('finishButton'), 'active');
+			else removeClass(document.getElementById('finishButton'), 'active');
 		}
 
 		function refreshCloseButton(step) {
-			if (step == stepElements.length)
-				addClass(document.getElementById('closeButton'), 'active');
-			else
-				removeClass(document.getElementById('closeButton'), 'active');
+			if (step == stepElements.length) addClass(document.getElementById('closeButton'), 'active');
+			else removeClass(document.getElementById('closeButton'), 'active');
 		}
 
 		function removeClass(element, className) {
@@ -194,13 +186,11 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 
 		function addClass(element, className) {
-			if (element.className.indexOf(className) == -1)
-				element.className = element.className + ' ' + className;
+			if (element.className.indexOf(className) == -1) element.className = element.className + ' ' + className;
 		}
 
-
 		let timeoutPrettifer;
-		(function() {
+		(function () {
 			// @ts-ignore
 			$('.js-range-slider-suspend-timeout').ionRangeSlider({
 				grid: true,
@@ -215,16 +205,17 @@ document.addEventListener('DOMContentLoaded', function() {
 				keyboard: true,
 				keyboard_step: 1.1,
 				prettify_enabled: true,
-				prettify: timeoutPrettifer = function(seconds) {
+				prettify: (timeoutPrettifer = function (seconds) {
 					//console.log("P: "+seconds);
 					let numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
 					let numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
-					if (this != null && this.max > 3600)
-						return numhours + ':' + (numminutes < 10 ? numminutes + '0' : numminutes);
+					if (this != null && this.max > 3600) return numhours + ':' + (numminutes < 10 ? numminutes + '0' : numminutes);
 					else
-						return (numhours > 0 ? numhours + ' hour' : '') + (numhours < 1 || numhours > 1 && numminutes > 0 ? numminutes + ' min ' : '');
-				},
-				onFinish: function(data) {
+						return (
+							(numhours > 0 ? numhours + ' hour' : '') + (numhours < 1 || (numhours > 1 && numminutes > 0) ? numminutes + ' min ' : '')
+						);
+				}),
+				onFinish: function (data) {
 					console.log('onFinish', data);
 					void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', timeout: data.from });
 				}
@@ -232,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		})();
 
 		let prettifyVarCountRecicleKeep = 0;
-		(function() {
+		(function () {
 			// @ts-ignore
 			$('.js-range-slider-recicle-keep').ionRangeSlider({
 				grid: true,
@@ -245,27 +236,23 @@ document.addEventListener('DOMContentLoaded', function() {
 				keyboard: true,
 				keyboard_step: 0.9,
 				prettify_enabled: true,
-				prettify: function(seconds) {
+				prettify: function (seconds) {
 					prettifyVarCountRecicleKeep++;
 
-					if (prettifyVarCountRecicleKeep < 6)
-						return seconds;
-					else
-						return chrome.i18n.getMessage('wizard_recycleKeepSliderValue', [seconds]);//"...and if there are more than <b style='font-size: 14px;'>"+seconds+"</b> opened tabs";
+					if (prettifyVarCountRecicleKeep < 6) return seconds;
+					else return chrome.i18n.getMessage('wizard_recycleKeepSliderValue', [seconds]); //"...and if there are more than <b style='font-size: 14px;'>"+seconds+"</b> opened tabs";
 				},
-				onFinish: function(data) {
-
+				onFinish: function (data) {
 					void chrome.runtime.sendMessage({
 						method: '[AutomaticTabCleaner:updateTimeout]',
 						limitOfOpenedTabs: data.from
 					});
 				}
 			});
-
 		})();
 
 		let prettifyVarCountRecicleAfter = 0;
-		(function() {
+		(function () {
 			// @ts-ignore
 			$('.js-range-slider-recicle-after').ionRangeSlider({
 				grid: true,
@@ -278,20 +265,20 @@ document.addEventListener('DOMContentLoaded', function() {
 				keyboard: true,
 				keyboard_step: 0.5,
 				prettify_enabled: true,
-				prettify: function(seconds) {
+				prettify: function (seconds) {
 					prettifyVarCountRecicleAfter++;
 					//debugger;
 					let numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
 					let numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
 
-					let result = (numhours > 0 ? numhours + ' hour' + (numhours > 1 ? 's ' : ' ') : '') + (numminutes > 0 ? numminutes + ' min ' : (numhours <= 0 ? '0' : ''));
+					let result =
+						(numhours > 0 ? numhours + ' hour' + (numhours > 1 ? 's ' : ' ') : '') +
+						(numminutes > 0 ? numminutes + ' min ' : numhours <= 0 ? '0' : '');
 
-					if (prettifyVarCountRecicleAfter < 6)
-						return result;
-					else
-						return chrome.i18n.getMessage('wizard_recycleAfterSliderValue', [result]);//"Suspender will close tabs after <b style='font-size: 14px;'>"+ result + "</b> of inactivity";
+					if (prettifyVarCountRecicleAfter < 6) return result;
+					else return chrome.i18n.getMessage('wizard_recycleAfterSliderValue', [result]); //"Suspender will close tabs after <b style='font-size: 14px;'>"+ result + "</b> of inactivity";
 				},
-				onFinish: function(data) {
+				onFinish: function (data) {
 					console.log('onFinish', data);
 
 					void chrome.runtime.sendMessage({
@@ -307,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		 * PAGE 2
 		 *
 		 */
-		$('input[type="radio"].closeRadio').on('change', function() {
+		$('input[type="radio"].closeRadio').on('change', function () {
 			if ($(this).hasClass('no') && $(this).prop('checked')) {
 				$('.close-sliders').addClass('hidden');
 				void chrome.runtime.sendMessage({
@@ -331,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		document.getElementById('debugCheckbox').onchange = () => {
 			void chrome.runtime.sendMessage({
 				method: '[AutomaticTabCleaner:updateTimeout]',
-			  // @ts-ignore
+				// @ts-ignore
 				sendErrors: document.getElementById('debugCheckbox').checked === true
 			});
 		};
@@ -352,20 +339,25 @@ document.addEventListener('DOMContentLoaded', function() {
 		async function updatePage4() {
 			//let BG = chrome.extension.getBackgroundPage();
 			//let res = BG.popupQuery({ id: 0, url: '' });
-			const res: PopupQueryBGResponse = await chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:popupQuery]', tab: { id: 0, url: '' } });
+			const res: PopupQueryBGResponse = await chrome.runtime.sendMessage({
+				method: '[AutomaticTabCleaner:popupQuery]',
+				tab: { id: 0, url: '' }
+			});
 			// @ts-ignore
 			let timeout = parseInt(res.timeout);
 			document.getElementById('resultTimeoutValue').innerText = timeoutPrettifer(timeout).trim();
-
 
 			restartVideo();
 		}
 
 		/* READ DEFAULT CONFIGURATION */
-		void (async function() {
+		void (async function () {
 			//let BG = chrome.extension.getBackgroundPage();
 			//let res = BG.popupQuery({ id: 0, url: '' });
-			const res: PopupQueryBGResponse = await chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:popupQuery]', tab: { id: 0, url: '' } });
+			const res: PopupQueryBGResponse = await chrome.runtime.sendMessage({
+				method: '[AutomaticTabCleaner:popupQuery]',
+				tab: { id: 0, url: '' }
+			});
 			$('.js-range-slider-suspend-timeout').data('ionRangeSlider').update({ from: res.timeout });
 			prettifyVarCountRecicleKeep = 0;
 			$('.js-range-slider-recicle-keep').data('ionRangeSlider').update({ from: res.limitOfOpenedTabs });
@@ -373,13 +365,11 @@ document.addEventListener('DOMContentLoaded', function() {
 			$('.js-range-slider-recicle-after').data('ionRangeSlider').update({ from: res.closeTimeout });
 
 			if (res.isCloseTabsOn)
-				$('input:radio[name=closeRadio][value=yes]').click();//.attr('checked', 'checked');
-			else
-				$('input:radio[name=closeRadio][value=no]').click();//.attr('checked', 'checked');
+				$('input:radio[name=closeRadio][value=yes]').click(); //.attr('checked', 'checked');
+			else $('input:radio[name=closeRadio][value=no]').click(); //.attr('checked', 'checked');
 
 			// @ts-ignore
 			document.getElementById('debugCheckbox').checked = res.sendErrors;
 		})();
-
 	})();
 });

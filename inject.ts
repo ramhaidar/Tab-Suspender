@@ -15,10 +15,10 @@ async function getTabId() {
 	return await chrome.runtime.sendMessage({ method: '[TS:getTabId]' });
 }
 
-(function() {
+(function () {
 	'use strict';
 
-	window.addEventListener('pageshow', function() {
+	window.addEventListener('pageshow', function () {
 		resotreForm();
 	});
 
@@ -39,23 +39,21 @@ async function getTabId() {
 	 * Rize event
 	 */
 	function riseEvent() {
-		if (count >= 2)
-			return false;
+		if (count >= 2) return false;
 		count++;
 		return true;
 	}
 
-	const changeEventCallback = function() {
-		void chrome.runtime.sendMessage({ 'method': '[AutomaticTabCleaner:TabChangedRequestFromInject]' });
+	const changeEventCallback = function () {
+		void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:TabChangedRequestFromInject]' });
 	};
 
-	const onevent = function(e) {
-		if (riseEvent())
-			dropEvent(e);
+	const onevent = function (e) {
+		if (riseEvent()) dropEvent(e);
 	};
 
 	function resotreForm() {
-		chrome.runtime.sendMessage({ 'method': '[AutomaticTabCleaner:getFormRestoreDataAndRemove]' }, function(response) {
+		chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:getFormRestoreDataAndRemove]' }, function (response) {
 			if (response == null) {
 				return;
 			}
@@ -66,7 +64,6 @@ async function getTabId() {
 
 			const formDataToRestore = response.formData;
 
-
 			//TODO: Test on this case: http://obraz.pro/register/#registration
 
 			processRestoreForm(formDataToRestore);
@@ -75,9 +72,9 @@ async function getTabId() {
 
 	function errorLog(exception) {
 		void chrome.runtime.sendMessage({
-			'method': '[AutomaticTabCleaner:trackError]',
+			method: '[AutomaticTabCleaner:trackError]',
 			message: 'Error in Inject: ' + (exception ? exception.message : ''),
-			stack: (exception ? exception.stack : '')
+			stack: exception ? exception.stack : ''
 		});
 	}
 
@@ -87,12 +84,11 @@ async function getTabId() {
 		domElement.dispatchEvent(evt);
 	}
 
-
 	/**
 	 * Down event
 	 */
 	let interval = null;
-	const dropEventIntervalController = function() {
+	const dropEventIntervalController = function () {
 		if (count == 0) {
 			if (interval != null) {
 				clearInterval(interval);
@@ -117,8 +113,7 @@ async function getTabId() {
 			count--;
 			changeEventCallback();
 		} else {
-			if (count == 0)
-				return;
+			if (count == 0) return;
 
 			if (interval == null) {
 				interval = setInterval(dropEventIntervalController, waitWindow / 2);
@@ -129,50 +124,50 @@ async function getTabId() {
 	function calcNotCompleteInputsLength() {
 		let totalScore = 0;
 		for (const i in notCompleteInputs) {
-			if (notCompleteInputs[i].type === 'textarea')
-				totalScore += 3;
-			else
-				totalScore += 1;
+			if (notCompleteInputs[i].type === 'textarea') totalScore += 3;
+			else totalScore += 1;
 		}
 		return totalScore;
 	}
 
-	document.body.addEventListener('change', function(e) {
-		let messageSent = false;
-		//@ts-ignore
-		if (e.target.tagName != null && (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') && e.target.hidden != true) {
-			if (calcNotCompleteInputsLength() <= 3) {
-				for (const i in notCompleteInputs) {
-					if (!document.body.contains(notCompleteInputs[i]) || notCompleteInputs[i].value == null || notCompleteInputs[i].value == '') {
-						const element = notCompleteInputs.splice(Number(i), 1);
-						if (debug)
-							console.log('Input removed: ', element);
-						if (!messageSent) {
-							void chrome.runtime.sendMessage({ 'method': '[AutomaticTabCleaner:UnmarkPageAsNonCompleteInput]' });
-							messageSent=true;
+	document.body.addEventListener(
+		'change',
+		function (e) {
+			let messageSent = false;
+			//@ts-ignore
+			if (
+				e.target.tagName != null &&
+				(e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') &&
+				e.target.hidden != true
+			) {
+				if (calcNotCompleteInputsLength() <= 3) {
+					for (const i in notCompleteInputs) {
+						if (!document.body.contains(notCompleteInputs[i]) || notCompleteInputs[i].value == null || notCompleteInputs[i].value == '') {
+							const element = notCompleteInputs.splice(Number(i), 1);
+							if (debug) console.log('Input removed: ', element);
+							if (!messageSent) {
+								void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:UnmarkPageAsNonCompleteInput]' });
+								messageSent = true;
+							}
 						}
 					}
 				}
+
+				if (calcNotCompleteInputsLength() > 2) return;
+
+				for (const i in notCompleteInputs) if (notCompleteInputs[i] === e.target) return;
+
+				//@ts-ignore
+				if (e.target.value != null && e.target.value != '') notCompleteInputs.push(e.target);
+
+				if (calcNotCompleteInputsLength() > 2) {
+					void chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:MarkPageAsNonCompleteInput]' });
+					if (debug) console.log('Input Changed 3 times: Page Marked As Non Complete');
+				}
 			}
-
-			if (calcNotCompleteInputsLength() > 2)
-				return;
-
-			for (const i in notCompleteInputs)
-				if (notCompleteInputs[i] === e.target)
-					return;
-
-			//@ts-ignore
-			if (e.target.value != null && e.target.value != '')
-				notCompleteInputs.push(e.target);
-
-			if (calcNotCompleteInputsLength() > 2) {
-				void chrome.runtime.sendMessage({ 'method': '[AutomaticTabCleaner:MarkPageAsNonCompleteInput]' });
-				if (debug)
-					console.log('Input Changed 3 times: Page Marked As Non Complete');
-			}
-		}
-	}, true);
+		},
+		true
+	);
 
 	document.addEventListener('scroll', onevent, true);
 	document.addEventListener('click', onevent, true);
@@ -181,26 +176,32 @@ async function getTabId() {
 	window.addEventListener('load', onevent, true);
 
 	// Track Ctrl+Click (Cmd+Click on Mac) on links to open tabs in suspended mode
-	document.addEventListener('click', function(e) {
-		// @ts-ignore
-		const target = e.target as HTMLElement;
-		const link = target.closest('a');
+	document.addEventListener(
+		'click',
+		function (e) {
+			// @ts-ignore
+			const target = e.target as HTMLElement;
+			const link = target.closest('a');
 
-		// Check for Ctrl+Click (Windows/Linux) or Cmd+Click (Mac)
-		const isModifierClick = e.ctrlKey || e.metaKey;
+			// Check for Ctrl+Click (Windows/Linux) or Cmd+Click (Mac)
+			const isModifierClick = e.ctrlKey || e.metaKey;
 
-		if (link && isModifierClick && link.href && link.target !== '_self') {
-			// Notify background that next tab should be suspended
-			chrome.runtime.sendMessage({
-				'method': '[AutomaticTabCleaner:CtrlClickDetected]',
-				'url': link.href
-			}).catch(console.error);
-		}
-	}, true);
+			if (link && isModifierClick && link.href && link.target !== '_self') {
+				// Notify background that next tab should be suspended
+				chrome.runtime
+					.sendMessage({
+						method: '[AutomaticTabCleaner:CtrlClickDetected]',
+						url: link.href
+					})
+					.catch(console.error);
+			}
+		},
+		true
+	);
 
 	let suspendedPagesUrls = [];
 
-	chrome.runtime.onMessage.addListener(function(request: any, sender, sendResponse) {
+	chrome.runtime.onMessage.addListener(function (request: any, sender, sendResponse) {
 		if (request.method === '[AutomaticTabCleaner:backupSuspendedPagesUrls]') {
 			suspendedPagesUrls = request.suspendedUrls;
 			console.log('susPgsUrls: ', suspendedPagesUrls.length);
@@ -220,45 +221,47 @@ async function getTabId() {
 				console.error('[AutomaticTabCleaner:ParkPageFromInject]: ', e);
 			}
 
-			if (width != null)
-				document.body.style.width = width + 'px';
+			if (width != null) document.body.style.width = width + 'px';
 
 			// @ts-ignore
-			html2canvas(document.body, {
-				'onrendered': async function(canvas) {
-					document.body.appendChild(canvas);
+			html2canvas(
+				document.body,
+				{
+					onrendered: async function (canvas) {
+						document.body.appendChild(canvas);
 
-					try {
-						let url = chrome.runtime.getURL('park.html');
-						url += '?tabId=' + encodeURIComponent(closureTabId);
-						url += '&sessionId=' + encodeURIComponent(_request.sessionId);
-						url += '&title=' + encodeURIComponent(document.title);
-						url += '&url=' + encodeURIComponent(_request.url ? _request.url : window.location.href);
-						url += '&icon=' + encodeURIComponent(getOriginalFaviconUrl());
+						try {
+							let url = chrome.runtime.getURL('park.html');
+							url += '?tabId=' + encodeURIComponent(closureTabId);
+							url += '&sessionId=' + encodeURIComponent(_request.sessionId);
+							url += '&title=' + encodeURIComponent(document.title);
+							url += '&url=' + encodeURIComponent(_request.url ? _request.url : window.location.href);
+							url += '&icon=' + encodeURIComponent(getOriginalFaviconUrl());
 
-						await chrome.runtime.sendMessage(canvas.toDataURL('image/jpeg', _request.screenshotQuality / 100));
+							await chrome.runtime.sendMessage(canvas.toDataURL('image/jpeg', _request.screenshotQuality / 100));
 
-						await chrome.runtime.sendMessage({
-							'method': '[AutomaticTabCleaner:ParkPageFromInjectFinished]',
-							'url': url,
-							'tabId': closureTabId
-						});
+							await chrome.runtime.sendMessage({
+								method: '[AutomaticTabCleaner:ParkPageFromInjectFinished]',
+								url: url,
+								tabId: closureTabId
+							});
 
-						sendResponse({ result: 'successful' });
-					} catch (e) {
-						console.error('Failed to process `html2canvas` result: ', e);
-						sendResponse({ result: 'fail', error: e });
+							sendResponse({ result: 'successful' });
+						} catch (e) {
+							console.error('Failed to process `html2canvas` result: ', e);
+							sendResponse({ result: 'fail', error: e });
+						}
 					}
-				}
-			}/*,
+				} /*,
 				'width': (width != null ? width : window.outerWidth),//window.innerWidth,
 				'height': (window.outerHeight > 0 ? window.outerHeight : height)//window.innerHeight//  //document.height
-			}*/);
+			}*/
+			);
 			return true;
 		} else if (request.method === '[AutomaticTabCleaner:getOriginalFaviconUrl]') {
 			sendResponse(getOriginalFaviconUrl());
 		} else if (request.method === '[AutomaticTabCleaner:highliteFavicon]') {
-			setTimeout(function() {
+			setTimeout(function () {
 				highlite(request.highliteInfo);
 			}, 0);
 		} else if (request.method === '[AutomaticTabCleaner:CollectPageState]') {
@@ -299,10 +302,8 @@ async function getTabId() {
 
 	/************************************/
 
-
 	function drawSetupWizardDialog() {
-		if (document.getElementById(WIZARD_FRAME_ID))
-			return;
+		if (document.getElementById(WIZARD_FRAME_ID)) return;
 
 		document.getElementsByTagName('body')[0].style.filter = 'blur(1px)';
 
@@ -325,10 +326,8 @@ async function getTabId() {
 
 	/************************************/
 
-
 	function drawAddPageToWhiteListDialog() {
-		if (document.getElementById(ADD_TO_WHITELIST_FRAME_ID))
-			return;
+		if (document.getElementById(ADD_TO_WHITELIST_FRAME_ID)) return;
 
 		document.getElementsByTagName('body')[0].style.filter = 'blur(1px)';
 
@@ -349,7 +348,8 @@ async function getTabId() {
 	/************************************/
 	/*				FAVICON                   */
 	/************************************/
-	const lockImgSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAJCAYAAAD+WDajAAAACXBIWXMAAAsSAAALEgHS3X78AAAA70lEQVQYlU3JP2qFMBwA4CQELeSlprwDlE5WeoAsBUHFtVfQ8zxwkQ5d39DF5R3iba2DFQ+h0CwqiX/SX6dCv/VDAICKorjjnL8GQfDped5bVVVHAEAIAFCSJOcsyy5d173keX5J0/QdABBqmuZRSnnVWt/O84yMMQcp5bWu6yfS973gnOuyLClj7Hg6nRwhxDgMg4fDMDy3bfustf7e950QQhBjTPi+/0GVUg8AgIQQAgAwIQSMMVgpdU8ppYu1FrZt2wEAY4zBWosJIQsdx9Gdpom6rvvzl+u60mmabmgURe2yLAfHcdZ/6cRx/PUL8ROEMEM1AFcAAAAASUVORK5CYII=';
+	const lockImgSrc =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAJCAYAAAD+WDajAAAACXBIWXMAAAsSAAALEgHS3X78AAAA70lEQVQYlU3JP2qFMBwA4CQELeSlprwDlE5WeoAsBUHFtVfQ8zxwkQ5d39DF5R3iba2DFQ+h0CwqiX/SX6dCv/VDAICKorjjnL8GQfDped5bVVVHAEAIAFCSJOcsyy5d173keX5J0/QdABBqmuZRSnnVWt/O84yMMQcp5bWu6yfS973gnOuyLClj7Hg6nRwhxDgMg4fDMDy3bfustf7e950QQhBjTPi+/0GVUg8AgIQQAgAwIQSMMVgpdU8ppYu1FrZt2wEAY4zBWosJIQsdx9Gdpom6rvvzl+u60mmabmgURe2yLAfHcdZ/6cRx/PUL8ROEMEM1AFcAAAAASUVORK5CYII=';
 	const faviconInfo = getFaviconInfo();
 	const links = faviconInfo.domFavicons;
 	const img = new Image();
@@ -360,7 +360,7 @@ async function getTabId() {
 	let originalIconUrlBase64;
 
 	extractIconBase64();
-	window.addEventListener('load', function() {
+	window.addEventListener('load', function () {
 		setTimeout(extractIconBase64, 1000);
 	});
 
@@ -369,7 +369,6 @@ async function getTabId() {
 	}
 
 	function extractIconBase64(faviconUrl?, retries?) {
-
 		if (retries == null) {
 			retries = 1;
 		}
@@ -378,10 +377,10 @@ async function getTabId() {
 			return;
 		}
 
-		chrome.runtime.sendMessage({ method: '[TS:fetchFavicon]'/*, url: normalizeUrl(url)*/ })
-			.then(dataUrl => {
-				if (dataUrl == null)
-					return;
+		chrome.runtime
+			.sendMessage({ method: '[TS:fetchFavicon]' /*, url: normalizeUrl(url)*/ })
+			.then((dataUrl) => {
+				if (dataUrl == null) return;
 				originalIconUrlBase64 = dataUrl;
 				prepareIcon(originalIconUrlBase64);
 			})
@@ -414,8 +413,7 @@ async function getTabId() {
 			insertFaviconDomElement();
 		}
 
-		for (let i = 0; i < links.length; i++)
-			links[i].href = proccesedIcon;
+		for (let i = 0; i < links.length; i++) links[i].href = proccesedIcon;
 	}
 
 	function generateFaviconUri() {
@@ -423,12 +421,11 @@ async function getTabId() {
 		lockImg = new Image();
 		lockImg.crossOrigin = 'anonymous';
 
-		img.onload = function() {
+		img.onload = function () {
 			lockImg.src = lockImgSrc;
 		};
 
-		lockImg.onload = function() {
-
+		lockImg.onload = function () {
 			let canvas, ctx;
 
 			if (originalCanvas == null) {
@@ -452,8 +449,7 @@ async function getTabId() {
 	}
 
 	function highlite(highliteInfo) {
-		if (originalCanvas == null)
-			return;
+		if (originalCanvas == null) return;
 
 		const canvas = cloneCanvas(originalCanvas);
 		const ctx = canvas.getContext('2d');
@@ -484,7 +480,7 @@ async function getTabId() {
 		if (percent) {
 			ctx.beginPath();
 			ctx.moveTo(0, 62);
-			ctx.lineTo(Math.round(64 * percent / 100), 62);
+			ctx.lineTo(Math.round((64 * percent) / 100), 62);
 			ctx.strokeStyle = '#1d8cd6';
 			ctx.lineWidth = 5;
 			ctx.stroke();
@@ -512,18 +508,16 @@ async function getTabId() {
 		const nodeList = document.getElementsByTagName('link');
 
 		for (let i = 0; i < nodeList.length; i++) {
-			if ((nodeList[i].getAttribute('rel') === 'shortcut icon')) {
+			if (nodeList[i].getAttribute('rel') === 'shortcut icon') {
 				faviconUrl = nodeList[i].getAttribute('href');
 				domFavicons.push(nodeList[i]);
 			}
 
-			if (nodeList[i].getAttribute('rel') === 'icon')
-				domFavicons.push(nodeList[i]);
+			if (nodeList[i].getAttribute('rel') === 'icon') domFavicons.push(nodeList[i]);
 		}
 
 		if (faviconUrl == null)
-			if (domFavicons.length > 0)
-				faviconUrl = domFavicons[0].getAttribute('href');
+			if (domFavicons.length > 0) faviconUrl = domFavicons[0].getAttribute('href');
 			else {
 				const url = window.location.href;
 				const arr = url.split('/');
@@ -533,7 +527,6 @@ async function getTabId() {
 
 		return { faviconUrl: faviconUrl, domFavicons: domFavicons };
 	}
-
 
 	function hebernateFormData() {
 		let namedDomInputs;
@@ -556,12 +549,10 @@ async function getTabId() {
 
 		for (let i = 0, len = domInputs.length; i < len; i++) {
 			input = domInputs[i];
-			if (!isVisible(input))
-				continue;
+			if (!isVisible(input)) continue;
 			name = input.name;
 			type = input.type;
-			if (name in inputs)
-				continue;
+			if (name in inputs) continue;
 			actualInputs = {};
 			k = 0;
 			foundOne = false; // TODO:....
@@ -576,8 +567,7 @@ async function getTabId() {
 					case 'checkbox':
 					case 'radio':
 						actualInputs[k] = input.checked ? 'checked' : '';
-						if (input.checked)
-							foundOne = true;
+						if (input.checked) foundOne = true;
 						break;
 					case 'hidden':
 						break;
@@ -585,23 +575,19 @@ async function getTabId() {
 						break;
 					default:
 						actualInputs[k] = input.value;
-						if (input.value != null && input.value != '')
-							foundOne = true;
+						if (input.value != null && input.value != '') foundOne = true;
 				}
 			}
-			if (foundOne)
-				inputs[name] = actualInputs;
+			if (foundOne) inputs[name] = actualInputs;
 		}
 
 		const selects = {};
 		domSelects = document.querySelectorAll('select');
 		for (let i = 0, len = domSelects.length; i < len; i++) {
 			select = domSelects[i];
-			if (!isVisible(select))
-				continue;
+			if (!isVisible(select)) continue;
 			name = select.name;
-			if (name in selects)
-				continue;
+			if (name in selects) continue;
 			foundSelects = {};
 			k = 0;
 			foundOne = false;
@@ -610,28 +596,22 @@ async function getTabId() {
 			for (j = 0, len1 = namedDomSelects.length; j < len1; j++) {
 				select = namedDomSelects[j];
 				++k;
-				if (!isVisible(select))
-					continue;
+				if (!isVisible(select)) continue;
 				val = select.options[select.selectedIndex].value;
 				foundOne = true;
-				if (val instanceof Array)
-					foundSelects[k] = val;
-				else
-					foundSelects[k] = [val];
+				if (val instanceof Array) foundSelects[k] = val;
+				else foundSelects[k] = [val];
 			}
-			if (foundOne)
-				selects[name] = foundSelects;
+			if (foundOne) selects[name] = foundSelects;
 		}
 
 		const texts = {};
 		domTextareas = document.querySelectorAll('textarea');
 		for (let i = 0, len = domTextareas.length; i < len; i++) {
 			textarea = domTextareas[i];
-			if (!isVisible(textarea))
-				continue;
+			if (!isVisible(textarea)) continue;
 			name = textarea.name;
-			if (name in texts)
-				continue;
+			if (name in texts) continue;
 			foundTexts = {};
 			k = 0;
 			foundOne = false;
@@ -639,27 +619,22 @@ async function getTabId() {
 			for (j = 0, len1 = namedDomTextareas.length; j < len1; j++) {
 				textarea = namedDomTextareas[j];
 				++k;
-				if (!isVisible(textarea))
-					continue;
+				if (!isVisible(textarea)) continue;
 				foundTexts[k] = textarea.value;
-				if (textarea.value != null && textarea.value != '')
-					foundOne = true;
+				if (textarea.value != null && textarea.value != '') foundOne = true;
 			}
-			if (foundOne)
-				texts[name] = foundTexts;
+			if (foundOne) texts[name] = foundTexts;
 		}
 
 		const collectedFormData = {
-			timestamp: (new Date()).getTime(),
+			timestamp: new Date().getTime(),
 			inputs: inputs,
 			texts: texts,
 			selects: selects
 		};
 
-		if (Object.keys(inputs).length > 0 || Object.keys(texts).length > 0 || Object.keys(selects).length > 0)
-			return collectedFormData;
-		else
-			return null;
+		if (Object.keys(inputs).length > 0 || Object.keys(texts).length > 0 || Object.keys(selects).length > 0) return collectedFormData;
+		else return null;
 	}
 
 	function processRestoreForm(savedData) {
@@ -668,7 +643,7 @@ async function getTabId() {
 		}
 
 		for (const name in savedData.inputs) {
-			const inputs = document.querySelectorAll('input[name="' + name + '"]');//$('input[name="' + name + '"]');
+			const inputs = document.querySelectorAll('input[name="' + name + '"]'); //$('input[name="' + name + '"]');
 			let i = 0;
 			for (let _i = 0, _len = inputs.length; _i < _len; _i++) {
 				const input = inputs[_i];
@@ -733,31 +708,32 @@ async function getTabId() {
 			const savedSelects = savedData.selects[name];
 			const selects = document.querySelectorAll('select[name="' + name + '"]');
 			let i = 0;
-			_results.push((function() {
-				let _k, _len2, _results1;
+			_results.push(
+				(function () {
+					let _k, _len2, _results1;
 
-				_results1 = [];
-				for (_k = 0, _len2 = selects.length; _k < _len2; _k++) {
-					const select = selects[_k];
-					++i;
-					if (i in savedSelects) {
-						try {
-							//@ts-ignore
-							if (select.value == savedSelects[i])
-								continue;
-							//@ts-ignore
-							select.value = savedSelects[i];
-							fireEvent(select, 'change');
-						} catch (e) {
-							errorLog(e);
+					_results1 = [];
+					for (_k = 0, _len2 = selects.length; _k < _len2; _k++) {
+						const select = selects[_k];
+						++i;
+						if (i in savedSelects) {
+							try {
+								//@ts-ignore
+								if (select.value == savedSelects[i]) continue;
+								//@ts-ignore
+								select.value = savedSelects[i];
+								fireEvent(select, 'change');
+							} catch (e) {
+								errorLog(e);
+							}
+							_results1.push();
+						} else {
+							_results1.push(void 0);
 						}
-						_results1.push();
-					} else {
-						_results1.push(void 0);
 					}
-				}
-				return _results1;
-			})());
+					return _results1;
+				})()
+			);
 		}
 	}
 })();

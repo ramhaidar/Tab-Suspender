@@ -2,7 +2,6 @@ const NUMBER_TYPE = 'number';
 const STRING_TYPE = 'string';
 const BOOLEAN_TYPE = 'boolean';
 
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SETTINGS_TYPES = {
 	// Default: boolean
@@ -17,17 +16,14 @@ const SETTINGS_TYPES = {
 	exceptionPatternsV2: STRING_TYPE,
 	parkBgColor: STRING_TYPE,
 	screenshotCssStyle: STRING_TYPE,
-	restoreButtonView: STRING_TYPE,
+	restoreButtonView: STRING_TYPE
 };
 
 function GET_SETTINGS_TYPE(key: string): string {
 	const foundType = SETTINGS_TYPES[key];
-	if (foundType != null)
-		return foundType;
-	else
-		return BOOLEAN_TYPE;
+	if (foundType != null) return foundType;
+	else return BOOLEAN_TYPE;
 }
-
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class Settings {
@@ -91,7 +87,8 @@ const DEFAULT_SETTINGS: Settings = {
 	restoreOnMouseHover: true,
 	reloadTabOnRestore: false,
 	exceptionPatterns: null, // DEPRECATED
-	exceptionPatternsV2: '*mail.google.com*\n*outlook.live.com*\n*service.mail.com*\n*mail.yahoo.com*\n*mail.aol.com*\n*icloud.com/#mail*\nexamplesite.com*\n*.examplesitesecond.com*', // <<=== Continue There TODO - DONE
+	exceptionPatternsV2:
+		'*mail.google.com*\n*outlook.live.com*\n*service.mail.com*\n*mail.yahoo.com*\n*mail.aol.com*\n*icloud.com/#mail*\nexamplesite.com*\n*.examplesitesecond.com*', // <<=== Continue There TODO - DONE
 	// Tab Icon
 	tabIconOpacityChange: true,
 	animateTabIconSuspendTimeout: false,
@@ -109,7 +106,7 @@ const DEFAULT_SETTINGS: Settings = {
 	battLvlLessValue: 50,
 	screenshotCssStyle: '',
 	adaptiveSuspendTimeout: true,
-	restoreButtonView: 'roundIcon', /* Available: roundIcon, noIcon, topBar */
+	restoreButtonView: 'roundIcon' /* Available: roundIcon, noIcon, topBar */,
 	sendErrors: true,
 	ignoreCloseGroupedTabs: true,
 	ignoreSuspendGroupedTabs: false,
@@ -120,11 +117,11 @@ const DEFAULT_SETTINGS: Settings = {
 	suspendOnCtrlClick_hotfix_migrated: null,
 	// v2.0.0
 	localStorageMigrated: null,
-	localStorageFormDataCleaned: null,
+	localStorageFormDataCleaned: null
 };
 
 // @ts-ignore
-if (typeof global !== "undefined") {
+if (typeof global !== 'undefined') {
 	(global as any).DEFAULT_SETTINGS = DEFAULT_SETTINGS;
 	(global as any).SETTINGS_TYPES = SETTINGS_TYPES;
 	(global as any).GET_SETTINGS_TYPE = GET_SETTINGS_TYPE;

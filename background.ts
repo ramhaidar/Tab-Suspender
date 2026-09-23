@@ -5,16 +5,15 @@
  */
 'use strict';
 
-const Copyright = 'Copyright (c) 2015 Sergey Zadorozhniy. The content presented herein may not, under any circumstances, be reproduced in whole or in any part or form without written permission from Sergey Zadorozhniy. Zadorozhniy.Sergey@gmail.com';
+const Copyright =
+	'Copyright (c) 2015 Sergey Zadorozhniy. The content presented herein may not, under any circumstances, be reproduced in whole or in any part or form without written permission from Sergey Zadorozhniy. Zadorozhniy.Sergey@gmail.com';
 const TS_SESSION_ID_KEY = 'TSSessionId';
 
 const TSSessionId = Date.now();
 let previousTSSessionId;
 
-
 // Globals
 const parkUrl = chrome.runtime.getURL('park.html');
-
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const historyPageUrl = chrome.runtime.getURL('history.html');
@@ -71,65 +70,56 @@ const NEXT_TAB_SUSPEND_TTL = 3000; // 3 seconds to create tab after Ctrl/Cmd+cli
 // eslint-disable-next-line prefer-const
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const openSuspendedHistory = () =>
-	focusOrOpenTSPage(chrome.runtime.getURL('history.html'));
+const openSuspendedHistory = () => focusOrOpenTSPage(chrome.runtime.getURL('history.html'));
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const openClosedHistory = () =>
-	focusOrOpenTSPage(chrome.runtime.getURL('history.html') + '#closed');
+const openClosedHistory = () => focusOrOpenTSPage(chrome.runtime.getURL('history.html') + '#closed');
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getRestoreEvent = async function() {
-	return (await settings.get('restoreOnMouseHover') == true ? 'hover' : 'click');
+const getRestoreEvent = async function () {
+	return (await settings.get('restoreOnMouseHover')) == true ? 'hover' : 'click';
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getReloadTabOnRestore = (): Promise<boolean> =>
-	settings.get('reloadTabOnRestore');
+const getReloadTabOnRestore = (): Promise<boolean> => settings.get('reloadTabOnRestore');
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getTabIconStatusVisualize = (): Promise<boolean> =>
-	settings.get('tabIconStatusVisualize');
+const getTabIconStatusVisualize = (): Promise<boolean> => settings.get('tabIconStatusVisualize');
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getTabIconOpacityChange = (): Promise<boolean> =>
-	settings.get('tabIconOpacityChange');
+const getTabIconOpacityChange = (): Promise<boolean> => settings.get('tabIconOpacityChange');
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getRestoreButtonView = (): Promise<string> =>
-	settings.get('restoreButtonView');
+const getRestoreButtonView = (): Promise<string> => settings.get('restoreButtonView');
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getScreenshotCssStyle = (): Promise<string> =>
-	settings.get('screenshotCssStyle');
+const getScreenshotCssStyle = (): Promise<string> => settings.get('screenshotCssStyle');
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getStartDiscarted = function(): Promise<boolean> {
+const getStartDiscarted = function (): Promise<boolean> {
 	return settings.get('startDiscarted');
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const isFirstTimeTabDiscard = function(tabId) {
+const isFirstTimeTabDiscard = function (tabId) {
 	const isFirstTime = !(tabId in firstTimeTabDiscardMap);
 	firstTimeTabDiscardMap[tabId] = true;
 	return isFirstTime;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getParkBgColor = async function(): Promise<string> {
+const getParkBgColor = async function (): Promise<string> {
 	const color = await settings.get('parkBgColor');
-	if (color != null && color.search(/^([A-Fa-f0-9]{8}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/) >= 0)
-		return color;
-	else
-		return DEFAULT_SETTINGS.parkBgColor;
+	if (color != null && color.search(/^([A-Fa-f0-9]{8}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/) >= 0) return color;
+	else return DEFAULT_SETTINGS.parkBgColor;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getStartedAt = async function() {
+const getStartedAt = async function () {
 	return startedAt;
 };
 
-chrome.notifications.onClicked.addListener(function(id) {
+chrome.notifications.onClicked.addListener(function (id) {
 	chrome.notifications.clear(id);
 });
 
@@ -138,7 +128,6 @@ chrome.runtime.setUninstallURL('https://uninstall.tab-suspender.com/', null);
 /*
  * STARTUP/UPDATE
  */
-
 
 // init function
 /**
@@ -158,8 +147,7 @@ async function init(options) {
 	/* Restore parkHistory */
 	try {
 		parkHistory = await LocalStore.get(LocalStoreKeys.PARK_HISTORY);
-		if (!Array.isArray(parkHistory))
-			parkHistory = [];
+		if (!Array.isArray(parkHistory)) parkHistory = [];
 	} catch (e) {
 		console.error('Exception while restore previous parkHistory:', e);
 	}
@@ -167,8 +155,7 @@ async function init(options) {
 	/* Restore closeHistory */
 	try {
 		closeHistory = await LocalStore.get(LocalStoreKeys.CLOSE_HISTORY);
-		if (!Array.isArray(closeHistory))
-			closeHistory = [];
+		if (!Array.isArray(closeHistory)) closeHistory = [];
 	} catch (e) {
 		console.error('Exception while restore previous closeHistory:', e);
 	}
@@ -177,25 +164,21 @@ async function init(options) {
 /**
  *
  */
-chrome.runtime.onUpdateAvailable.addListener(function(details) {
+chrome.runtime.onUpdateAvailable.addListener(function (details) {
 	console.log('Update available.. ' + (details ? details.version : 'no version info.'));
 });
 
 /**
  *
  */
-chrome.runtime.onInstalled.addListener(function(details) {
-
-	if (debug)
-		console.log('Installed at ' + new Date().getTime());
+chrome.runtime.onInstalled.addListener(function (details) {
+	if (debug) console.log('Installed at ' + new Date().getTime());
 
 	if (details.reason == 'install') {
-		if (debug)
-			console.log('This is a first install!');
+		if (debug) console.log('This is a first install!');
 	} else if (details.reason == 'update') {
 		const thisVersion = chrome.runtime.getManifest().version;
 		console.log('Updated from ' + details.previousVersion + ' to ' + thisVersion + '!'); /* Updated from 0.4.8.3 to 0.4.8.4! */
-
 
 		/************* PATCHES: ********************************
 		 * TODO: remove this variable after migration complete!!!
@@ -223,13 +206,15 @@ chrome.runtime.onInstalled.addListener(function(details) {
  *
  */
 function drawSetupWizardDialog() {
-	chrome.tabs.query({ currentWindow: true, active: true }, function(tabs) {
-		chrome.tabs.create({
-			'windowId': tabs[0].windowId,
-			'index': tabs[0].index + 1,
-			'url': chrome.runtime.getURL('wizard_background.html'),
-			'active': true
-		}).catch(console.error);
+	chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+		chrome.tabs
+			.create({
+				windowId: tabs[0].windowId,
+				index: tabs[0].index + 1,
+				url: chrome.runtime.getURL('wizard_background.html'),
+				active: true
+			})
+			.catch(console.error);
 	});
 }
 
@@ -237,11 +222,9 @@ function drawSetupWizardDialog() {
  *
  */
 function start() {
-
 	console.log(Copyright);
 
-	if (debug)
-		console.warn('********************************************************************************************************');
+	if (debug) console.warn('********************************************************************************************************');
 	console.warn('* Starting...   ', new Date());
 	console.warn('********************************************************************************************************');
 
@@ -251,17 +234,19 @@ function start() {
 	console.log('TSSessionId: ', TSSessionId);
 
 	/* Save last session ID */
-	chrome.storage.local.get([TS_SESSION_ID_KEY]).then((result) => {
-		previousTSSessionId = result[TS_SESSION_ID_KEY];
-		console.log('previousTSSessionId: ', previousTSSessionId);
+	chrome.storage.local
+		.get([TS_SESSION_ID_KEY])
+		.then((result) => {
+			previousTSSessionId = result[TS_SESSION_ID_KEY];
+			console.log('previousTSSessionId: ', previousTSSessionId);
 
-		chrome.storage.local.set({ [TS_SESSION_ID_KEY]: TSSessionId }).then(() => {
-			console.log('previousTSSessionId is stored in chrome.storage.local');
-		}, console.error);
-	}).catch(() => {
-		console.error('previousTSSessionId is not found in chrome.storage.local');
-	});
-
+			chrome.storage.local.set({ [TS_SESSION_ID_KEY]: TSSessionId }).then(() => {
+				console.log('previousTSSessionId is stored in chrome.storage.local');
+			}, console.error);
+		})
+		.catch(() => {
+			console.error('previousTSSessionId is not found in chrome.storage.local');
+		});
 
 	/* Connect DB */
 	// @ts-ignore
@@ -269,12 +254,12 @@ function start() {
 
 	setTimeout(cleanupDB, DELAY_BEFORE_DB_CLEANUP);
 
-
-	const prepare = async function() {
+	const prepare = async function () {
 		/* TODO: cleanup this logic after cleanup complete! */
 
 		/* Prepare settings */
-		const firstInstallation = ((await SettingsStoreClient.get('timeout', SETTINGS_STORAGE_NAMESPACE)) == null && !chrome.extension.inIncognitoContext);
+		const firstInstallation =
+			(await SettingsStoreClient.get('timeout', SETTINGS_STORAGE_NAMESPACE)) == null && !chrome.extension.inIncognitoContext;
 
 		settings = new SettingsStore(SETTINGS_STORAGE_NAMESPACE, DEFAULT_SETTINGS, offscreenDocumentProvider);
 
@@ -282,46 +267,45 @@ function start() {
 		 * TODO: WIZARD: ADD IF FOR IS IT FIRST INSTALL OR UPDATE ONLY!!!
 		 */
 		try {
-			settings.getOnStorageInitialized().then(async () => {
+			settings
+				.getOnStorageInitialized()
+				.then(async () => {
+					/* ????? WILL BE INITIALISED 2 TIMES: HERE AND INSIDE INIT(..) TO RELOAD SETTINGS ?????????? */
+					whiteList = new WhiteList(settings);
 
-				/* ????? WILL BE INITIALISED 2 TIMES: HERE AND INSIDE INIT(..) TO RELOAD SETTINGS ?????????? */
-				whiteList = new WhiteList(settings);
+					windowManger = new WindowManager();
+					tabManager = new TabManager();
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					tabObserver = new TabObserver(tabManager);
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					tabCapture = new TabCapture(tabManager);
+					contextMenuController = new ContextMenuController(tabManager);
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					formRestoreController = new PageStateRestoreController();
+					settingsPageController = new SettingsPageController();
+					ignoreList = new IgnoreList();
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					bgMessageListener = new BGMessageListener(tabManager);
 
-				windowManger = new WindowManager();
-				tabManager = new TabManager();
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				tabObserver = new TabObserver(tabManager);
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				tabCapture = new TabCapture(tabManager);
-				contextMenuController = new ContextMenuController(tabManager);
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				formRestoreController = new PageStateRestoreController();
-				settingsPageController = new SettingsPageController();
-				ignoreList = new IgnoreList();
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				bgMessageListener = new BGMessageListener(tabManager);
+					setTimeout(() => void trackView('TS started', { version: chrome.runtime.getManifest().version }), 5000);
 
-				setTimeout(() => void trackView('TS started', { version: chrome.runtime.getManifest().version }), 5000);
-
-				const isAlreadyHasSyncSettings = ((await LocalStore.get(LocalStoreKeys.INSTALLED)) != null && !chrome.extension.inIncognitoContext);
-				if (firstInstallation && !isAlreadyHasSyncSettings) {
-					console.log('EX: Installed!');
-					drawSetupWizardDialog();
-					setTimeout(() => void trackView(LocalStoreKeys.INSTALLED), 5000);
-				} else {
-					console.log('EX: Updated!');
-					//setTimeout(() => void trackView('updated'), 5000);
-					if (!isAlreadyHasSyncSettings) {
-						LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+					const isAlreadyHasSyncSettings = (await LocalStore.get(LocalStoreKeys.INSTALLED)) != null && !chrome.extension.inIncognitoContext;
+					if (firstInstallation && !isAlreadyHasSyncSettings) {
+						console.log('EX: Installed!');
+						drawSetupWizardDialog();
+						setTimeout(() => void trackView(LocalStoreKeys.INSTALLED), 5000);
+					} else {
+						console.log('EX: Updated!');
+						//setTimeout(() => void trackView('updated'), 5000);
+						if (!isAlreadyHasSyncSettings) {
+							LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+						}
 					}
-				}
-			})
+				})
 				.catch(console.error)
 				.finally(() => {
-					if (debug)
-						setTimeout(preInit, 1000);
-					else
-						setTimeout(preInit, 500);
+					if (debug) setTimeout(preInit, 1000);
+					else setTimeout(preInit, 500);
 				});
 			// eslint-disable-next-line no-empty
 		} catch (e) {
@@ -336,7 +320,7 @@ function start() {
 
 		const startNormalTabsDiscarted = await settings.get('startNormalTabsDiscarted');
 		/* Discard tabs */
-		chrome.tabs.query({ active: false/*, discarded: false*/ }, async function(tabs) {
+		chrome.tabs.query({ active: false /*, discarded: false*/ }, async function (tabs) {
 			console.log('Processing tabs after session restore - total tabs:', tabs.length);
 
 			for (const i in tabs) {
@@ -351,7 +335,7 @@ function start() {
 					if (tabs[i].url.indexOf(parkUrl) == -1) {
 						if (startNormalTabsDiscarted)
 							if (tabs[i].discarded == false)
-								if (!await tabManager.isExceptionTab(tabs[i]))
+								if (!(await tabManager.isExceptionTab(tabs[i])))
 									try {
 										console.log('Discarding tab:', tabs[i].id, 'groupId:', tabs[i].groupId, 'url:', tabs[i].url);
 										discardTab(tabs[i].id);
@@ -371,7 +355,6 @@ function start() {
  *
  */
 async function preInit(options) {
-
 	await init(options);
 
 	new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();

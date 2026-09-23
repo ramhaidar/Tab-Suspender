@@ -22,10 +22,11 @@ class BrowserActionControl {
 
 	private readonly expectedExceptions = 'RegExp:No tab with id: \\d{1,5}\\.';
 
-	constructor(settings: SettingsStore,
-							whiteList: WhiteList,
-							globalMenuIdMap: { [key: string | number]: string | number },
-							pauseTics: number
+	constructor(
+		settings: SettingsStore,
+		whiteList: WhiteList,
+		globalMenuIdMap: { [key: string | number]: string | number },
+		pauseTics: number
 	) {
 		this.extensionTitle = 'Tab Suspender';
 		this.settings = settings;
@@ -38,7 +39,6 @@ class BrowserActionControl {
 	 *
 	 */
 	async updateStatus(tab) {
-
 		let computedIcon;
 		let isIconSet = false;
 
@@ -54,8 +54,7 @@ class BrowserActionControl {
 				computedIcon = 'img/icon16_paused.png';
 				isIconSet = true;
 			}
-			if (this.pauseTics <= 0)
-				computedIcon = 'img/icon16.png';
+			if (this.pauseTics <= 0) computedIcon = 'img/icon16.png';
 		}
 
 		let ignoredTab = false;
@@ -71,7 +70,7 @@ class BrowserActionControl {
 				chrome.contextMenus.update(this.globalMenuIdMap['ignore-current-tab'], { checked: false });
 			}
 
-			whitelistedTab = (this.whiteList.isURIException(tab.url) || this.whiteList.isURIException(parseUrlParam(tab.url, 'url')));
+			whitelistedTab = this.whiteList.isURIException(tab.url) || this.whiteList.isURIException(parseUrlParam(tab.url, 'url'));
 			if (whitelistedTab) {
 				this.setBrowserActionTitle(tab.id, this.extensionTitle + ': Page is in Whitelist');
 
@@ -89,16 +88,14 @@ class BrowserActionControl {
 			}
 
 			if (!isIconSet) {
-				if (ignoredTab)
-					computedIcon = 'img/icon16_green_minus.png';
+				if (ignoredTab) computedIcon = 'img/icon16_green_minus.png';
 				else if (whitelistedTab) {
 					computedIcon = 'img/icon16_green.png';
-				} else
-					computedIcon = 'img/icon16.png';
+				} else computedIcon = 'img/icon16.png';
 			}
 		}
 		if (computedIcon != lastIcon) {
-			void chrome.action.setIcon({ 'path': computedIcon });
+			void chrome.action.setIcon({ path: computedIcon });
 			lastIcon = computedIcon;
 		}
 	}
@@ -109,10 +106,8 @@ class BrowserActionControl {
 	synchronizeActiveTabs() {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
-		chrome.tabs.query({ active: true }, function(tabs) {
-			for (const i in tabs)
-				if (tabs.hasOwnProperty(i))
-					void self.updateStatus(tabs[i]);
+		chrome.tabs.query({ active: true }, function (tabs) {
+			for (const i in tabs) if (tabs.hasOwnProperty(i)) void self.updateStatus(tabs[i]);
 		});
 	}
 
@@ -123,10 +118,10 @@ class BrowserActionControl {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
 
-		chrome.action.getTitle({ tabId: tabId }, function(actualTitle) {
+		chrome.action.getTitle({ tabId: tabId }, function (actualTitle) {
 			if (!hasLastError(self.expectedExceptions))
 				if (actualTitle != title)
-					chrome.action.setTitle({ tabId: tabId, title: title }, function() {
+					chrome.action.setTitle({ tabId: tabId, title: title }, function () {
 						hasLastError(self.expectedExceptions);
 					});
 		});

@@ -25,13 +25,11 @@ class PageStateRestoreController {
 	 *
 	 */
 	async getFormRestoreDataAndRemove(actualTabId) {
-
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
 
 		const targetMapEntry = this.getTargetMapEntry(actualTabId);
-		if (targetMapEntry == null)
-			return null;
+		if (targetMapEntry == null) return null;
 
 		//void LocalStore.remove(key);
 
@@ -40,22 +38,20 @@ class PageStateRestoreController {
 		return new Promise<FormRestoreInfo>((resolve, reject) => {
 			database.queryIndex(
 				{
-					IDB:
-						{
-							// @ts-ignore
-							table: FD_DB_NAME,
-						},
+					IDB: {
+						// @ts-ignore
+						table: FD_DB_NAME
+					},
 					params: [storedTabIdInt]
 				},
-				function(fields) {
+				function (fields) {
 					if (fields == null) {
 						console.warn(`FD Fields list from BD is null, storedTabIdInt: ${storedTabIdInt}`);
 						resolve(null);
 						return;
 					}
 
-					if (debugScreenCache)
-						console.log('getScreen result: ', Date.now());
+					if (debugScreenCache) console.log('getScreen result: ', Date.now());
 
 					void self.deleteDataRecord(actualTabId);
 
@@ -63,17 +59,16 @@ class PageStateRestoreController {
 				}
 			);
 		});
-	};
+	}
 
 	async deleteDataRecord(tabId: number) {
 		database.executeDelete({
-			IDB:
-				{
-					// @ts-ignore
-					table: FD_DB_NAME,
-					params: [tabId],
-					ignoreNotFound: true,
-				}
+			IDB: {
+				// @ts-ignore
+				table: FD_DB_NAME,
+				params: [tabId],
+				ignoreNotFound: true
+			}
 		});
 	}
 
@@ -83,24 +78,19 @@ class PageStateRestoreController {
 	getTargetMapEntry(actualTabId) {
 		const tabMapEntry = this.tabMap[actualTabId];
 		if (tabMapEntry != null) {
-			if (this.isTabMapEntryOutdated(tabMapEntry))
-				return null;
-			else
-				return tabMapEntry;
+			if (this.isTabMapEntryOutdated(tabMapEntry)) return null;
+			else return tabMapEntry;
 		}
-	};
+	}
 
 	/**
 	 *
 	 */
 	async collectPageState(tabId: number) {
-
 		let finished = false;
-		return new Promise(resolve => {
-
-			chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:CollectPageState]' }, function(response/*{ formData, videoTime }*/) {
-				if (debug)
-					console.log('FData: ', response.formData);
+		return new Promise((resolve) => {
+			chrome.tabs.sendMessage(tabId, { method: '[AutomaticTabCleaner:CollectPageState]' }, function (response /*{ formData, videoTime }*/) {
+				if (debug) console.log('FData: ', response.formData);
 
 				if (response.formData && Object.keys(response.formData).length !== 0 && response.formData.constructor === Object) {
 					/* !TODO-v3: Make auto cleanup Important!
@@ -109,18 +99,17 @@ class PageStateRestoreController {
 
 					const data = {
 						tabId: tabId,
-						data: response.formData,
-					}
+						data: response.formData
+					};
 
 					database.putV2([
-							{
-								IDB:
-									{
-										// @ts-ignore
-										table: FD_DB_NAME,
-										data: data
-									}
+						{
+							IDB: {
+								// @ts-ignore
+								table: FD_DB_NAME,
+								data: data
 							}
+						}
 					]);
 				}
 
@@ -132,25 +121,23 @@ class PageStateRestoreController {
 				if (!finished) resolve({});
 			}, 500);
 		});
-	};
+	}
 
 	/**
 	 *
 	 */
 	expectRestore(actualTabId, storedAsTabId, url) {
 		if (actualTabId != null && storedAsTabId != null)
-			this.tabMap[actualTabId] = { 'timestamp': new Date().getTime(), 'storedAsTabId': storedAsTabId, 'url': url };
-	};
+			this.tabMap[actualTabId] = { timestamp: new Date().getTime(), storedAsTabId: storedAsTabId, url: url };
+	}
 
 	/**
 	 *
 	 */
 	cleanup() {
 		for (const key in this.tabMap)
-			if (this.tabMap.hasOwnProperty(key))
-				if (this.isTabMapEntryOutdated(this.tabMap[key]))
-					delete this.tabMap[key];
-	};
+			if (this.tabMap.hasOwnProperty(key)) if (this.isTabMapEntryOutdated(this.tabMap[key])) delete this.tabMap[key];
+	}
 
 	/**
 	 *
@@ -159,4 +146,3 @@ class PageStateRestoreController {
 		return Date.now() - tabMapEntry.timestamp > this.TIMEOUT;
 	}
 }
-

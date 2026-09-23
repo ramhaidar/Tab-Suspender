@@ -1,4 +1,3 @@
-
 interface ParkPageDataBGResponse {
 	tabInfo: ITabInfo;
 	startDiscarded: boolean;
@@ -17,7 +16,6 @@ interface ParkPageDataBGResponse {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class BGMessageListener {
-
 	private tabManager: TabManager;
 
 	private readonly BASE64_SEPARATOR = ';base64,';
@@ -29,259 +27,266 @@ class BGMessageListener {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
 
-		chrome.runtime.onMessage.addListener(/* DO NOT ADD async HERE IT BROKE sendResponse??*/(request, sender, sendResponse) => {
+		chrome.runtime.onMessage.addListener(
+			/* DO NOT ADD async HERE IT BROKE sendResponse??*/ (request, sender, sendResponse) => {
+				/* Screen from h2c, always devicePixelRatio=1*/
+				if (typeof request == 'string') {
+					console.warn('Screen Requested', request.length);
+					if (request === 'data:,') console.error(new Error(`Damaged screen [data:,]!!!`), { favIconUrl: undefined, ...sender.tab });
 
-			/* Screen from h2c, always devicePixelRatio=1*/
-		  if (typeof request == 'string') {
-				console.warn('Screen Requested', request.length);
-				if (request === 'data:,')
-					console.error(new Error(`Damaged screen [data:,]!!!`), {favIconUrl: undefined, ...sender.tab});
-
-				void ScreenshotController.addScreen(sender.tab.id, request, 1/*TabCapture.lastWindowDevicePixelRatio[sender.tab.windowId]*/);
-			} else if (request.method === '[TS:getScreen]') {
-				void ScreenshotController.getScreen(request.tabId, request.sessionId, (scr, pixRat) => {
-					sendResponse({ scr, pixRat });
-				});
-				return true; // For async sendResponse()
-			} else if (request.method === '[TS:dataForParkPage]') {
-				void (async () => {
-					try {
-						// TODO-v4: Figure out why TabId:  | Cannot read properties of undefined (reading 'toObject') happened ???
-						// TODO-v4: make each parameter extraction in individual try to avoid unexpected errors and ship max data to tab
-						const response: ParkPageDataBGResponse = {
-							startDiscarded: await getStartDiscarted(),
-							startAt: await getStartedAt(),
-							isFirstTimeTabDiscard: isFirstTimeTabDiscard(request.tabId),
-							parkedUrl: tabManager.findReplacedTabById(request.tabId)?.parkedUrl,
-							tabInfo: tabManager.findReplacedTabById(request.tabId).toObject(),
-							isTabMarkedForUnsuspend: isTabMarkedForUnsuspend(request.tabId, request.sessionId, { remove: true }),
-							reloadTabOnRestore: await getReloadTabOnRestore(),
-							tabIconStatusVisualize: await getTabIconStatusVisualize(),
-							tabIconOpacityChange: await getTabIconOpacityChange(),
-							screenshotCssStyle: await getScreenshotCssStyle(),
-							restoreEvent: await getRestoreEvent(),
-							parkBgColor: await getParkBgColor(),
-							restoreButtonView: await getRestoreButtonView(),
-						};
-						sendResponse(response);
-					} catch (e) {
-						sendResponse({});
-						console.error(`[TS:dataForParkPage]: TabId: ${request.tabId}`, e, sender.tab);
-					}
-				})();
-				return true; // For async sendResponse()
-			} else if (request.method === '[TS:fetchFavicon]') {
-				// Validate sender.tab.id before calling chrome.tabs.get()
-				// Chrome API requires tabId >= 0
-				// Possible causes: closed tab, service worker context, detached page
-				if (!sender.tab || typeof sender.tab.id !== 'number' || sender.tab.id < 0) {
-					console.warn(`[TS:fetchFavicon] Invalid sender context. Tab ID: ${sender.tab?.id}, URL: ${sender.url}, frameId: ${sender.frameId}`);
-					sendResponse(null);
-					return false;
-				}
-
-				chrome.tabs.get(sender.tab.id).then((tab) => {
-					if (tab.favIconUrl == null || tab.favIconUrl.trim() === '') {
-						console.warn(`Error fetch() favicon, empty: tab.favIconUrl=(${tab.favIconUrl})`);
-						sendResponse(null);
-						return;
-					}
-
-					if (!TabManager.isTabURLAllowedForPark(tab)) {
-						console.debug(`Skip [TS:fetchFavicon] because tab url not Allowed to Park [${tab.url}]`);
-						sendResponse(null);
-						return;
-					}
-
-					// TODO-v4: Add icon cache
-					fetch(tab.favIconUrl/* ? tab.favIconUrl : request.url*/,
-						{
-							method: 'get'
-						})
-						.then(async response => {
-							const arrayBuffer = await response.arrayBuffer();
-
-							const blob = new Blob([arrayBuffer]);
-							const reader = new FileReader();
-
-							reader.onload = (event) => {
-								// @ts-ignore
-								let dataUrl: string = event.target.result;
-								const contentType = response.headers.get("Content-Type");
-								const octetStream = 'data:application/octet-stream;base64,';
-								if (dataUrl.startsWith(octetStream)) {
-									if (contentType == null) {
-										console.warn(`favIcon has no Header contentType[]`, dataUrl);
-									} else if (contentType.startsWith('image/x-icon') || contentType === 'image/vnd.microsoft.icon') {
-										dataUrl = 'data:image/x-icon;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-									} else if (contentType.startsWith('image/png')) {
-										dataUrl = 'data:image/png;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-									} else if (contentType.startsWith('image/svg+xml')) {
-										dataUrl = 'data:image/svg+xml;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-									} else if (contentType.startsWith('image/jpeg')) {
-										dataUrl = 'data:image/jpeg;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-									} else if (contentType.startsWith('image/webp')) {
-										dataUrl = 'data:image/webp;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-									} else if (contentType.startsWith('image/ico')) {
-										dataUrl = 'data:image/ico;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-									} else if (contentType.startsWith('application/octet-stream')) {
-										dataUrl = 'data:image/x-icon;base64,' + dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
-										console.warn(`Strange favIcon contentType[${contentType}]`, dataUrl);
-									} else {
-										console.error(`Unknown content type: ${contentType}, [${sender.tab.url}]`);
-										if (debug)
-											console.log(`Blob[${sender.tab.url}]`, [dataUrl,tab.favIconUrl, tab]);
-									}
-								}
-								sendResponse(dataUrl);
+					void ScreenshotController.addScreen(sender.tab.id, request, 1 /*TabCapture.lastWindowDevicePixelRatio[sender.tab.windowId]*/);
+				} else if (request.method === '[TS:getScreen]') {
+					void ScreenshotController.getScreen(request.tabId, request.sessionId, (scr, pixRat) => {
+						sendResponse({ scr, pixRat });
+					});
+					return true; // For async sendResponse()
+				} else if (request.method === '[TS:dataForParkPage]') {
+					void (async () => {
+						try {
+							// TODO-v4: Figure out why TabId:  | Cannot read properties of undefined (reading 'toObject') happened ???
+							// TODO-v4: make each parameter extraction in individual try to avoid unexpected errors and ship max data to tab
+							const response: ParkPageDataBGResponse = {
+								startDiscarded: await getStartDiscarted(),
+								startAt: await getStartedAt(),
+								isFirstTimeTabDiscard: isFirstTimeTabDiscard(request.tabId),
+								parkedUrl: tabManager.findReplacedTabById(request.tabId)?.parkedUrl,
+								tabInfo: tabManager.findReplacedTabById(request.tabId).toObject(),
+								isTabMarkedForUnsuspend: isTabMarkedForUnsuspend(request.tabId, request.sessionId, { remove: true }),
+								reloadTabOnRestore: await getReloadTabOnRestore(),
+								tabIconStatusVisualize: await getTabIconStatusVisualize(),
+								tabIconOpacityChange: await getTabIconOpacityChange(),
+								screenshotCssStyle: await getScreenshotCssStyle(),
+								restoreEvent: await getRestoreEvent(),
+								parkBgColor: await getParkBgColor(),
+								restoreButtonView: await getRestoreButtonView()
 							};
-							reader.readAsDataURL(blob);
-						})
-						.catch((e) => {
-							console.error(`Error when favicon Fetch(url), url=[${tab.favIconUrl}]`, e, request.url);
-							sendResponse(null);
-						});
-				}).catch(console.error);
-
-				return true; // For async sendResponse()
-			} else if (request.method === '[AutomaticTabCleaner:trackError]') {
-				const error = Error(request.message);
-				error.stack = request.stack;
-				console.error('[External]: ' + request.message, error);
-			} else if (request.method === '[AutomaticTabCleaner:GetTabId]') {
-				sendResponse(sender.tab.id);
-			} else if (request.method === '[AutomaticTabCleaner:ParkPageFromInjectFinished]') {
-				chrome.tabs.update(request.tabId, { 'url': request.url }).catch(console.error);
-
-				tabManager.markTabParkedFromInject(request.tabId);
-			} else if (request.method === '[TS:offscreenDocument:batteryStatusChanged]') {
-				if ((request.battery as BatteryStatusMessage).isCharging != null)
-					isCharging = (request.battery as BatteryStatusMessage).isCharging;
-				if ((request.battery as BatteryStatusMessage).level != null)
-					batteryLevel = (request.battery as BatteryStatusMessage).level
-				console.log(`BGListener - Charging status: ${isCharging}, Level: ${batteryLevel}`);
-			} else if (request.method === '[TS:offscreenDocument:heartbeat]') {
-				// Heartbeat from offscreen document to keep service worker alive
-				// Send acknowledgment back to maintain bidirectional communication
-				sendResponse({ method: '[TS:offscreenDocument:heartbeatAck]', timestamp: Date.now() });
-				return true; // For async sendResponse()
-			} else if (request.method === '[TS:offscreenDocument:getSuspendedTabs]') {
-				// Return list of all suspended tabs for backup sync
-				void (async () => {
-					try {
-						const allTabs = await chrome.tabs.query({});
-						const suspendedTabs = allTabs
-							.filter(tab => tab.url && TabManager.isTabParked(tab))
-							.map(tab => {
-								const tabUrl = new URL(tab.url);
-								return {
-									url: tabUrl.searchParams.get('url') || '',
-									title: tabUrl.searchParams.get('title') || tab.title || '',
-									favicon: tabUrl.searchParams.get('icon') || tab.favIconUrl || ''
-								};
-							})
-							.filter(t => t.url); // Only include tabs with valid URLs
-
-						sendResponse({ tabs: suspendedTabs });
-					} catch (e) {
-						console.error('Error getting suspended tabs for backup:', e);
-						sendResponse({ tabs: [] });
+							sendResponse(response);
+						} catch (e) {
+							sendResponse({});
+							console.error(`[TS:dataForParkPage]: TabId: ${request.tabId}`, e, sender.tab);
+						}
+					})();
+					return true; // For async sendResponse()
+				} else if (request.method === '[TS:fetchFavicon]') {
+					// Validate sender.tab.id before calling chrome.tabs.get()
+					// Chrome API requires tabId >= 0
+					// Possible causes: closed tab, service worker context, detached page
+					if (!sender.tab || typeof sender.tab.id !== 'number' || sender.tab.id < 0) {
+						console.warn(
+							`[TS:fetchFavicon] Invalid sender context. Tab ID: ${sender.tab?.id}, URL: ${sender.url}, frameId: ${sender.frameId}`
+						);
+						sendResponse(null);
+						return false;
 					}
-				})();
-				return true; // For async sendResponse()
-			} else if (request.method === '[AutomaticTabCleaner:addExceptionPatterns]') {/* DEPREACTED! */
-				if (debug)
-					console.log('AddExceptionPatterns info Requested.');
-				void (async () => {
-					settings.set('exceptionPatterns', await settings.get('exceptionPatterns') + '\n' + request.pattern).then(() => {
+
+					chrome.tabs
+						.get(sender.tab.id)
+						.then((tab) => {
+							if (tab.favIconUrl == null || tab.favIconUrl.trim() === '') {
+								console.warn(`Error fetch() favicon, empty: tab.favIconUrl=(${tab.favIconUrl})`);
+								sendResponse(null);
+								return;
+							}
+
+							if (!TabManager.isTabURLAllowedForPark(tab)) {
+								console.debug(`Skip [TS:fetchFavicon] because tab url not Allowed to Park [${tab.url}]`);
+								sendResponse(null);
+								return;
+							}
+
+							// TODO-v4: Add icon cache
+							fetch(tab.favIconUrl /* ? tab.favIconUrl : request.url*/, {
+								method: 'get'
+							})
+								.then(async (response) => {
+									const arrayBuffer = await response.arrayBuffer();
+
+									const blob = new Blob([arrayBuffer]);
+									const reader = new FileReader();
+
+									reader.onload = (event) => {
+										// @ts-ignore
+										let dataUrl: string = event.target.result;
+										const contentType = response.headers.get('Content-Type');
+										const octetStream = 'data:application/octet-stream;base64,';
+										if (dataUrl.startsWith(octetStream)) {
+											if (contentType == null) {
+												console.warn(`favIcon has no Header contentType[]`, dataUrl);
+											} else if (contentType.startsWith('image/x-icon') || contentType === 'image/vnd.microsoft.icon') {
+												dataUrl =
+													'data:image/x-icon;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+											} else if (contentType.startsWith('image/png')) {
+												dataUrl =
+													'data:image/png;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+											} else if (contentType.startsWith('image/svg+xml')) {
+												dataUrl =
+													'data:image/svg+xml;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+											} else if (contentType.startsWith('image/jpeg')) {
+												dataUrl =
+													'data:image/jpeg;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+											} else if (contentType.startsWith('image/webp')) {
+												dataUrl =
+													'data:image/webp;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+											} else if (contentType.startsWith('image/ico')) {
+												dataUrl =
+													'data:image/ico;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+											} else if (contentType.startsWith('application/octet-stream')) {
+												dataUrl =
+													'data:image/x-icon;base64,' +
+													dataUrl.substring(dataUrl.indexOf(this.BASE64_SEPARATOR) + this.BASE64_SEPARATOR_LENGTH);
+												console.warn(`Strange favIcon contentType[${contentType}]`, dataUrl);
+											} else {
+												console.error(`Unknown content type: ${contentType}, [${sender.tab.url}]`);
+												if (debug) console.log(`Blob[${sender.tab.url}]`, [dataUrl, tab.favIconUrl, tab]);
+											}
+										}
+										sendResponse(dataUrl);
+									};
+									reader.readAsDataURL(blob);
+								})
+								.catch((e) => {
+									console.error(`Error when favicon Fetch(url), url=[${tab.favIconUrl}]`, e, request.url);
+									sendResponse(null);
+								});
+						})
+						.catch(console.error);
+
+					return true; // For async sendResponse()
+				} else if (request.method === '[AutomaticTabCleaner:trackError]') {
+					const error = Error(request.message);
+					error.stack = request.stack;
+					console.error('[External]: ' + request.message, error);
+				} else if (request.method === '[AutomaticTabCleaner:GetTabId]') {
+					sendResponse(sender.tab.id);
+				} else if (request.method === '[AutomaticTabCleaner:ParkPageFromInjectFinished]') {
+					chrome.tabs.update(request.tabId, { url: request.url }).catch(console.error);
+
+					tabManager.markTabParkedFromInject(request.tabId);
+				} else if (request.method === '[TS:offscreenDocument:batteryStatusChanged]') {
+					if ((request.battery as BatteryStatusMessage).isCharging != null)
+						isCharging = (request.battery as BatteryStatusMessage).isCharging;
+					if ((request.battery as BatteryStatusMessage).level != null) batteryLevel = (request.battery as BatteryStatusMessage).level;
+					console.log(`BGListener - Charging status: ${isCharging}, Level: ${batteryLevel}`);
+				} else if (request.method === '[TS:offscreenDocument:heartbeat]') {
+					// Heartbeat from offscreen document to keep service worker alive
+					// Send acknowledgment back to maintain bidirectional communication
+					sendResponse({ method: '[TS:offscreenDocument:heartbeatAck]', timestamp: Date.now() });
+					return true; // For async sendResponse()
+				} else if (request.method === '[TS:offscreenDocument:getSuspendedTabs]') {
+					// Return list of all suspended tabs for backup sync
+					void (async () => {
+						try {
+							const allTabs = await chrome.tabs.query({});
+							const suspendedTabs = allTabs
+								.filter((tab) => tab.url && TabManager.isTabParked(tab))
+								.map((tab) => {
+									const tabUrl = new URL(tab.url);
+									return {
+										url: tabUrl.searchParams.get('url') || '',
+										title: tabUrl.searchParams.get('title') || tab.title || '',
+										favicon: tabUrl.searchParams.get('icon') || tab.favIconUrl || ''
+									};
+								})
+								.filter((t) => t.url); // Only include tabs with valid URLs
+
+							sendResponse({ tabs: suspendedTabs });
+						} catch (e) {
+							console.error('Error getting suspended tabs for backup:', e);
+							sendResponse({ tabs: [] });
+						}
+					})();
+					return true; // For async sendResponse()
+				} else if (request.method === '[AutomaticTabCleaner:addExceptionPatterns]') {
+					/* DEPREACTED! */
+					if (debug) console.log('AddExceptionPatterns info Requested.');
+					void (async () => {
+						settings
+							.set('exceptionPatterns', (await settings.get('exceptionPatterns')) + '\n' + request.pattern)
+							.then(() => {
+								sendResponse({ successful: true });
+							})
+							.catch(console.error);
+					})();
+					return true; // For async sendResponse()
+				} else if (request.method === '[AutomaticTabCleaner:suspendTab]') {
+					if (debug) console.log('suspendTab Requested.');
+					if (TabManager.isTabURLAllowedForPark(request.tab)) {
+						if (debug) console.log('Park alowed: ', request.tab);
+
+						void parkTab(request.tab, request.tab.id);
+
 						sendResponse({ successful: true });
-					}).catch(console.error);
-				})();
-				return true; // For async sendResponse()
-			} else if (request.method === '[AutomaticTabCleaner:suspendTab]') {
-				if (debug)
-					console.log('suspendTab Requested.');
-				if (TabManager.isTabURLAllowedForPark(request.tab)) {
-					if (debug)
-						console.log('Park alowed: ', request.tab);
+					} else {
+						if (debug) console.log('Park disalowed: ', request.tab);
+						sendResponse({ successful: true });
+					}
+				} else if (request.method === '[AutomaticTabCleaner:suspendTabGroup]') {
+					if (debug) console.log('suspendTabGroup Requested.');
+					parkTabGroup(request.tab);
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:suspendWindow]') {
+					parkTabs(request.tab, request.tab.windowId);
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:suspendAllOtherTabs]') {
+					if (debug) console.log('suspendAllOtherTabs Requested.');
 
-					void parkTab(request.tab, request.tab.id);
+					parkTabs(request.tab);
 
 					sendResponse({ successful: true });
-				} else {
-					if (debug)
-						console.log('Park disalowed: ', request.tab);
+				} else if (request.method === '[AutomaticTabCleaner:suspendAllTabs]') {
+					if (debug) console.log('suspendAllTabs Requested.');
+
+					parkTabs();
+
 					sendResponse({ successful: true });
-				}
-			} else if (request.method === '[AutomaticTabCleaner:suspendTabGroup]') {
-				if (debug)
-					console.log('suspendTabGroup Requested.');
-				parkTabGroup(request.tab);
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:suspendWindow]') {
-				parkTabs(request.tab, request.tab.windowId);
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:suspendAllOtherTabs]') {
-				if (debug)
-					console.log('suspendAllOtherTabs Requested.');
+				} else if (request.method === '[AutomaticTabCleaner:unsuspendAllTabs]') {
+					if (debug) console.log('unsuspendAllTabs Requested.');
 
-				parkTabs(request.tab);
+					unsuspendTabs();
 
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:suspendAllTabs]') {
-				if (debug)
-					console.log('suspendAllTabs Requested.');
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:unsuspendWindow]') {
+					unsuspendTabs(request.tab.windowId);
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:unsuspendTab]') {
+					self.tabManager.unsuspendTab(request.tab);
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:unsuspendTabGroup]') {
+					if (debug) console.log('unsuspendTabGroup Requested.');
+					unsuspendTabGroup(request.tab);
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:pause]') {
+					if (debug) console.log('pause Requested.');
 
-				parkTabs();
+					pauseTics = request.pauseTics;
+					pauseTicsStartedFrom = request.pauseTics;
 
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:unsuspendAllTabs]') {
-				if (debug)
-					console.log('unsuspendAllTabs Requested.');
+					new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
 
-				unsuspendTabs();
+					sendResponse({ successful: true, pauseTics: pauseTics });
+				} else if (request.method === '[AutomaticTabCleaner:ignoreTab]') {
+					if (debug) console.log('ignoreTab Requested.');
 
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:unsuspendWindow]') {
-				unsuspendTabs(request.tab.windowId);
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:unsuspendTab]') {
-				self.tabManager.unsuspendTab(request.tab);
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:unsuspendTabGroup]') {
-				if (debug)
-					console.log('unsuspendTabGroup Requested.');
-				unsuspendTabGroup(request.tab);
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:pause]') {
-				if (debug)
-					console.log('pause Requested.');
+					if (request.action == 'add') ignoreList.addToIgnoreTabList(request.tabId);
+					else if (request.action === 'remove') ignoreList.removeFromIgnoreTabList(request.tabId);
 
-				pauseTics = request.pauseTics;
-				pauseTicsStartedFrom = request.pauseTics;
+					sendResponse({ successful: true });
+				} else if (request.method === '[AutomaticTabCleaner:popupQuery]') {
+					if (debug) console.log('popupQuery Requested.');
 
-				new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
+					popupQuery(request.tab)
+						.then((popupQueryResult) => {
+							sendResponse(popupQueryResult);
+						})
+						.catch(console.error);
 
-				sendResponse({ successful: true, pauseTics: pauseTics });
-			} else if (request.method === '[AutomaticTabCleaner:ignoreTab]') {
-				if (debug)
-					console.log('ignoreTab Requested.');
-
-				if (request.action == 'add')
-					ignoreList.addToIgnoreTabList(request.tabId);
-				else if (request.action === 'remove')
-					ignoreList.removeFromIgnoreTabList(request.tabId);
-
-				sendResponse({ successful: true });
-			} else if (request.method === '[AutomaticTabCleaner:popupQuery]') {
-				if (debug)
-					console.log('popupQuery Requested.');
-
-				popupQuery(request.tab).then((popupQueryResult)=>{
-					sendResponse(popupQueryResult);
-				}).catch(console.error);
-
-				/*const tabURLAllowedForPark = TabManager.isTabURLAllowedForPark(request.tab);
+					/*const tabURLAllowedForPark = TabManager.isTabURLAllowedForPark(request.tab);
 				let parked;
 				try {
 					parked = tabManager.getTabInfoById(request.tab.id).parked;
@@ -310,139 +315,144 @@ class BGMessageListener {
 					};
 					sendResponse(response);
 				})();*/
-				return true; // For async sendResponse()
-			} else if (request.method === '[AutomaticTabCleaner:updateTimeout]') {
-				void (async () => {
-					try {
-						if (request.isTabSuspenderActive != null)
-							await settings.set('active', request.isTabSuspenderActive);
-						else if (request.timeout != null && typeof request.timeout == 'number')
-							await settings.set('timeout', request.timeout);
-						else if (request.isCloseTabsOn != null)
-							await settings.set('isCloseTabsOn', request.isCloseTabsOn);
-						else if (request.closeTimeout != null && typeof request.closeTimeout == 'number')
-							await settings.set('closeTimeout', request.closeTimeout);
-						else if (request.limitOfOpenedTabs != null && typeof request.limitOfOpenedTabs == 'number')
-							await settings.set('limitOfOpenedTabs', request.limitOfOpenedTabs);
-						else if (request.sendErrors != null)
-							await settings.set('sendErrors', request.sendErrors);
-						else if (request.popup_showWindowSessionByDefault != null)
-							await settings.set('popup_showWindowSessionByDefault', request.popup_showWindowSessionByDefault);
-						else if (request.restoreButtonView != null)
-							await settings.set('restoreButtonView', request.restoreButtonView);
-						else if (request.parkBgColor != null)
-							await settings.set('parkBgColor', request.parkBgColor);
+					return true; // For async sendResponse()
+				} else if (request.method === '[AutomaticTabCleaner:updateTimeout]') {
+					void (async () => {
+						try {
+							if (request.isTabSuspenderActive != null) await settings.set('active', request.isTabSuspenderActive);
+							else if (request.timeout != null && typeof request.timeout == 'number') await settings.set('timeout', request.timeout);
+							else if (request.isCloseTabsOn != null) await settings.set('isCloseTabsOn', request.isCloseTabsOn);
+							else if (request.closeTimeout != null && typeof request.closeTimeout == 'number')
+								await settings.set('closeTimeout', request.closeTimeout);
+							else if (request.limitOfOpenedTabs != null && typeof request.limitOfOpenedTabs == 'number')
+								await settings.set('limitOfOpenedTabs', request.limitOfOpenedTabs);
+							else if (request.sendErrors != null) await settings.set('sendErrors', request.sendErrors);
+							else if (request.popup_showWindowSessionByDefault != null)
+								await settings.set('popup_showWindowSessionByDefault', request.popup_showWindowSessionByDefault);
+							else if (request.restoreButtonView != null) await settings.set('restoreButtonView', request.restoreButtonView);
+							else if (request.parkBgColor != null) await settings.set('parkBgColor', request.parkBgColor);
 
-						await SettingsPageController.reloadSettings();
-						sendResponse({ successful: true });
-					} catch (e) {
-						console.error(e);
-						sendResponse({ successful: false });
-					}
-				})();
+							await SettingsPageController.reloadSettings();
+							sendResponse({ successful: true });
+						} catch (e) {
+							console.error(e);
+							sendResponse({ successful: false });
+						}
+					})();
 
-				return true;
-			} else if (request.method === '[AutomaticTabCleaner:uriExceptionCheck]') {
-				sendResponse({ isException: whiteList.isURIException(request.uri) });
-			} else if (request.method === '[AutomaticTabCleaner:TabChangedRequestFromInject]') {
-				void tabCapture.captureTab(sender.tab);
-			} else if (request.method === '[AutomaticTabCleaner:TabUnsuspended]') {
-				tabManager.setTabUnsuspended(sender.tab);
-				formRestoreController.expectRestore(sender.tab.id, request.targetTabId, request.url);
-			} else if (request.method === '[AutomaticTabCleaner:getParkHistory]') {
-				sendResponse({ parkHistory: parkHistory, closeHistory: closeHistory });
-			} else if (request.method === '[AutomaticTabCleaner:hideDialog]') {
-				whiteList.hideWhiteListDialog(sender.tab.id);
-				sendResponse({ tabId: sender.tab.id });
-			} else if (request.method === '[AutomaticTabCleaner:installed]') {
-				LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
-			} else if (request.method === '[AutomaticTabCleaner:addToWhiteList]') {
-				whiteList.addPattern(request.pattern).then(() => {
-					if (request.hideDialog === true)
-						whiteList.hideWhiteListDialog(sender.tab.id, { goBack: true });
+					return true;
+				} else if (request.method === '[AutomaticTabCleaner:uriExceptionCheck]') {
+					sendResponse({ isException: whiteList.isURIException(request.uri) });
+				} else if (request.method === '[AutomaticTabCleaner:TabChangedRequestFromInject]') {
+					void tabCapture.captureTab(sender.tab);
+				} else if (request.method === '[AutomaticTabCleaner:TabUnsuspended]') {
+					tabManager.setTabUnsuspended(sender.tab);
+					formRestoreController.expectRestore(sender.tab.id, request.targetTabId, request.url);
+				} else if (request.method === '[AutomaticTabCleaner:getParkHistory]') {
+					sendResponse({ parkHistory: parkHistory, closeHistory: closeHistory });
+				} else if (request.method === '[AutomaticTabCleaner:hideDialog]') {
+					whiteList.hideWhiteListDialog(sender.tab.id);
+					sendResponse({ tabId: sender.tab.id });
+				} else if (request.method === '[AutomaticTabCleaner:installed]') {
+					LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+				} else if (request.method === '[AutomaticTabCleaner:addToWhiteList]') {
+					whiteList
+						.addPattern(request.pattern)
+						.then(() => {
+							if (request.hideDialog === true) whiteList.hideWhiteListDialog(sender.tab.id, { goBack: true });
 
-					SettingsPageController.reloadSettings().then(() => {
-						setTimeout(function() {
-							new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
-						}, 500);
-					}).catch(console.error);
-				}).catch(console.error);
+							SettingsPageController.reloadSettings()
+								.then(() => {
+									setTimeout(function () {
+										new BrowserActionControl(settings, whiteList, ContextMenuController.menuIdMap, pauseTics).synchronizeActiveTabs();
+									}, 500);
+								})
+								.catch(console.error);
+						})
+						.catch(console.error);
 
-				sendResponse({ tabId: sender.tab.id });
-			} else if (request.method === '[AutomaticTabCleaner:removeUrlFromWhitelist]') {
-				void whiteList.removeUrlFromWhitelist(request.url);
-			} else if (request.method === '[AutomaticTabCleaner:donate]') {
-				/*google.payments.inapp.buy({
+					sendResponse({ tabId: sender.tab.id });
+				} else if (request.method === '[AutomaticTabCleaner:removeUrlFromWhitelist]') {
+					void whiteList.removeUrlFromWhitelist(request.url);
+				} else if (request.method === '[AutomaticTabCleaner:donate]') {
+					/*google.payments.inapp.buy({
 					'parameters': { 'env': 'prod' },
 					'sku': 'ts_user_donation_level_4',
 					'success': console.log,
 					'failure': console.log
 				});*/
-				chrome.tabs.create({
-					url: 'https://www.patreon.com/TabSuspender'
-				}).catch(console.error);
-			} else if (request.method === '[AutomaticTabCleaner:getFormRestoreDataAndRemove]') {
-				formRestoreController.getFormRestoreDataAndRemove(sender.tab.id).then(data => {
-					sendResponse(data);
-				}).catch(console.error);
-				return true; // For async sendResponse()
-			} else if (request.method === '[AutomaticTabCleaner:DiscardTab]') {
-				discardTab(sender.tab.id);
-			} else if (request.method === '[AutomaticTabCleaner:UnmarkPageAsNonCompleteInput]') {
-				tabManager.getTabInfoOrCreate(sender.tab).nonCmpltInput = false;
-			} else if (request.method === '[AutomaticTabCleaner:MarkPageAsNonCompleteInput]') {
-				tabManager.getTabInfoOrCreate(sender.tab).nonCmpltInput = true;
-			} else if (request.method === '[AutomaticTabCleaner:OpenSettingsPage]') {
-				SettingsPageController.openSettings();
-			} else if (request.method === '[AutomaticTabCleaner:OpenPopup]') {
-				window.open(chrome.runtime.getURL('popup.html'), "extension_popup");
-			}else if (request.method === '[AutomaticTabCleaner:ReloadSettings]') {
-				if (debug)
-					console.log(request.method);
-				SettingsPageController.reloadSettings({ fromSettingsPage: true }).catch(console.error);
-			} else if (request.method === '[AutomaticTabCleaner:resetAllSettings]') {
-				settings.removeAll().then(()=>{
-					settings = new SettingsStore(SETTINGS_STORAGE_NAMESPACE, DEFAULT_SETTINGS, offscreenDocumentProvider);
-					LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
-					SettingsPageController.reloadSettings(/*{fromSettingsPage: true}*/).catch(console.error);
-				}).catch(console.error);
-			} else if (request.method === '[AutomaticTabCleaner:exportAllSettings]') {
-				void (async ()=> {
-					sendResponse({ settings: JSON.stringify(await settings.toObject(), null, 2) });
-				})();
-				return true;
-			} else if (request.method === '[AutomaticTabCleaner:importAllSettings]') {
-				settings.importWithClear(request.settings).then(()=>{
-					LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
-					SettingsPageController.reloadSettings(/*{fromSettingsPage: true}*/).catch(console.error);
-				}).catch(console.error);
-			} else if (request.method === '[TS:getSessionPageConfig]') {
-				sendResponse({TSSessionId});
-			} else if (request.method === '[TS:getTabId]') {
-				sendResponse({tabId: sender.tab.id});
-			} else if (request.method === '[AutomaticTabCleaner:CtrlClickDetected]') {
-				if (debug)
-					console.log('CtrlClickDetected (Ctrl or Cmd): ', request.url);
-				// Mark that next tab should be suspended
-				nextTabShouldBeSuspended = true;
-				// Reset flag after TTL
-				setTimeout(() => {
-					nextTabShouldBeSuspended = false;
-				}, NEXT_TAB_SUSPEND_TTL);
-			} else if (
-				request.method === '[TS:offscreenDocument:cleanupComplete]' ||
-				request.method === '[TS:offscreenDocument:sendError]'
-			) {
-				// Skip Offscreen event...
-			} else {
-				console.error(`Unimplemented message ${request.method}`);
+					chrome.tabs
+						.create({
+							url: 'https://www.patreon.com/TabSuspender'
+						})
+						.catch(console.error);
+				} else if (request.method === '[AutomaticTabCleaner:getFormRestoreDataAndRemove]') {
+					formRestoreController
+						.getFormRestoreDataAndRemove(sender.tab.id)
+						.then((data) => {
+							sendResponse(data);
+						})
+						.catch(console.error);
+					return true; // For async sendResponse()
+				} else if (request.method === '[AutomaticTabCleaner:DiscardTab]') {
+					discardTab(sender.tab.id);
+				} else if (request.method === '[AutomaticTabCleaner:UnmarkPageAsNonCompleteInput]') {
+					tabManager.getTabInfoOrCreate(sender.tab).nonCmpltInput = false;
+				} else if (request.method === '[AutomaticTabCleaner:MarkPageAsNonCompleteInput]') {
+					tabManager.getTabInfoOrCreate(sender.tab).nonCmpltInput = true;
+				} else if (request.method === '[AutomaticTabCleaner:OpenSettingsPage]') {
+					SettingsPageController.openSettings();
+				} else if (request.method === '[AutomaticTabCleaner:OpenPopup]') {
+					window.open(chrome.runtime.getURL('popup.html'), 'extension_popup');
+				} else if (request.method === '[AutomaticTabCleaner:ReloadSettings]') {
+					if (debug) console.log(request.method);
+					SettingsPageController.reloadSettings({ fromSettingsPage: true }).catch(console.error);
+				} else if (request.method === '[AutomaticTabCleaner:resetAllSettings]') {
+					settings
+						.removeAll()
+						.then(() => {
+							settings = new SettingsStore(SETTINGS_STORAGE_NAMESPACE, DEFAULT_SETTINGS, offscreenDocumentProvider);
+							LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+							SettingsPageController.reloadSettings(/*{fromSettingsPage: true}*/).catch(console.error);
+						})
+						.catch(console.error);
+				} else if (request.method === '[AutomaticTabCleaner:exportAllSettings]') {
+					void (async () => {
+						sendResponse({ settings: JSON.stringify(await settings.toObject(), null, 2) });
+					})();
+					return true;
+				} else if (request.method === '[AutomaticTabCleaner:importAllSettings]') {
+					settings
+						.importWithClear(request.settings)
+						.then(() => {
+							LocalStore.set(LocalStoreKeys.INSTALLED, true).catch(console.error);
+							SettingsPageController.reloadSettings(/*{fromSettingsPage: true}*/).catch(console.error);
+						})
+						.catch(console.error);
+				} else if (request.method === '[TS:getSessionPageConfig]') {
+					sendResponse({ TSSessionId });
+				} else if (request.method === '[TS:getTabId]') {
+					sendResponse({ tabId: sender.tab.id });
+				} else if (request.method === '[AutomaticTabCleaner:CtrlClickDetected]') {
+					if (debug) console.log('CtrlClickDetected (Ctrl or Cmd): ', request.url);
+					// Mark that next tab should be suspended
+					nextTabShouldBeSuspended = true;
+					// Reset flag after TTL
+					setTimeout(() => {
+						nextTabShouldBeSuspended = false;
+					}, NEXT_TAB_SUSPEND_TTL);
+				} else if (request.method === '[TS:offscreenDocument:cleanupComplete]' || request.method === '[TS:offscreenDocument:sendError]') {
+					// Skip Offscreen event...
+				} else {
+					console.error(`Unimplemented message ${request.method}`);
+				}
 			}
-		});
+		);
 
 		// For puppeteer Tests only
-		chrome.runtime.onMessageExternal.addListener( (request, sender, sendResponse) => {
-			console.log("Received message from " + sender + ": ", request);
-			sendResponse({tabId: sender.tab.id});
+		chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+			console.log('Received message from ' + sender + ': ', request);
+			sendResponse({ tabId: sender.tab.id });
 		});
 	}
 }

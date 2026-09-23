@@ -5,139 +5,135 @@
  */
 'use strict';
 
-void (async ()=>{
-// eslint-disable-next-line no-redeclare
-const DEBUG = true;
-const debugPerformance = true;
+void (async () => {
+	// eslint-disable-next-line no-redeclare
+	const DEBUG = true;
+	const debugPerformance = true;
 
-if (debugPerformance) {
-	console.log('Compiled inside: ', Date.now());
-	console.time('Load time...');
-}
+	if (debugPerformance) {
+		console.log('Compiled inside: ', Date.now());
+		console.time('Load time...');
+	}
 
-//const urlParamChache = {};
-let backProcessed = false;
-let title;
-let favicon;
-let link;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let secondTime = false;
-let restoreEvent = 'hover';
-let reloadTabOnRestore = false;
-let tabIconOpacityChange = false;
-let tabIconStatusVisualize = false;
-let tabId;
-let targetUrl;
-let bgScreen = null; /* TEMPORARLY VARDON'T FORGGOT TO CLEAN AFTER DRAW! */
-let screenshotDevicePixelRatio;
-let isTabMarkedForUnsuspend = false;
-let parkedUrl;
-let screenPromise;
-let faviconDrawed;
-let globalParkData: ParkPageDataBGResponse;
+	//const urlParamChache = {};
+	let backProcessed = false;
+	let title;
+	let favicon;
+	let link;
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	let secondTime = false;
+	let restoreEvent = 'hover';
+	let reloadTabOnRestore = false;
+	let tabIconOpacityChange = false;
+	let tabIconStatusVisualize = false;
+	let tabId;
+	let targetUrl;
+	let bgScreen = null; /* TEMPORARLY VARDON'T FORGGOT TO CLEAN AFTER DRAW! */
+	let screenshotDevicePixelRatio;
+	let isTabMarkedForUnsuspend = false;
+	let parkedUrl;
+	let screenPromise;
+	let faviconDrawed;
+	let globalParkData: ParkPageDataBGResponse;
 
-const url: URL = new URL(window.location.href);
-const searchParams: URLSearchParams = url.searchParams;
+	const url: URL = new URL(window.location.href);
+	const searchParams: URLSearchParams = url.searchParams;
 
-const loaded = new Promise<void>((resolve) => {
-	window.addEventListener('load', () => {
-		if (debugPerformance)
-			console.log('onload: ', Date.now());
+	const loaded = new Promise<void>((resolve) => {
+		window.addEventListener('load', () => {
+			if (debugPerformance) console.log('onload: ', Date.now());
 
-		resolve();
+			resolve();
+		});
 	});
-});
 
-let DOMContentLoaded;
-// @ts-expect-error
-window.domLoadedPromise = new Promise<void>((resolve) => {
-	document.addEventListener('DOMContentLoaded', () => {
-		if(DOMContentLoaded) return;
-		DOMContentLoaded = true;
+	let DOMContentLoaded;
+	// @ts-expect-error
+	window.domLoadedPromise = new Promise<void>((resolve) => {
+		document.addEventListener(
+			'DOMContentLoaded',
+			() => {
+				if (DOMContentLoaded) return;
+				DOMContentLoaded = true;
 
-		if (debugPerformance)
-			console.log('onDOMContentLoaded: ', Date.now());
+				if (debugPerformance) console.log('onDOMContentLoaded: ', Date.now());
 
-		try {
-			createTitleAndIcon();
-			applysUserDisplayHeight(window.innerHeight);
-			// eslint-disable-next-line no-empty,@typescript-eslint/no-unused-vars
-		} catch (e) {
-		}
+				try {
+					createTitleAndIcon();
+					applysUserDisplayHeight(window.innerHeight);
+					// eslint-disable-next-line no-empty,@typescript-eslint/no-unused-vars
+				} catch (e) {}
 
-		resolve();
-	}, true);
-});
+				resolve();
+			},
+			true
+		);
+	});
 
+	if (debugPerformance) console.log('getBackgroundPage: ', Date.now());
 
+	// Fix for Issue #27: Utility function for Promise with timeout
+	function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+		return Promise.race([
+			promise,
+			new Promise<T>((resolve) =>
+				setTimeout(() => {
+					if (DEBUG) console.warn(`Promise timed out after ${ms}ms, using fallback`);
+					resolve(fallback);
+				}, ms)
+			)
+		]);
+	}
 
-if (debugPerformance)
-	console.log('getBackgroundPage: ', Date.now());
+	try {
+		tabId = searchParams.get('tabId');
 
-// Fix for Issue #27: Utility function for Promise with timeout
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-	return Promise.race([
-		promise,
-		new Promise<T>((resolve) => setTimeout(() => {
-			if (DEBUG)
-				console.warn(`Promise timed out after ${ms}ms, using fallback`);
-			resolve(fallback);
-		}, ms))
-	]);
-}
+		// Fix for Issue #27: Add 2.5-second timeout to screenPromise to prevent hanging
+		screenPromise = withTimeout(
+			chrome.runtime.sendMessage({ method: '[TS:getScreen]', tabId, sessionId: searchParams.get('sessionId') }),
+			2500,
+			{ scr: null, pixRat: null } // fallback: screenshot unavailable
+		);
 
-try {
-
-	tabId = searchParams.get('tabId');
-
-	// Fix for Issue #27: Add 2.5-second timeout to screenPromise to prevent hanging
-	screenPromise = withTimeout(
-		chrome.runtime.sendMessage({ method: '[TS:getScreen]', tabId, sessionId: searchParams.get('sessionId') }),
-		2500,
-		{ scr: null, pixRat: null }  // fallback: screenshot unavailable
-	);
-
-	const parkData: ParkPageDataBGResponse = await chrome.runtime.sendMessage({ method: '[TS:dataForParkPage]', tabId, sessionId: searchParams.get('sessionId') }); //.then((parkData: ParkPageDataBGResponse) => {
+		const parkData: ParkPageDataBGResponse = await chrome.runtime.sendMessage({
+			method: '[TS:dataForParkPage]',
+			tabId,
+			sessionId: searchParams.get('sessionId')
+		}); //.then((parkData: ParkPageDataBGResponse) => {
 
 		globalParkData = parkData;
 
 		// @ts-expect-error
 		window.domLoadedPromise.then(() => {
-
 			try {
-
-				if(DEBUG) {
+				if (DEBUG) {
 					console.log('bgpage.getStartDiscarted(): ', parkData.startDiscarded);
 				}
 
 				if (parkData.startDiscarded == true) {
-					if ((Date.now() - parkData.startAt) < 15000) {
-						if(DEBUG) {
-							console.log('(new Date().getTime() - bgpage.getStartedAt()) < 15000: ', (Date.now() - parkData.startAt) < 15000);
+					if (Date.now() - parkData.startAt < 15000) {
+						if (DEBUG) {
+							console.log('(new Date().getTime() - bgpage.getStartedAt()) < 15000: ', Date.now() - parkData.startAt < 15000);
 						}
 						if (parkData.isFirstTimeTabDiscard) {
-							if(DEBUG) {
+							if (DEBUG) {
 								console.log('bgpage.isFirstTimeTabDiscard(tabId): ', parkData.isFirstTimeTabDiscard);
 							}
 							// Fix for Issue #27: Use chrome.tabs.query instead of deprecated chrome.tabs.getCurrent()
 							chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
 								const tab = tabs[0];
 								if (!tab || tab.active === false) {
-									if(DEBUG) {
+									if (DEBUG) {
 										console.log('tab.active: ', tab?.active);
 									}
 									window.stop();
-									chrome.runtime.sendMessage({ 'method': '[AutomaticTabCleaner:DiscardTab]' }).catch(console.error);
+									chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:DiscardTab]' }).catch(console.error);
 									return;
-								} else
-									continueCheck();
+								} else continueCheck();
 							});
-						} else
-							continueCheck();
-					} else
-						continueCheck();
-				} else
-					continueCheck();
+						} else continueCheck();
+					} else continueCheck();
+				} else continueCheck();
 			} catch (e) {
 				console.error(e);
 
@@ -149,15 +145,13 @@ try {
 
 			/* CHECK IF TAB MARKED FOR UNSUSPEND */
 			function continueCheck() {
-				if (debugPerformance)
-					console.log('Continue Check: ', Date.now());
+				if (debugPerformance) console.log('Continue Check: ', Date.now());
 
 				parkedUrl = parkData.parkedUrl;
 
 				isTabMarkedForUnsuspend = parkData.isTabMarkedForUnsuspend;
 
-				if (DEBUG)
-					console.log('isTabMarkedForUnsuspend: ', isTabMarkedForUnsuspend);
+				if (DEBUG) console.log('isTabMarkedForUnsuspend: ', isTabMarkedForUnsuspend);
 
 				if (isTabMarkedForUnsuspend) {
 					document.getElementById('resoteImg').style.display = 'none';
@@ -165,48 +159,53 @@ try {
 					reloadTabOnRestore = parkData.reloadTabOnRestore;
 					setTimeout(continueStart, 0);
 				} else {
-					if (debugPerformance)
-						console.log('Get Screen: ', Date.now());
+					if (debugPerformance) console.log('Get Screen: ', Date.now());
 
 					tabIconStatusVisualize = parkData.tabIconStatusVisualize;
 					tabIconOpacityChange = parkData.tabIconOpacityChange;
 
-					screenPromise.then(({scr, pixRat}) => {
-						try {
-							if (debugPerformance)
-								console.log('Get Screen Loaded: ', Date.now());
+					screenPromise
+						.then(({ scr, pixRat }) => {
+							try {
+								if (debugPerformance) console.log('Get Screen Loaded: ', Date.now());
 
-							if(scr == null) {
-								throw new Error('Screen image is null!');
+								if (scr == null) {
+									throw new Error('Screen image is null!');
+								}
+
+								bgScreen = scr;
+								if (!pixRat) {
+									screenshotDevicePixelRatio = window.devicePixelRatio;
+								} else {
+									screenshotDevicePixelRatio = pixRat;
+								}
+								/* EXPERIMANTAL */
+								setTimeout(() => {
+									drawContent(parkData);
+								}, 0);
+								//drawContent(bgpage);
+								setTimeout(continueStart, 0);
+							} catch (e) {
+								console.error(e);
+
+								//applyRestoreButtonView(bgpage);
+								setTimeout(() => {
+									drawContent(parkData);
+								}, 0);
+								//drawContent(bgpage);
+								setTimeout(continueStart, 0);
 							}
-
-							bgScreen = scr;
-							if (!pixRat) {
-								screenshotDevicePixelRatio = window.devicePixelRatio;
-							} else {
-								screenshotDevicePixelRatio = pixRat;
-							}
-							/* EXPERIMANTAL */
-							setTimeout(() => { drawContent(parkData);}, 0);
-							//drawContent(bgpage);
+						})
+						.catch((e) => {
+							console.error('screenPromise failed or timeout:', e);
+							// Continue rendering page without screenshot
+							setTimeout(() => {
+								drawContent(parkData);
+							}, 0);
 							setTimeout(continueStart, 0);
-						} catch (e) {
-							console.error(e);
+						});
 
-							//applyRestoreButtonView(bgpage);
-							setTimeout(() => { drawContent(parkData);}, 0);
-							//drawContent(bgpage);
-							setTimeout(continueStart, 0);
-						}
-					}).catch((e) => {
-						console.error('screenPromise failed or timeout:', e);
-						// Continue rendering page without screenshot
-						setTimeout(() => { drawContent(parkData);}, 0);
-						setTimeout(continueStart, 0);
-					});
-
-					if (debugPerformance)
-						console.log('Apply background: ', Date.now());
+					if (debugPerformance) console.log('Apply background: ', Date.now());
 
 					applysSreenshotCssStyle(parkData.screenshotCssStyle);
 					//applyRestoreButtonView(bgpage.getRestoreButtonView());
@@ -220,201 +219,196 @@ try {
 
 		// @ts-expect-error
 		window.domLoadedPromise = null;
-	//}).catch(console.error);
-} catch (e) {
-	console.error(e);
+		//}).catch(console.error);
+	} catch (e) {
+		console.error(e);
 
-	// @ts-expect-error
-	window.domLoadedPromise.then(() => {
-		applyRestoreButtonView();
-		setTimeout(drawContent, 0);
-		setTimeout(continueStart, 0);
-	});
-}
-
-function applysUserDisplayHeight(height) {
-	const restoreImg = document.getElementById('resoteImg');
-
-	if(DEBUG) {
-		console.log('DisplayHeight: ', height);
+		// @ts-expect-error
+		window.domLoadedPromise.then(() => {
+			applyRestoreButtonView();
+			setTimeout(drawContent, 0);
+			setTimeout(continueStart, 0);
+		});
 	}
-	if (height != null) {
-		if (height <= 600) {
-			// @ts-expect-error
-			restoreImg.width = '128';
-			// @ts-expect-error
-			restoreImg.height = '128';
-			restoreImg.classList.add('h600');
-		} else if (height <= 800) {
-			// @ts-expect-error
-			restoreImg.width = '160';
-			// @ts-expect-error
-			restoreImg.height = '160';
-			restoreImg.classList.add('h800');
-		} else if (height <= 1024) {
-			// @ts-expect-error
-			restoreImg.width = '196';
-			// @ts-expect-error
-			restoreImg.height = '196';
-			restoreImg.classList.add('h1024');
+
+	function applysUserDisplayHeight(height) {
+		const restoreImg = document.getElementById('resoteImg');
+
+		if (DEBUG) {
+			console.log('DisplayHeight: ', height);
 		}
+		if (height != null) {
+			if (height <= 600) {
+				// @ts-expect-error
+				restoreImg.width = '128';
+				// @ts-expect-error
+				restoreImg.height = '128';
+				restoreImg.classList.add('h600');
+			} else if (height <= 800) {
+				// @ts-expect-error
+				restoreImg.width = '160';
+				// @ts-expect-error
+				restoreImg.height = '160';
+				restoreImg.classList.add('h800');
+			} else if (height <= 1024) {
+				// @ts-expect-error
+				restoreImg.width = '196';
+				// @ts-expect-error
+				restoreImg.height = '196';
+				restoreImg.classList.add('h1024');
+			}
+		}
+
+		restoreImg.classList.remove('wait-for-render');
 	}
 
-	restoreImg.classList.remove('wait-for-render');
-}
+	function applyRestoreButtonView(parkData?, restoreButtonView?) {
+		restoreButtonView = restoreButtonView ? restoreButtonView : parkData ? parkData.restoreButtonView : null;
 
-function applyRestoreButtonView(parkData?, restoreButtonView?) {
-	restoreButtonView = restoreButtonView ? restoreButtonView : (parkData ? parkData.restoreButtonView : null);
+		const screen = document.getElementById('screen');
+		const resroreImg = document.getElementById('resoteImg');
 
-	const screen = document.getElementById('screen');
-	const resroreImg = document.getElementById('resoteImg');
-
-	const initOriginalUrlBlock = () => {
-		/* Native Url Block */
-		document.body.classList.add('always-visible');
-		document.getElementById('nativeUrlSpan').onclick /*= document.getElementById('nativeUrl').onclick*/ = () => {
-			window.getSelection().selectAllChildren(document.getElementById('nativeUrlSpan'));
+		const initOriginalUrlBlock = () => {
+			/* Native Url Block */
+			document.body.classList.add('always-visible');
+			document.getElementById('nativeUrlSpan').onclick /*= document.getElementById('nativeUrl').onclick*/ = () => {
+				window.getSelection().selectAllChildren(document.getElementById('nativeUrlSpan'));
+			};
 		};
-	};
 
-	if (restoreButtonView == null || restoreButtonView === 'roundIcon') {
-		resroreImg.style.display = 'block';
-		resroreImg.style.opacity = null;
-		document.getElementById('topRestore').style.display = 'none';
+		if (restoreButtonView == null || restoreButtonView === 'roundIcon') {
+			resroreImg.style.display = 'block';
+			resroreImg.style.opacity = null;
+			document.getElementById('topRestore').style.display = 'none';
 
-		initOriginalUrlBlock();
+			initOriginalUrlBlock();
 
-		resroreImg.onmouseover = () => {
-			if (restoreEvent === 'hover') {
+			resroreImg.onmouseover = () => {
+				if (restoreEvent === 'hover') {
+					goBack();
+					resroreImg.className = 'restore inprogress';
+					screen.classList.add('inprogress');
+				}
+			};
+
+			resroreImg.onclick = () => {
+				if (restoreEvent === 'click') {
+					goBack();
+					resroreImg.className = 'restore inprogress';
+					screen.classList.add('inprogress');
+				}
+			};
+		} else if (restoreButtonView === 'topBar') {
+			resroreImg.style.display = 'none';
+			document.getElementById('topRestore').style.display = 'block';
+
+			document.getElementById('topRestore').onclick = () => {
 				goBack();
-				resroreImg.className = 'restore inprogress';
+				document.getElementById('topRestore').className = 'topRestore inprogress';
 				screen.classList.add('inprogress');
-			}
-		};
+			};
+		} else if (restoreButtonView === 'noIcon') {
+			resroreImg.style.display = 'none';
+			document.getElementById('topRestore').style.display = 'none';
 
-		resroreImg.onclick = () => {
-			if (restoreEvent === 'click') {
-				goBack();
-				resroreImg.className = 'restore inprogress';
-				screen.classList.add('inprogress');
-			}
-		};
-	} else if (restoreButtonView === 'topBar') {
-		resroreImg.style.display = 'none';
-		document.getElementById('topRestore').style.display = 'block';
+			initOriginalUrlBlock();
+		}
 
-		document.getElementById('topRestore').onclick = () => {
+		document.getElementById('screenDiv').onclick = () => {
 			goBack();
-			document.getElementById('topRestore').className = 'topRestore inprogress';
+			resroreImg.className = 'restore inprogress';
 			screen.classList.add('inprogress');
 		};
-	} else if (restoreButtonView === 'noIcon') {
-		resroreImg.style.display = 'none';
-		document.getElementById('topRestore').style.display = 'none';
-
-		initOriginalUrlBlock();
 	}
 
-	document.getElementById('screenDiv').onclick = () => {
-		goBack();
-		resroreImg.className = 'restore inprogress';
-		screen.classList.add('inprogress');
-	};
-}
-
-function applyBackground(color) {
-	document.body.style.background = color;
-}
-
-function applysSreenshotCssStyle(cssText) {
-	const screenImgElement = document.getElementById('screen');
-	screenImgElement.style.cssText = cssText;
-	applyPixelRatio(screenImgElement);
-}
-
-function applyScreenshotsVisibility(screenshotsEnabled) {
-	const screenImg = document.getElementById('screen');
-	if (screenshotsEnabled) {
-		// Show screenshots - remove no-screenshot class and show screen element
-		document.body.classList.remove('no-screenshot');
-		screenImg.style.display = '';
-		document.getElementById('title_div').style.display = 'none';
-		document.getElementById('nativeUrl').classList.remove('visible');
-	} else {
-		// Hide screenshots - add no-screenshot class and hide screen element
-		document.body.classList.add('no-screenshot');
-		screenImg.style.display = 'none';
-		document.getElementById('title_div').style.display = 'block';
-		document.getElementById('nativeUrl').classList.add('visible');
-		// Update title and favicon if available
-		if (title) {
-			document.getElementById('title').textContent = title;
-			// @ts-expect-error
-			document.getElementById('title').href = new URLSearchParams(window.location.search).get('url');
-		}
-		if (favicon && favicon !== 'undefined' && favicon !== 'null') {
-			// @ts-expect-error
-			document.getElementById('favicon').src = favicon;
-		}
-	}
-}
-
-function createTitleAndIcon(force?) {
-	if(DEBUG) {
-		console.log('createTitleAndIcon...');
+	function applyBackground(color) {
+		document.body.style.background = color;
 	}
 
-	// If force is true, reset faviconDrawed to allow regeneration
-	if (force) {
-		faviconDrawed = false;
+	function applysSreenshotCssStyle(cssText) {
+		const screenImgElement = document.getElementById('screen');
+		screenImgElement.style.cssText = cssText;
+		applyPixelRatio(screenImgElement);
 	}
 
-	if(faviconDrawed && !force)
-		return;
-
-	if (title == null)
-		title = searchParams.get('title');
-	if (document.title !== title)
-		document.title = title;
-
-	link = document.getElementById('faviconLink');
-
-	if (link != null && !force)
-		if (link.href != null && link.href.indexOf('img/icon16_off.png') === -1)
-			return;
-
-	if (link == null) {
-		link = document.createElement('link');
-		link.type = 'image/x-icon';
-		link.rel = 'shortcut icon';
-	}
-
-	if (favicon == null || force) {
-		generateFaviconUri(searchParams.get('icon'/*, false*/), (proccesedIcon) => {
-			favicon = proccesedIcon;
-			link.href = proccesedIcon;
-			if (link.id !== 'faviconLink') {
-				link.id = 'faviconLink';
-				document.getElementsByTagName('head')[0].appendChild(link);
-			}
-
-			// Update page favicon element if in no-screenshot mode
-			const faviconElement = document.getElementById('favicon');
-			if (faviconElement && proccesedIcon && proccesedIcon !== 'undefined' && proccesedIcon !== 'null') {
+	function applyScreenshotsVisibility(screenshotsEnabled) {
+		const screenImg = document.getElementById('screen');
+		if (screenshotsEnabled) {
+			// Show screenshots - remove no-screenshot class and show screen element
+			document.body.classList.remove('no-screenshot');
+			screenImg.style.display = '';
+			document.getElementById('title_div').style.display = 'none';
+			document.getElementById('nativeUrl').classList.remove('visible');
+		} else {
+			// Hide screenshots - add no-screenshot class and hide screen element
+			document.body.classList.add('no-screenshot');
+			screenImg.style.display = 'none';
+			document.getElementById('title_div').style.display = 'block';
+			document.getElementById('nativeUrl').classList.add('visible');
+			// Update title and favicon if available
+			if (title) {
+				document.getElementById('title').textContent = title;
 				// @ts-expect-error
-				faviconElement.src = proccesedIcon;
+				document.getElementById('title').href = new URLSearchParams(window.location.search).get('url');
 			}
-		});
-		faviconDrawed = true;
-	} else {
-		if (favicon != null) {
-			link.href = favicon;
+			if (favicon && favicon !== 'undefined' && favicon !== 'null') {
+				// @ts-expect-error
+				document.getElementById('favicon').src = favicon;
+			}
 		}
 	}
-}
 
-// eslint-disable-next-line no-redeclare
-/*function parseUrlParam(name, doNotCache?) {
+	function createTitleAndIcon(force?) {
+		if (DEBUG) {
+			console.log('createTitleAndIcon...');
+		}
+
+		// If force is true, reset faviconDrawed to allow regeneration
+		if (force) {
+			faviconDrawed = false;
+		}
+
+		if (faviconDrawed && !force) return;
+
+		if (title == null) title = searchParams.get('title');
+		if (document.title !== title) document.title = title;
+
+		link = document.getElementById('faviconLink');
+
+		if (link != null && !force) if (link.href != null && link.href.indexOf('img/icon16_off.png') === -1) return;
+
+		if (link == null) {
+			link = document.createElement('link');
+			link.type = 'image/x-icon';
+			link.rel = 'shortcut icon';
+		}
+
+		if (favicon == null || force) {
+			generateFaviconUri(searchParams.get('icon' /*, false*/), (proccesedIcon) => {
+				favicon = proccesedIcon;
+				link.href = proccesedIcon;
+				if (link.id !== 'faviconLink') {
+					link.id = 'faviconLink';
+					document.getElementsByTagName('head')[0].appendChild(link);
+				}
+
+				// Update page favicon element if in no-screenshot mode
+				const faviconElement = document.getElementById('favicon');
+				if (faviconElement && proccesedIcon && proccesedIcon !== 'undefined' && proccesedIcon !== 'null') {
+					// @ts-expect-error
+					faviconElement.src = proccesedIcon;
+				}
+			});
+			faviconDrawed = true;
+		} else {
+			if (favicon != null) {
+				link.href = favicon;
+			}
+		}
+	}
+
+	// eslint-disable-next-line no-redeclare
+	/*function parseUrlParam(name, doNotCache?) {
 	let val;
 	if ((val = urlParamChache[name]) != null)
 		return val;
@@ -433,468 +427,433 @@ function createTitleAndIcon(force?) {
 	}
 }*/
 
-function generateFaviconUri(url, callback) {
-	if(DEBUG) {
-		console.log('generateFaviconUri...');
-	}
-	const img = new Image();
-	const onCorruptedUrlTimeout = setTimeout(()=>{img.onerror(null);}, 3000);
-	img.onload = () => {
-		clearTimeout(onCorruptedUrlTimeout);
-		const canvas = window.document.createElement('canvas');
-		canvas.width = img.width;
-		canvas.height = img.height;
-		const ctx = canvas.getContext('2d');
-		if(tabIconOpacityChange){
-			ctx.globalAlpha = 0.65;
-		} else {
-			ctx.globalAlpha = 1;
+	function generateFaviconUri(url, callback) {
+		if (DEBUG) {
+			console.log('generateFaviconUri...');
 		}
-		ctx.drawImage(img, 0, 0);
-		if(DEBUG)
-			console.log('tabIconStatusVisualize: ' + tabIconStatusVisualize);
-		if (tabIconStatusVisualize) {
-			drawWaterMark(canvas, ctx, img.width, callback);
-		} else {
+		const img = new Image();
+		const onCorruptedUrlTimeout = setTimeout(() => {
+			img.onerror(null);
+		}, 3000);
+		img.onload = () => {
+			clearTimeout(onCorruptedUrlTimeout);
+			const canvas = window.document.createElement('canvas');
+			canvas.width = img.width;
+			canvas.height = img.height;
+			const ctx = canvas.getContext('2d');
+			if (tabIconOpacityChange) {
+				ctx.globalAlpha = 0.65;
+			} else {
+				ctx.globalAlpha = 1;
+			}
+			ctx.drawImage(img, 0, 0);
+			if (DEBUG) console.log('tabIconStatusVisualize: ' + tabIconStatusVisualize);
+			if (tabIconStatusVisualize) {
+				drawWaterMark(canvas, ctx, img.width, callback);
+			} else {
+				callback(canvas.toDataURL());
+			}
+		};
+		img.onerror = (e) => {
+			clearTimeout(onCorruptedUrlTimeout);
+			console.log('Loading Favicon Error', e);
+			img.src = chrome.runtime.getURL('img/new_page.png');
+		};
+		img.src = url && url !== 'undefined' && url !== 'null' ? url : chrome.runtime.getURL('img/new_page.png');
+	}
+
+	function drawWaterMark(canvas, ctx, width, callback) {
+		if (DEBUG) {
+			console.log('drawWaterMark...');
+		}
+		const img = new Image();
+		if (width !== 64) {
+			console.error('Unexpected: Favicon image != 64x64 -> ', width);
 			callback(canvas.toDataURL());
+			return;
 		}
-	};
-	img.onerror = (e) => {
-		clearTimeout(onCorruptedUrlTimeout);
-		console.log('Loading Favicon Error', e);
-		img.src = chrome.runtime.getURL('img/new_page.png');
-	};
-	img.src = (url && url !== 'undefined' && url !== 'null') ? url : chrome.runtime.getURL('img/new_page.png');
+		img.onload = () => {
+			ctx.globalAlpha = 0.65;
 
-}
-
-function drawWaterMark(canvas, ctx, width, callback) {
-	if(DEBUG) {
-		console.log('drawWaterMark...');
-	}
-	const img = new Image();
-	if (width !== 64) {
-		console.error('Unexpected: Favicon image != 64x64 -> ', width);
-		callback(canvas.toDataURL());
-		return;
-	}
-	img.onload = () => {
-		ctx.globalAlpha = 0.65;
-
-		ctx.drawImage(img, 49, 49);
-		callback(canvas.toDataURL());
-	};
-	img.src = 'img/watermark/Circle_Blue_16_Brite_100.png';
-}
-
-function cssScale(): string {
-
-	if (DEBUG) {
-		console.log('screenshotDevicePixelRatio: ', screenshotDevicePixelRatio);
+			ctx.drawImage(img, 49, 49);
+			callback(canvas.toDataURL());
+		};
+		img.src = 'img/watermark/Circle_Blue_16_Brite_100.png';
 	}
 
-	// Guard: if screenshotDevicePixelRatio is not set yet, use window.devicePixelRatio as fallback
-	const pixelRatio = screenshotDevicePixelRatio ?? window.devicePixelRatio ?? 1;
-
-	if (pixelRatio != 1 || globalParkData?.tabInfo?.zoomFactor != 1) {
-		let scale = 1 / pixelRatio;
-		if (globalParkData?.tabInfo?.zoomFactor != null && globalParkData.tabInfo.zoomFactor != 1) {
-			scale *= globalParkData.tabInfo.zoomFactor;
+	function cssScale(): string {
+		if (DEBUG) {
+			console.log('screenshotDevicePixelRatio: ', screenshotDevicePixelRatio);
 		}
-		return 'scale(' + scale + ', ' + scale + ')';
-	}
-	return '';
-}
 
-function applyPixelRatio(screenImg) {
+		// Guard: if screenshotDevicePixelRatio is not set yet, use window.devicePixelRatio as fallback
+		const pixelRatio = screenshotDevicePixelRatio ?? window.devicePixelRatio ?? 1;
 
-	try {
-		screenImg.style.transform = cssScale();
-	} catch (e) {
-		console.error(e);
-	}
-}
-
-function drawContent(parkData) {
-	if (debugPerformance)
-		console.log('Draw Image started: ', Date.now());
-	//createTitleAndIcon();
-	const screenImg = document.getElementById('screen');
-
-	screenImg.onload = () => {
-		if (debugPerformance)
-			console.log('Image finally showed: ', Date.now());
-
-		applyRestoreButtonView(parkData);
-		applyBackground('#' + parkData.parkBgColor);
-	}
-	screenImg.onerror = () => {
-		applyRestoreButtonView(parkData);
-		applyBackground('#' + parkData.parkBgColor);
+		if (pixelRatio != 1 || globalParkData?.tabInfo?.zoomFactor != 1) {
+			let scale = 1 / pixelRatio;
+			if (globalParkData?.tabInfo?.zoomFactor != null && globalParkData.tabInfo.zoomFactor != 1) {
+				scale *= globalParkData.tabInfo.zoomFactor;
+			}
+			return 'scale(' + scale + ', ' + scale + ')';
+		}
+		return '';
 	}
 
-	applyPixelRatio(screenImg);
+	function applyPixelRatio(screenImg) {
+		try {
+			screenImg.style.transform = cssScale();
+		} catch (e) {
+			console.error(e);
+		}
+	}
 
-	if (bgScreen == null) {
-		// Enhanced text-only mode when screenshots are disabled
-		screenImg.style.display = 'none';
-		document.body.classList.add('no-screenshot');
-		document.getElementById('title').textContent = title;
-		// @ts-expect-error
-		document.getElementById('title').href = searchParams.get('url');
-		if (favicon && favicon !== 'undefined' && favicon !== 'null') {
+	function drawContent(parkData) {
+		if (debugPerformance) console.log('Draw Image started: ', Date.now());
+		//createTitleAndIcon();
+		const screenImg = document.getElementById('screen');
+
+		screenImg.onload = () => {
+			if (debugPerformance) console.log('Image finally showed: ', Date.now());
+
+			applyRestoreButtonView(parkData);
+			applyBackground('#' + parkData.parkBgColor);
+		};
+		screenImg.onerror = () => {
+			applyRestoreButtonView(parkData);
+			applyBackground('#' + parkData.parkBgColor);
+		};
+
+		applyPixelRatio(screenImg);
+
+		if (bgScreen == null) {
+			// Enhanced text-only mode when screenshots are disabled
+			screenImg.style.display = 'none';
+			document.body.classList.add('no-screenshot');
+			document.getElementById('title').textContent = title;
 			// @ts-expect-error
-			document.getElementById('favicon').src = favicon;
-		}
-		document.getElementById('title_div').style.display = 'block';
-		document.getElementById('nativeUrl').classList.add('visible');
+			document.getElementById('title').href = searchParams.get('url');
+			if (favicon && favicon !== 'undefined' && favicon !== 'null') {
+				// @ts-expect-error
+				document.getElementById('favicon').src = favicon;
+			}
+			document.getElementById('title_div').style.display = 'block';
+			document.getElementById('nativeUrl').classList.add('visible');
 
-		screenImg.onerror(null);
-	} else
+			screenImg.onerror(null);
+		}
 		// @ts-expect-error
-		screenImg.src = bgScreen;
+		else screenImg.src = bgScreen;
 
-	/* TODO: add dynamic restoreImg resize */
+		/* TODO: add dynamic restoreImg resize */
 
-	bgScreen = null;
-	// Don't null out favicon here - it's still being used by generateFaviconUri callback
-	// favicon = null;
+		bgScreen = null;
+		// Don't null out favicon here - it's still being used by generateFaviconUri callback
+		// favicon = null;
 
-	if (debugPerformance) {
-		console.log('Complete!!!: ', Date.now());
-		console.timeEnd('Load time...');
-	}
-}
-
-function continueStart() {
-	if (isTabMarkedForUnsuspend) {
-		if (DEBUG)
-			console.log('Prepare to go Back!');
-
-		goBack({ force: true });
-
-		return;
-	}
-
-	/****
-	 * TODO: Looks like document.readyState === "complete" != window.addEventListener('load'
-	 */
-	if(DEBUG) {
-		console.log('Waiting for Page load...', Date.now());
-	}
-	loaded.then(()=>{
-		if(DEBUG) {
-			console.log('Page Already loaded');
+		if (debugPerformance) {
+			console.log('Complete!!!: ', Date.now());
+			console.timeEnd('Load time...');
 		}
-		startEX();
-	}).catch(console.error);
-}
-
-chrome.runtime.onMessage.addListener((message) => {
-
-	if (message.method === '[AutomaticTabCleaner:RestoreMessage]') {
-		if (message.anyWay)
-			goBack();
-		else {
-			// Fix for Tab Group bug: Check if THIS tab (where park.html is running) matches the message
-			// Chrome changes tab ID on discard/restore, so we need to check both:
-			// 1. Current tab ID (message.tab.id) - new ID after restore
-			// 2. Origin tab ID (message.originRefId) - old ID before discard (stored in URL)
-			const myTabId = parseInt(tabId);
-			const messageTabId = message.tab && message.tab.id;
-			const originRefId = message.originRefId;
-
-			// Match if either current ID or origin ID matches
-			const isMatch = (!isNaN(myTabId) && messageTabId && myTabId === messageTabId) ||
-			                (!isNaN(myTabId) && originRefId && myTabId === originRefId);
-
-			if (isMatch) {
-				goBack();
-			}
-		}
-	} else if (message.method === '[AutomaticTabCleaner:UpdateTabsSettings]') {
-		loaded.then(() => {
-			if (message.restoreEvent != null)
-				restoreEvent = message.restoreEvent;
-
-			if (message.reloadTabOnRestore != null)
-				reloadTabOnRestore = message.reloadTabOnRestore;
-
-			if (message.parkBgColor != null)
-				applyBackground('#' + message.parkBgColor);
-
-			if (message.screenshotCssStyle != null)
-				applysSreenshotCssStyle(message.screenshotCssStyle);
-
-			if (message.restoreButtonView != null)
-				applyRestoreButtonView(null, message.restoreButtonView);
-
-			if (message.tabIconStatusVisualize != null) {
-				tabIconStatusVisualize = message.tabIconStatusVisualize;
-				createTitleAndIcon(true);
-			}
-
-			if (message.screenshotsEnabled != null) {
-				applyScreenshotsVisibility(message.screenshotsEnabled);
-			}
-		}).catch(console.error);
-	} else if (message.method === '[AutomaticTabCleaner:DrawAddPageToWhiteListDialog]') {
-		// @ts-expect-error
-		drawAddPageToWhiteListDialog();
-	} else if (message.method === '[AutomaticTabCleaner:hideDialogRequetToTab]') {
-		document.getElementById('ATCSDialogiFrame').parentElement.removeChild(document.getElementById('ATCSDialogiFrame'));
-		document.getElementById('screen').style.filter = '';
-		window.focus();
-
-		if (message.options && message.options.goBack)
-			goBack();
-		else
-			showNativeUrl();
 	}
-});
 
-function startEX() {
-	if (debugPerformance)
-		console.log('Start begun...!', Date.now());
-	favicon = null;
+	function continueStart() {
+		if (isTabMarkedForUnsuspend) {
+			if (DEBUG) console.log('Prepare to go Back!');
 
-	// eslint-disable-next-line no-unused-vars
-	secondTime = isSecondTime();
+			goBack({ force: true });
 
-	document.getElementById('title').onclick =
-		document.getElementById('titleImg').onclick = () => {
+			return;
+		}
+
+		/****
+		 * TODO: Looks like document.readyState === "complete" != window.addEventListener('load'
+		 */
+		if (DEBUG) {
+			console.log('Waiting for Page load...', Date.now());
+		}
+		loaded
+			.then(() => {
+				if (DEBUG) {
+					console.log('Page Already loaded');
+				}
+				startEX();
+			})
+			.catch(console.error);
+	}
+
+	chrome.runtime.onMessage.addListener((message) => {
+		if (message.method === '[AutomaticTabCleaner:RestoreMessage]') {
+			if (message.anyWay) goBack();
+			else {
+				// Fix for Tab Group bug: Check if THIS tab (where park.html is running) matches the message
+				// Chrome changes tab ID on discard/restore, so we need to check both:
+				// 1. Current tab ID (message.tab.id) - new ID after restore
+				// 2. Origin tab ID (message.originRefId) - old ID before discard (stored in URL)
+				const myTabId = parseInt(tabId);
+				const messageTabId = message.tab && message.tab.id;
+				const originRefId = message.originRefId;
+
+				// Match if either current ID or origin ID matches
+				const isMatch =
+					(!isNaN(myTabId) && messageTabId && myTabId === messageTabId) || (!isNaN(myTabId) && originRefId && myTabId === originRefId);
+
+				if (isMatch) {
+					goBack();
+				}
+			}
+		} else if (message.method === '[AutomaticTabCleaner:UpdateTabsSettings]') {
+			loaded
+				.then(() => {
+					if (message.restoreEvent != null) restoreEvent = message.restoreEvent;
+
+					if (message.reloadTabOnRestore != null) reloadTabOnRestore = message.reloadTabOnRestore;
+
+					if (message.parkBgColor != null) applyBackground('#' + message.parkBgColor);
+
+					if (message.screenshotCssStyle != null) applysSreenshotCssStyle(message.screenshotCssStyle);
+
+					if (message.restoreButtonView != null) applyRestoreButtonView(null, message.restoreButtonView);
+
+					if (message.tabIconStatusVisualize != null) {
+						tabIconStatusVisualize = message.tabIconStatusVisualize;
+						createTitleAndIcon(true);
+					}
+
+					if (message.screenshotsEnabled != null) {
+						applyScreenshotsVisibility(message.screenshotsEnabled);
+					}
+				})
+				.catch(console.error);
+		} else if (message.method === '[AutomaticTabCleaner:DrawAddPageToWhiteListDialog]') {
+			// @ts-expect-error
+			drawAddPageToWhiteListDialog();
+		} else if (message.method === '[AutomaticTabCleaner:hideDialogRequetToTab]') {
+			document.getElementById('ATCSDialogiFrame').parentElement.removeChild(document.getElementById('ATCSDialogiFrame'));
+			document.getElementById('screen').style.filter = '';
+			window.focus();
+
+			if (message.options && message.options.goBack) goBack();
+			else showNativeUrl();
+		}
+	});
+
+	function startEX() {
+		if (debugPerformance) console.log('Start begun...!', Date.now());
+		favicon = null;
+
+		// eslint-disable-next-line no-unused-vars
+		secondTime = isSecondTime();
+
+		document.getElementById('title').onclick = document.getElementById('titleImg').onclick = () => {
 			goBack();
 			return false;
 		};
 
-	let url = searchParams.get('url');
-	const title = searchParams.get('title');
+		let url = searchParams.get('url');
+		const title = searchParams.get('title');
 
-	if (url.indexOf('http://') === 0)
-		url = url.substr(7);
-	if (url.indexOf('https://') === 0)
-		url = url.substr(8);
+		if (url.indexOf('http://') === 0) url = url.substr(7);
+		if (url.indexOf('https://') === 0) url = url.substr(8);
 
-	const nativeUrlSpan = document.getElementById('nativeUrlSpan');
-	nativeUrlSpan.innerText = url;
-	nativeUrlSpan.title = `Title: "${title}"`;
+		const nativeUrlSpan = document.getElementById('nativeUrlSpan');
+		nativeUrlSpan.innerText = url;
+		nativeUrlSpan.title = `Title: "${title}"`;
 
-	initNativeUrlAnimation();
-}
-
-function goBack(options?) {
-
-	targetUrl = searchParams.get('url');
-
-	chrome.runtime.sendMessage({
-		'method': '[AutomaticTabCleaner:TabUnsuspended]',
-		'targetTabId': tabId,
-		'url': targetUrl
-	}).catch(console.error);
-
-	if (!backProcessed || options != null && options.force === true) {
-		// Fix for Issue #27: Set backProcessed BEFORE navigation attempt
-		// This prevents race conditions but allows retry on failure
-		backProcessed = true;
-
-		if (reloadTabOnRestore === false &&
-			!isFromHistory() &&
-			parkedUrl != null
-			/* TODO: Rework this logic && window.history.length > 2 && !secondTime*/) {
-			if (DEBUG)
-				console.log('Back');
-			historyFallback(targetUrl);
-		} else {
-			if (DEBUG)
-				console.log('Reload');
-			window.location.replace(targetUrl);
-		}
-	}
-}
-
-function historyFallback(fallbackUrl) {
-	let hasHistory = false;
-	let navigationAttempted = false;
-
-	window.onbeforeunload = () => {
-		hasHistory = true;
-	};
-
-	window.history.go(-1);
-
-	if(DEBUG) {
-		setInterval(() => {
-			console.log('hasHistory: ' + hasHistory);
-		}, 100);
+		initNativeUrlAnimation();
 	}
 
-	// Fix for Issue #27: Increased timeout from 500ms to 1500ms for slower systems
-	setTimeout(() => {
-		if (!hasHistory && !navigationAttempted) {
-			navigationAttempted = true;
-			window.location.assign(fallbackUrl);
-			if (DEBUG)
-				console.log('Force Back 1500ms!!!');
-		}
-	}, 1500);
-}
+	function goBack(options?) {
+		targetUrl = searchParams.get('url');
 
-// @ts-expect-error
-window.startEX = startEX;
+		chrome.runtime
+			.sendMessage({
+				method: '[AutomaticTabCleaner:TabUnsuspended]',
+				targetTabId: tabId,
+				url: targetUrl
+			})
+			.catch(console.error);
 
+		if (!backProcessed || (options != null && options.force === true)) {
+			// Fix for Issue #27: Set backProcessed BEFORE navigation attempt
+			// This prevents race conditions but allows retry on failure
+			backProcessed = true;
 
-function isSecondTime() {
-	const indexOfNumberSymbol = window.location.href.lastIndexOf('#');
-	if (indexOfNumberSymbol != -1)
-		if (location.href.substring(indexOfNumberSymbol) == '#secondTime')
-			return true;
-	return false;
-}
-
-function isFromHistory() {
-	const indexOfNumberSymbol = window.location.href.lastIndexOf('#');
-	if (indexOfNumberSymbol != -1)
-		if (location.href.substring(indexOfNumberSymbol) == '#fromHistory')
-			return true;
-	return false;
-}
-
-let nativeUrlVisible = false;
-let nativeUrlTimer = null;
-let nativeUrlTimerClose = null;
-let nativeUrlTimerCloseAfterTimeout = null;
-let nativeUrlPosition;
-let nativeUrlElement;
-let nativeUrlElementHover = false;
-
-
-let showNativeUrl;
-let hideNativeUrl;
-
-function initNativeUrlAnimation() {
-
-	if (nativeUrlElement != null)
-		return;
-
-	const newNativeUrlElement = document.getElementById('nativeUrl');
-
-	if (newNativeUrlElement == null)
-		return;
-
-
-	newNativeUrlElement.onmouseover = () => {
-		nativeUrlElementHover = true;
-		if (nativeUrlTimerCloseAfterTimeout)
-			clearTimeout(nativeUrlTimerCloseAfterTimeout);
-	};
-
-	newNativeUrlElement.onmouseout = (event) => {
-		if (event) {
-			// @ts-expect-error
-			const e = event.toElement || event.relatedTarget;
-			if (e) {
-				if ((e.parentNode == this || (e.parentNode != null && e.parentNode.parentNode == this) || e == this))
-					return;
+			if (
+				reloadTabOnRestore === false &&
+				!isFromHistory() &&
+				parkedUrl != null
+				/* TODO: Rework this logic && window.history.length > 2 && !secondTime*/
+			) {
+				if (DEBUG) console.log('Back');
+				historyFallback(targetUrl);
+			} else {
+				if (DEBUG) console.log('Reload');
+				window.location.replace(targetUrl);
 			}
 		}
+	}
 
-		nativeUrlElementHover = false;
-		if (nativeUrlTimerCloseAfterTimeout)
-			clearTimeout(nativeUrlTimerCloseAfterTimeout);
+	function historyFallback(fallbackUrl) {
+		let hasHistory = false;
+		let navigationAttempted = false;
 
-		nativeUrlTimerCloseAfterTimeout = setTimeout(() => {
-			hideNativeUrl();
-		}, 5000);
-	};
+		window.onbeforeunload = () => {
+			hasHistory = true;
+		};
 
+		window.history.go(-1);
 
-	hideNativeUrl = () => {
-		if (nativeUrlVisible != true)
-			return;
+		if (DEBUG) {
+			setInterval(() => {
+				console.log('hasHistory: ' + hasHistory);
+			}, 100);
+		}
 
-		nativeUrlTimer = null;
-
-		nativeUrlTimerClose = setInterval(() => {
-			newNativeUrlElement.style.top = --nativeUrlPosition + 'px';
-			if (nativeUrlPosition <= -27) {
-				nativeUrlVisible = false;
-				clearInterval(nativeUrlTimerClose);
-				nativeUrlTimerClose = null;
+		// Fix for Issue #27: Increased timeout from 500ms to 1500ms for slower systems
+		setTimeout(() => {
+			if (!hasHistory && !navigationAttempted) {
+				navigationAttempted = true;
+				window.location.assign(fallbackUrl);
+				if (DEBUG) console.log('Force Back 1500ms!!!');
 			}
-		}, 10);
-	};
+		}, 1500);
+	}
 
-	showNativeUrl = (options) => {
-		if (!options || !options.permanent)
-			clearTimeout(nativeUrlTimerCloseAfterTimeout);
-		nativeUrlTimerCloseAfterTimeout = null;
+	// @ts-expect-error
+	window.startEX = startEX;
 
-		if (!options || !options.permanent)
-			hideNativeUrl();
+	function isSecondTime() {
+		const indexOfNumberSymbol = window.location.href.lastIndexOf('#');
+		if (indexOfNumberSymbol != -1) if (location.href.substring(indexOfNumberSymbol) == '#secondTime') return true;
+		return false;
+	}
 
-		if (nativeUrlVisible != true && nativeUrlTimer == null) {
-			window.getSelection().selectAllChildren(document.getElementById('nativeUrlSpan'));
+	function isFromHistory() {
+		const indexOfNumberSymbol = window.location.href.lastIndexOf('#');
+		if (indexOfNumberSymbol != -1) if (location.href.substring(indexOfNumberSymbol) == '#fromHistory') return true;
+		return false;
+	}
 
-			nativeUrlPosition = -27;
-			nativeUrlTimer = setInterval(() => {
-				newNativeUrlElement.style.top = ++nativeUrlPosition + 'px';
+	let nativeUrlVisible = false;
+	let nativeUrlTimer = null;
+	let nativeUrlTimerClose = null;
+	let nativeUrlTimerCloseAfterTimeout = null;
+	let nativeUrlPosition;
+	let nativeUrlElement;
+	let nativeUrlElementHover = false;
 
-				if (nativeUrlPosition >= 0) {
-					nativeUrlVisible = true;
-					clearInterval(nativeUrlTimer);
+	let showNativeUrl;
+	let hideNativeUrl;
 
-					if (nativeUrlTimerCloseAfterTimeout)
-						clearTimeout(nativeUrlTimerCloseAfterTimeout);
-					if (!options || !options.permanent)
-						nativeUrlTimerCloseAfterTimeout = setTimeout(() => {
-							if (!nativeUrlElementHover)
-								hideNativeUrl();
-						}, 5000);
+	function initNativeUrlAnimation() {
+		if (nativeUrlElement != null) return;
+
+		const newNativeUrlElement = document.getElementById('nativeUrl');
+
+		if (newNativeUrlElement == null) return;
+
+		newNativeUrlElement.onmouseover = () => {
+			nativeUrlElementHover = true;
+			if (nativeUrlTimerCloseAfterTimeout) clearTimeout(nativeUrlTimerCloseAfterTimeout);
+		};
+
+		newNativeUrlElement.onmouseout = (event) => {
+			if (event) {
+				// @ts-expect-error
+				const e = event.toElement || event.relatedTarget;
+				if (e) {
+					if (e.parentNode == this || (e.parentNode != null && e.parentNode.parentNode == this) || e == this) return;
 				}
-			}, 9);
-		}
-	};
-
-	document.getElementById('nativeUrlButton').onclick = showNativeUrl;
-
-
-	const loadJsCssFile = (filename, filetype) => {
-		return new Promise<void>((resolve, reject) => {
-			let fileRef;
-			if (filetype === "js") { //if filename is a external JavaScript file
-				fileRef = document.createElement('script')
-				fileRef.setAttribute("type", "text/javascript")
-				fileRef.setAttribute("src", filename);
-				fileRef.onload = () => {
-					resolve();
-				};
-			} else if (filetype === "css") { //if filename is an external CSS file
-				fileRef = document.createElement("link")
-				fileRef.setAttribute("rel", "stylesheet")
-				fileRef.setAttribute("type", "text/css")
-				fileRef.setAttribute("href", filename);
-				fileRef.onload = () => {
-					resolve();
-				};
 			}
-			if (typeof fileRef != "undefined")
-				document.getElementsByTagName("head")[0].appendChild(fileRef);
-			else
-				reject();
-		});
-	}
 
-	/* Load Main Menu */
-	document.getElementById('pauseIcon').onclick = () => {
-		Promise.all([loadJsCssFile('utils.js', 'js')])
-			.then(() => {
+			nativeUrlElementHover = false;
+			if (nativeUrlTimerCloseAfterTimeout) clearTimeout(nativeUrlTimerCloseAfterTimeout);
 
-				// @ts-ignore
-				const isDarkMode = window.isDarkMode();
+			nativeUrlTimerCloseAfterTimeout = setTimeout(() => {
+				hideNativeUrl();
+			}, 5000);
+		};
 
-				const mainMenuDiv = document.createElement('div');
-				const mainMenuOverlay = document.createElement('div');
-				mainMenuOverlay.style.cssText = `position: fixed;
+		hideNativeUrl = () => {
+			if (nativeUrlVisible != true) return;
+
+			nativeUrlTimer = null;
+
+			nativeUrlTimerClose = setInterval(() => {
+				newNativeUrlElement.style.top = --nativeUrlPosition + 'px';
+				if (nativeUrlPosition <= -27) {
+					nativeUrlVisible = false;
+					clearInterval(nativeUrlTimerClose);
+					nativeUrlTimerClose = null;
+				}
+			}, 10);
+		};
+
+		showNativeUrl = (options) => {
+			if (!options || !options.permanent) clearTimeout(nativeUrlTimerCloseAfterTimeout);
+			nativeUrlTimerCloseAfterTimeout = null;
+
+			if (!options || !options.permanent) hideNativeUrl();
+
+			if (nativeUrlVisible != true && nativeUrlTimer == null) {
+				window.getSelection().selectAllChildren(document.getElementById('nativeUrlSpan'));
+
+				nativeUrlPosition = -27;
+				nativeUrlTimer = setInterval(() => {
+					newNativeUrlElement.style.top = ++nativeUrlPosition + 'px';
+
+					if (nativeUrlPosition >= 0) {
+						nativeUrlVisible = true;
+						clearInterval(nativeUrlTimer);
+
+						if (nativeUrlTimerCloseAfterTimeout) clearTimeout(nativeUrlTimerCloseAfterTimeout);
+						if (!options || !options.permanent)
+							nativeUrlTimerCloseAfterTimeout = setTimeout(() => {
+								if (!nativeUrlElementHover) hideNativeUrl();
+							}, 5000);
+					}
+				}, 9);
+			}
+		};
+
+		document.getElementById('nativeUrlButton').onclick = showNativeUrl;
+
+		const loadJsCssFile = (filename, filetype) => {
+			return new Promise<void>((resolve, reject) => {
+				let fileRef;
+				if (filetype === 'js') {
+					//if filename is a external JavaScript file
+					fileRef = document.createElement('script');
+					fileRef.setAttribute('type', 'text/javascript');
+					fileRef.setAttribute('src', filename);
+					fileRef.onload = () => {
+						resolve();
+					};
+				} else if (filetype === 'css') {
+					//if filename is an external CSS file
+					fileRef = document.createElement('link');
+					fileRef.setAttribute('rel', 'stylesheet');
+					fileRef.setAttribute('type', 'text/css');
+					fileRef.setAttribute('href', filename);
+					fileRef.onload = () => {
+						resolve();
+					};
+				}
+				if (typeof fileRef != 'undefined') document.getElementsByTagName('head')[0].appendChild(fileRef);
+				else reject();
+			});
+		};
+
+		/* Load Main Menu */
+		document.getElementById('pauseIcon').onclick = () => {
+			Promise.all([loadJsCssFile('utils.js', 'js')])
+				.then(() => {
+					// @ts-ignore
+					const isDarkMode = window.isDarkMode();
+
+					const mainMenuDiv = document.createElement('div');
+					const mainMenuOverlay = document.createElement('div');
+					mainMenuOverlay.style.cssText = `position: fixed;
 				top: 0%;
 				left: 0%;
 				width: 100%;
@@ -902,26 +861,26 @@ function initNativeUrlAnimation() {
 				background-color: #555;
 				z-index: 1000;
 				opacity: .40;`;
-				const mainMenuDivInner = document.createElement('div');
-				if(isDarkMode) {
-					mainMenuDivInner.classList.add('blackThemeInner');
-				}
-				mainMenuDivInner.style.cssText = `border-radius: 10px;
+					const mainMenuDivInner = document.createElement('div');
+					if (isDarkMode) {
+						mainMenuDivInner.classList.add('blackThemeInner');
+					}
+					mainMenuDivInner.style.cssText = `border-radius: 10px;
 				overflow: hidden;
 				background-color: #fff`;
 
-				const mainMenuIframe = document.createElement('iframe');
-				mainMenuIframe.src = "./popup.html?showSessions=no";
-				mainMenuIframe.style.cssText = `border: 0px;
+					const mainMenuIframe = document.createElement('iframe');
+					mainMenuIframe.src = './popup.html?showSessions=no';
+					mainMenuIframe.style.cssText = `border: 0px;
 				width: 380px;
 				height: 423px;`;
-				mainMenuDivInner.appendChild(mainMenuIframe);
+					mainMenuDivInner.appendChild(mainMenuIframe);
 
-				if(isDarkMode) {
-					mainMenuDiv.classList.add('blackTheme');
-				}
-				mainMenuDiv.classList.add('mainMenuDiv');
-				mainMenuDiv.style.cssText = `position: absolute;
+					if (isDarkMode) {
+						mainMenuDiv.classList.add('blackTheme');
+					}
+					mainMenuDiv.classList.add('mainMenuDiv');
+					mainMenuDiv.style.cssText = `position: absolute;
 				z-index: 1001;
 				top: 47px;
 				left: 25px;
@@ -929,95 +888,96 @@ function initNativeUrlAnimation() {
 				width: 380px;
 				/*border-radius: 10px;
 				overflow: hidden;*/`;
-				mainMenuDiv.appendChild(mainMenuDivInner);
-				document.body.classList.add('blur');
-				document.body.parentElement.appendChild(mainMenuDiv);
-				document.body.parentElement.appendChild(mainMenuOverlay);
+					mainMenuDiv.appendChild(mainMenuDivInner);
+					document.body.classList.add('blur');
+					document.body.parentElement.appendChild(mainMenuDiv);
+					document.body.parentElement.appendChild(mainMenuOverlay);
 
-				mainMenuOverlay.onclick = () => {
-					mainMenuDiv.parentElement.removeChild(mainMenuDiv);
-					mainMenuOverlay.parentElement.removeChild(mainMenuOverlay);
-					document.body.classList.remove('blur');
-				}
-		}).catch(console.error);
-	};
-
-
-	document.getElementById('settingsBtn').onclick = () => {
-
-		if(document.getElementById('options').style.display === 'none') {
-			document.getElementById('options').style.display = 'block';
-
-			Promise.all([
-				loadJsCssFile('lib/coloris/coloris.min.js', 'js'),
-				loadJsCssFile('lib/coloris/coloris.min.css', 'css'),
-				loadJsCssFile('part-options.css', 'css'),
-			]).then(() => {
-				//chrome.runtime.getBackgroundPage((bgpage) => {
-
-					/* Blue Circle options */
-					//const restoreButtonView = bgpage.getRestoreButtonView();
-					const showRestoreButtonChecked = (globalParkData.restoreButtonView === 'roundIcon');
-					// @ts-expect-error
-					document.getElementById('showCircleInput').checked = showRestoreButtonChecked;
-					document.getElementById('showCircleInput').onchange = () => {
-						// @ts-expect-error
-						const restoreButtonView = (document.getElementById('showCircleInput').checked ? 'roundIcon' : 'noIcon');
-						chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', restoreButtonView: restoreButtonView }).catch(console.error);
-					}
-
-
-					/* Color Option */ // @ts-expect-error
-					document.getElementById('colorisInput').value
-						= '#' + globalParkData.parkBgColor;
-					// @ts-expect-error
-					Coloris({
-						el: '.coloris'
-					});
-					document.getElementById('colorisInput').oninput = () => {
-						// @ts-expect-error
-						const parkBgColor = document.getElementById('colorisInput').value.split('#');
-						if(parkBgColor.length >= 1)
-							chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', parkBgColor: parkBgColor[1] }).catch(console.error);
-					}
-
-					/* All Settings */
-					document.getElementById('allSettings').onclick = () => {
-						chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:OpenSettingsPage]' }).catch(console.error);
+					mainMenuOverlay.onclick = () => {
+						mainMenuDiv.parentElement.removeChild(mainMenuDiv);
+						mainMenuOverlay.parentElement.removeChild(mainMenuOverlay);
+						document.body.classList.remove('blur');
 					};
+				})
+				.catch(console.error);
+		};
 
-				//});
-			}).catch(console.error);
+		document.getElementById('settingsBtn').onclick = () => {
+			if (document.getElementById('options').style.display === 'none') {
+				document.getElementById('options').style.display = 'block';
 
-		} else {
-			document.getElementById('options').style.display = 'none';
-		}
+				Promise.all([
+					loadJsCssFile('lib/coloris/coloris.min.js', 'js'),
+					loadJsCssFile('lib/coloris/coloris.min.css', 'css'),
+					loadJsCssFile('part-options.css', 'css')
+				])
+					.then(() => {
+						//chrome.runtime.getBackgroundPage((bgpage) => {
+
+						/* Blue Circle options */
+						//const restoreButtonView = bgpage.getRestoreButtonView();
+						const showRestoreButtonChecked = globalParkData.restoreButtonView === 'roundIcon';
+						// @ts-expect-error
+						document.getElementById('showCircleInput').checked = showRestoreButtonChecked;
+						document.getElementById('showCircleInput').onchange = () => {
+							// @ts-expect-error
+							const restoreButtonView = document.getElementById('showCircleInput').checked ? 'roundIcon' : 'noIcon';
+							chrome.runtime
+								.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', restoreButtonView: restoreButtonView })
+								.catch(console.error);
+						};
+
+						/* Color Option */ // @ts-expect-error
+						document.getElementById('colorisInput').value = '#' + globalParkData.parkBgColor;
+						// @ts-expect-error
+						Coloris({
+							el: '.coloris'
+						});
+						document.getElementById('colorisInput').oninput = () => {
+							// @ts-expect-error
+							const parkBgColor = document.getElementById('colorisInput').value.split('#');
+							if (parkBgColor.length >= 1)
+								chrome.runtime
+									.sendMessage({ method: '[AutomaticTabCleaner:updateTimeout]', parkBgColor: parkBgColor[1] })
+									.catch(console.error);
+						};
+
+						/* All Settings */
+						document.getElementById('allSettings').onclick = () => {
+							chrome.runtime.sendMessage({ method: '[AutomaticTabCleaner:OpenSettingsPage]' }).catch(console.error);
+						};
+
+						//});
+					})
+					.catch(console.error);
+			} else {
+				document.getElementById('options').style.display = 'none';
+			}
+		};
 	}
-}
 
-/************************/
-/*     Util Methods     */
-/************************/
+	/************************/
+	/*     Util Methods     */
+	/************************/
 
-// @ts-expect-error
-window.drawAddPageToWhiteListDialog = () => {
-	if (document.getElementById('ATCSDialogiFrame'))
-		return;
+	// @ts-expect-error
+	window.drawAddPageToWhiteListDialog = () => {
+		if (document.getElementById('ATCSDialogiFrame')) return;
 
-	showNativeUrl({ permanent: true });
+		showNativeUrl({ permanent: true });
 
-	document.getElementById('screen').style.filter = 'blur(1px)';
+		document.getElementById('screen').style.filter = 'blur(1px)';
 
-	const iframe = document.createElement('iframe');
-	iframe.id = 'ATCSDialogiFrame';
-	iframe.src = chrome.runtime.getURL('dialog.html?dialog=page&url=' + searchParams.get('url'));
-	iframe.style.position = 'fixed';
-	iframe.style.top = '0px';
-	iframe.style.left = '0px';
-	iframe.style.width = '100%';
-	iframe.style.height = '100%';
-	iframe.style.zIndex = String(10000000);
-	iframe.frameBorder = 'none';
-	document.getElementsByTagName('body')[0].appendChild(iframe);
-};
+		const iframe = document.createElement('iframe');
+		iframe.id = 'ATCSDialogiFrame';
+		iframe.src = chrome.runtime.getURL('dialog.html?dialog=page&url=' + searchParams.get('url'));
+		iframe.style.position = 'fixed';
+		iframe.style.top = '0px';
+		iframe.style.left = '0px';
+		iframe.style.width = '100%';
+		iframe.style.height = '100%';
+		iframe.style.zIndex = String(10000000);
+		iframe.frameBorder = 'none';
+		document.getElementsByTagName('body')[0].appendChild(iframe);
+	};
 })();
