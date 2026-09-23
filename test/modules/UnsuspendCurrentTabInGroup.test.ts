@@ -363,8 +363,8 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const messageTabId = message.tab.id;
 			const originRefId = message.originRefId;
 
-			const isMatch = (!isNaN(myTabId) && messageTabId && myTabId === messageTabId) ||
-			                (!isNaN(myTabId) && originRefId && myTabId === originRefId);
+			const isMatch =
+				(!isNaN(myTabId) && messageTabId && myTabId === messageTabId) || (!isNaN(myTabId) && originRefId && myTabId === originRefId);
 
 			expect(isMatch).toBe(true);
 		});
@@ -376,7 +376,7 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const message = {
 				method: '[AutomaticTabCleaner:RestoreMessage]',
 				tab: { id: 101 }, // New ID after replacement
-				originRefId: 100  // Old ID
+				originRefId: 100 // Old ID
 			};
 
 			// Matching logic from park.ts
@@ -389,7 +389,7 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const isMatch = matchWithCurrent || matchWithOrigin;
 
 			expect(matchWithCurrent).toBe(false); // 100 !== 101
-			expect(matchWithOrigin).toBe(true);   // 100 === 100
+			expect(matchWithOrigin).toBe(true); // 100 === 100
 			expect(isMatch).toBe(true); // Should restore via originRefId
 		});
 
@@ -409,8 +409,8 @@ describe('Unsuspend Current Tab in Tab Group - Bug Fix', () => {
 			const messageTabId = message.tab.id;
 			const originRefId = message.originRefId;
 
-			const isMatch = (!isNaN(myTabId) && messageTabId && myTabId === messageTabId) ||
-			                (!isNaN(myTabId) && originRefId && myTabId === originRefId);
+			const isMatch =
+				(!isNaN(myTabId) && messageTabId && myTabId === messageTabId) || (!isNaN(myTabId) && originRefId && myTabId === originRefId);
 
 			expect(isMatch).toBe(false); // Should NOT match
 		});

@@ -1,89 +1,89 @@
 // Mock Chrome APIs for testing
 
 const mockTab: chrome.tabs.Tab = {
-  id: 1,
-  windowId: 1,
-  index: 0,
-  url: 'https://example.com',
-  title: 'Example',
-  favIconUrl: 'https://example.com/favicon.ico',
-  active: true,
-  pinned: false,
-  discarded: false,
-  autoDiscardable: true,
-  audible: false,
-  groupId: -1,
-  status: 'complete',
-  highlighted: false,
-  incognito: false,
-  selected: true
+	id: 1,
+	windowId: 1,
+	index: 0,
+	url: 'https://example.com',
+	title: 'Example',
+	favIconUrl: 'https://example.com/favicon.ico',
+	active: true,
+	pinned: false,
+	discarded: false,
+	autoDiscardable: true,
+	audible: false,
+	groupId: -1,
+	status: 'complete',
+	highlighted: false,
+	incognito: false,
+	selected: true
 };
 
 const mockStorage = {
-  local: {
-    get: jest.fn().mockResolvedValue({}),
-    set: jest.fn().mockResolvedValue(undefined),
-    remove: jest.fn().mockResolvedValue(undefined),
-    clear: jest.fn().mockResolvedValue(undefined)
-  }
+	local: {
+		get: jest.fn().mockResolvedValue({}),
+		set: jest.fn().mockResolvedValue(undefined),
+		remove: jest.fn().mockResolvedValue(undefined),
+		clear: jest.fn().mockResolvedValue(undefined)
+	}
 };
 
 const mockTabs = {
-  onCreated: {
-    addListener: jest.fn()
-  },
-  onReplaced: {
-    addListener: jest.fn()
-  },
-  onUpdated: {
-    addListener: jest.fn()
-  },
-  onRemoved: {
-    addListener: jest.fn()
-  },
-  onActivated: {
-    addListener: jest.fn()
-  },
-  get: jest.fn().mockImplementation((tabId, callback) => {
-    if (callback) {
-      callback({ ...mockTab, id: tabId });
-    }
-  }),
-  update: jest.fn().mockResolvedValue(mockTab),
-  reload: jest.fn().mockResolvedValue(undefined),
-  getZoom: jest.fn().mockImplementation((tabId, callback) => {
-    callback(1.0);
-  }),
-  setZoom: jest.fn().mockResolvedValue(undefined),
-  sendMessage: jest.fn().mockResolvedValue(undefined),
-  query: jest.fn().mockResolvedValue([mockTab])
+	onCreated: {
+		addListener: jest.fn()
+	},
+	onReplaced: {
+		addListener: jest.fn()
+	},
+	onUpdated: {
+		addListener: jest.fn()
+	},
+	onRemoved: {
+		addListener: jest.fn()
+	},
+	onActivated: {
+		addListener: jest.fn()
+	},
+	get: jest.fn().mockImplementation((tabId, callback) => {
+		if (callback) {
+			callback({ ...mockTab, id: tabId });
+		}
+	}),
+	update: jest.fn().mockResolvedValue(mockTab),
+	reload: jest.fn().mockResolvedValue(undefined),
+	getZoom: jest.fn().mockImplementation((tabId, callback) => {
+		callback(1.0);
+	}),
+	setZoom: jest.fn().mockResolvedValue(undefined),
+	sendMessage: jest.fn().mockResolvedValue(undefined),
+	query: jest.fn().mockResolvedValue([mockTab])
 };
 
 const mockWindows = {
-  getAll: jest.fn().mockImplementation((options, callback) => {
-    const mockWindow = {
-      id: 1,
-      tabs: [mockTab]
-    };
-    callback([mockWindow]);
-  })
+	getAll: jest.fn().mockImplementation((options, callback) => {
+		const mockWindow = {
+			id: 1,
+			tabs: [mockTab]
+		};
+		callback([mockWindow]);
+	})
 };
 
 const mockRuntime = {
-  getURL: jest.fn((path: string) => `chrome-extension://test/${path}`),
-  sendMessage: jest.fn().mockResolvedValue(undefined)
+	getURL: jest.fn((path: string) => `chrome-extension://test/${path}`),
+	sendMessage: jest.fn().mockResolvedValue(undefined)
 };
 
 const mockScripting = {
-  executeScript: jest.fn().mockResolvedValue([{ result: 1 }])
+	executeScript: jest.fn().mockResolvedValue([{ result: 1 }])
 };
 
 (global as any).chrome = {
-  storage: mockStorage,
-  tabs: mockTabs,
-  windows: mockWindows,
-  runtime: mockRuntime,
-  scripting: mockScripting
+	storage: mockStorage,
+	tabs: mockTabs,
+	windows: mockWindows,
+	runtime: mockRuntime,
+	scripting: mockScripting
 };
 
 // Mock DOM APIs - use Node.js built-in TextEncoder/TextDecoder
@@ -93,71 +93,71 @@ const NodeTextDecoder = require('util').TextDecoder;
 (global as any).TextDecoder = NodeTextDecoder;
 // Mock ReadableStream
 (global as any).ReadableStream = jest.fn().mockImplementation((options) => {
-  let controller;
-  const readable = {
-    getReader: () => ({
-      read: jest.fn().mockImplementation(async () => {
-        if (controller && controller._chunks && controller._chunks.length > 0) {
-          return { value: controller._chunks.shift(), done: false };
-        }
-        return { done: true };
-      })
-    })
-  };
+	let controller;
+	const readable = {
+		getReader: () => ({
+			read: jest.fn().mockImplementation(async () => {
+				if (controller && controller._chunks && controller._chunks.length > 0) {
+					return { value: controller._chunks.shift(), done: false };
+				}
+				return { done: true };
+			})
+		})
+	};
 
-  if (options && options.start) {
-    controller = {
-      _chunks: [],
-      enqueue: jest.fn((chunk) => controller._chunks.push(chunk)),
-      close: jest.fn()
-    };
-    options.start(controller);
-  }
+	if (options && options.start) {
+		controller = {
+			_chunks: [],
+			enqueue: jest.fn((chunk) => controller._chunks.push(chunk)),
+			close: jest.fn()
+		};
+		options.start(controller);
+	}
 
-  return readable;
+	return readable;
 });
 
 // Mock compression streams with simpler implementation
 (global as any).CompressionStream = jest.fn().mockImplementation(() => ({
-  writable: {
-    getWriter: () => ({
-      write: jest.fn().mockResolvedValue(undefined),
-      close: jest.fn().mockResolvedValue(undefined)
-    })
-  },
-  readable: {
-    getReader: () => ({
-      read: jest.fn().mockResolvedValue({
-        value: new NodeTextEncoder().encode("compressed_data"),
-        done: false
-      })
-    })
-  }
+	writable: {
+		getWriter: () => ({
+			write: jest.fn().mockResolvedValue(undefined),
+			close: jest.fn().mockResolvedValue(undefined)
+		})
+	},
+	readable: {
+		getReader: () => ({
+			read: jest.fn().mockResolvedValue({
+				value: new NodeTextEncoder().encode('compressed_data'),
+				done: false
+			})
+		})
+	}
 }));
 
 (global as any).DecompressionStream = jest.fn().mockImplementation(() => ({
-  writable: {
-    getWriter: () => ({
-      write: jest.fn().mockResolvedValue(undefined),
-      close: jest.fn().mockResolvedValue(undefined)
-    })
-  },
-  readable: {
-    getReader: () => ({
-      read: jest.fn().mockResolvedValue({
-        value: new NodeTextEncoder().encode("Hello, World!"),
-        done: false
-      })
-    })
-  }
+	writable: {
+		getWriter: () => ({
+			write: jest.fn().mockResolvedValue(undefined),
+			close: jest.fn().mockResolvedValue(undefined)
+		})
+	},
+	readable: {
+		getReader: () => ({
+			read: jest.fn().mockResolvedValue({
+				value: new NodeTextEncoder().encode('Hello, World!'),
+				done: false
+			})
+		})
+	}
 }));
 
 (global as any).Response = jest.fn().mockImplementation((body) => ({
-  arrayBuffer: jest.fn().mockImplementation(async () => {
-    const encoder = new NodeTextEncoder();
-    const data = encoder.encode("Hello, World!");
-    return data.buffer;
-  })
+	arrayBuffer: jest.fn().mockImplementation(async () => {
+		const encoder = new NodeTextEncoder();
+		const data = encoder.encode('Hello, World!');
+		return data.buffer;
+	})
 }));
 
 // Mock global functions and variables

@@ -433,17 +433,25 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		});
 
 		const tab = {
-			id: 1, windowId: 1, index: 0,
-			url: 'https://example.com', pendingUrl: 'https://example.com',
-			active: false, discarded: false, autoDiscardable: false, status: 'loading',
+			id: 1,
+			windowId: 1,
+			index: 0,
+			url: 'https://example.com',
+			pendingUrl: 'https://example.com',
+			active: false,
+			discarded: false,
+			autoDiscardable: false,
+			status: 'loading'
 		};
 
 		const onCreatedListener = (chrome.tabs.onCreated as any).addListener.mock.calls[0][0];
 		await onCreatedListener(tab);
 
 		(chrome.tabs.get as jest.Mock).mockResolvedValue({
-			...tab, status: 'complete',
-			title: 'Example', favIconUrl: 'https://example.com/favicon.ico',
+			...tab,
+			status: 'complete',
+			title: 'Example',
+			favIconUrl: 'https://example.com/favicon.ico'
 		});
 		(chrome.tabs.update as jest.Mock).mockResolvedValue(undefined);
 
@@ -454,10 +462,7 @@ describe('Ctrl/Cmd+Click Suspend Functionality', () => {
 		await Promise.resolve();
 
 		// Tab navigated to park.html
-		expect(chrome.tabs.update).toHaveBeenCalledWith(
-			tab.id,
-			expect.objectContaining({ url: expect.stringContaining('park.html') }),
-		);
+		expect(chrome.tabs.update).toHaveBeenCalledWith(tab.id, expect.objectContaining({ url: expect.stringContaining('park.html') }));
 
 		// Screenshot capture was NOT called — Ctrl+Click suspension skips it
 		expect((global as any).tabCapture.captureTab).not.toHaveBeenCalled();
