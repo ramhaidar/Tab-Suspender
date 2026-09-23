@@ -143,7 +143,7 @@ async function main(): Promise<void> {
 		log(`  Whitelist check: isURIException("${testUrl}") = ${afterAdd}`);
 
 		// Try to suspend a tab with this URL — it should be protected
-		const { parked: parkedWhenWhitelisted, tabId: whitelistedTabId } = await tryToSuspend(browser, extensionId, testUrl, 5000);
+		const { parked: parkedWhenWhitelisted } = await tryToSuspend(browser, extensionId, testUrl, 5000);
 
 		runner.assert(!parkedWhenWhitelisted, 'Whitelisted tab was NOT suspended (parkTab returned early due to isExceptionTab)');
 
