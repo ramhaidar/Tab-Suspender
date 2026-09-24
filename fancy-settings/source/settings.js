@@ -9,7 +9,7 @@ function _changeFancySettingsHandler() {
 
 window.addEvent('domready', () => {
 	// Option 1: Use the manifest:
-	new FancySettings.initWithManifest((settings) => {
+	FancySettings.initWithManifest((settings) => {
 		console.log(settings);
 		//settings.search.events = new Array();
 		settings.caller = (_arg) => {
