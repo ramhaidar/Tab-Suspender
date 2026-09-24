@@ -5,8 +5,8 @@
 	"type": "module",
 	"packageManager": "pnpm@12.5.1",
 	"scripts": {
-		"watch": "rm -rf ./build_dir/* && copy-files-from-to && tsc-watch --build ./ --onSuccess 'copy-files-from-to --silent'",
-		"build": "rm -rf ./build_dir/* && copy-files-from-to --silent && tsc --build ./",
+		"watch": "node ./clean-build-dir.js && copy-files-from-to && tsc-watch --build ./ --onSuccess 'copy-files-from-to --silent'",
+		"build": "node ./clean-build-dir.js && copy-files-from-to --silent && tsc --build ./",
 		"copy-files-from-to": "copy-files-from-to",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
