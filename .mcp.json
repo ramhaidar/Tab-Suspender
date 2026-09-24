@@ -1,0 +1,16 @@
+{
+  "settings": {
+    "directTools": false,
+    "toolPrefix": "server"
+  },
+  "mcpServers": {
+    "browser-desktop-interaction": {
+      "url": "http://localhost:9876/mcp/browser-desktop-interaction",
+      "lifecycle": "keep-alive",
+      "timeout": 15000,
+      "requestTimeoutMs": 30000,
+      "exposeResources": false,
+      "directTools": false
+    }
+  }
+}
