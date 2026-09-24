@@ -548,10 +548,6 @@ label.checkbox:active:after {
     background: #dcdcdc !important;
 }
 
-.MSG_extTitle__::before {
-    content: "Tab Suspender";
-}
-
 /* Preview Cards */
 .card{
     border-bottom: 3px solid #1a7bd9;
