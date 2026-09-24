@@ -8,6 +8,11 @@
  * - Fix #5: historyFallback timeout increased to 1500ms
  */
 
+// Side-effect import marks this file as a module so its top-level declarations
+// stay module-scoped instead of merging into the shared global script scope
+// (avoids TS2451 with test/lib/Chrome.ts, which also declares a global `testGlobals`).
+import '../typing/global.d';
+
 // Replicate the withTimeout function from park.ts for testing
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
 	return Promise.race([

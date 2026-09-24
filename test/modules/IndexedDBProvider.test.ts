@@ -1,3 +1,8 @@
+// Side-effect import marks this file as a module so its top-level declarations
+// stay module-scoped instead of merging into the shared global script scope
+// (avoids TS2451 with test/lib/Chrome.ts, which also declares a global `testGlobals`).
+import '../typing/global.d';
+
 type IndexedDBProviderTestInstance = {
 	initializedPromise: Promise<void>;
 	db: IDBDatabase | null;
