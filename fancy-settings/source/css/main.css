@@ -116,6 +116,10 @@ body.searching #tab-container .tab.active {
 	padding-top: 15px;
 }
 
+.tab-content.show {
+	display: block;
+}
+
 body.searching .tab-content {
 	display: none;
 }
